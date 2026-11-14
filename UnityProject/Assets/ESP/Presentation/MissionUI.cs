@@ -12,8 +12,11 @@ namespace ESP.Presentation
         private VisualElement mapControls, flightControls, weatherDetails;
         private Label site, status, altitude, speed, missionTime, weather, mapCredit, nasaStatus;
         private VisualElement regionalImage;
+        private Label rocketMarker, mapMission;
         private MissionDirector subscribedDirector;
-        private Button viewToggle, action;
+        private Button viewToggle, action, assist;
+        private readonly Button[] rateButtons = new Button[3];
+        private static readonly int[] Rates = { 1, 5, 20 };
         private Slider throttle;
         private float nextRefresh, nextMarkerRefresh;
         private VisualElement root;
@@ -62,6 +65,16 @@ namespace ESP.Presentation
                 root.Add(markers[i]);
             }
 
+            rocketMarker = Label("▲  ROCKET", 12, Mint, FontStyle.Bold);
+            rocketMarker.pickingMode = PickingMode.Ignore;
+            rocketMarker.style.position = Position.Absolute;
+            rocketMarker.style.display = DisplayStyle.None;
+            root.Add(rocketMarker);
+            mapMission = Label("", 12, Text, FontStyle.Bold);
+            mapMission.pickingMode = PickingMode.Ignore;
+            Absolute(mapMission, null, 74, 28, null);
+            root.Add(mapMission);
+
             mapControls = Column();
             mapControls.pickingMode = PickingMode.Ignore;
             Absolute(mapControls, 24, null, null, 24);
@@ -104,8 +117,22 @@ namespace ESP.Presentation
             flightHeading.pickingMode = PickingMode.Ignore;
             site = Label("", 24, Text, FontStyle.Bold);
             status = Label("", 11, Mint, FontStyle.Normal);
+            status.style.whiteSpace = WhiteSpace.Normal;
+            status.style.maxWidth = 1100;
             flightHeading.Add(site); flightHeading.Add(status);
             flightControls.Add(flightHeading);
+            var flightOptions = Row();
+            flightOptions.pickingMode = PickingMode.Ignore;
+            flightOptions.style.marginTop = 8;
+            assist = Button("ASSIST ON", () => { if (director?.FlightDriver is RocketFlightDriver f) f.ToggleAssistance(); Refresh(); }, false);
+            flightOptions.Add(assist);
+            for (int i = 0; i < Rates.Length; i++)
+            {
+                int rate = Rates[i];
+                rateButtons[i] = Button(rate + "×", () => { if (director?.FlightDriver is RocketFlightDriver f) f.SetTimeRate(rate); Refresh(); }, false);
+                flightOptions.Add(rateButtons[i]);
+            }
+            flightControls.Add(flightOptions);
             var bottom = Row();
             bottom.style.marginTop = 14;
             bottom.style.alignItems = Align.FlexEnd;
@@ -181,6 +208,14 @@ namespace ESP.Presentation
         private void RefreshMarkers()
         {
             if (root == null || root.panel == null) return;
+            Vector2 rocketScreen = default;
+            bool rocketVisible = director != null && director.TryGetRocketScreenPosition(out rocketScreen);
+            rocketMarker.style.display = rocketVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (rocketVisible)
+            {
+                Vector2 p = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(rocketScreen.x, Screen.height - rocketScreen.y));
+                rocketMarker.style.left = p.x; rocketMarker.style.top = p.y - 18;
+            }
             for (int i = 0; i < markers.Length; i++)
             {
                 Vector2 screen = default;
@@ -201,6 +236,14 @@ namespace ESP.Presentation
             bool isMap = !available || director.IsMapView;
             mapControls.style.display = isMap ? DisplayStyle.Flex : DisplayStyle.None;
             flightControls.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
+            var mapFlight = available ? director.FlightDriver as RocketFlightDriver : null;
+            bool showMapMission = isMap && mapFlight != null && mapFlight.HasPosition;
+            mapMission.style.display = showMapMission ? DisplayStyle.Flex : DisplayStyle.None;
+            if (showMapMission)
+            {
+                double t = Math.Max(0, director.MissionTimeSeconds);
+                mapMission.text = string.Format("MISSION {0:00}:{1:00}:{2:00}  •  {3}× SELECTED", (int)(t / 3600), (int)(t / 60) % 60, (int)t % 60, mapFlight.TimeRate);
+            }
             weatherDetails.style.display = weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
             viewToggle.text = isMap ? "LAUNCH VIEW  ↗" : "←  MAP VIEW";
             viewToggle.SetEnabled(available);
@@ -213,7 +256,17 @@ namespace ESP.Presentation
             regionalImage.style.display = director.RegionalImage != null ? DisplayStyle.Flex : DisplayStyle.None;
             regionalImage.style.backgroundImage = director.RegionalImage != null ? new StyleBackground((Texture2D)director.RegionalImage) : new StyleBackground(StyleKeyword.None);
             site.text = director.SiteName ?? "Launch site";
-            status.text = (director.FlightStatus ?? "READY").ToUpperInvariant() + "  •  REPRESENTATIVE SCENERY • HISTORICAL LANDSAT 2000 IMAGERY";
+            status.text = (director.FlightStatus ?? "READY").ToUpperInvariant();
+            var flight = director.FlightDriver as RocketFlightDriver;
+            if (flight != null) status.text += "  •  " + flight.FlightTelemetry;
+            assist.SetEnabled(flight != null);
+            assist.text = flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "ASSIST OFF";
+            assist.style.color = flight != null && flight.AssistanceEnabled ? Mint : Text;
+            for (int i = 0; i < rateButtons.Length; i++)
+            {
+                rateButtons[i].SetEnabled(flight != null);
+                rateButtons[i].style.color = flight != null && flight.TimeRate == Rates[i] ? Mint : Text;
+            }
             altitude.text = director.AltitudeMeters.ToString("N0") + " m";
             speed.text = director.SpeedMetersPerSecond.ToString("N0") + " m/s";
             double seconds = Math.Max(0, director.MissionTimeSeconds);

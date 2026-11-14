@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &140252804
+--- !u!1 &293842614
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,167 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 140252807}
-  - component: {fileID: 140252806}
-  - component: {fileID: 140252805}
-  m_Layer: 0
-  m_Name: Mission UI
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &140252805
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 140252804}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e9918edaf18de4ec0b2ba10b5a2187e7, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.MissionUI
-  director: {fileID: 1807032525}
---- !u!114 &140252806
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 140252804}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name:
-  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
-  m_PanelSettings: {fileID: 11400000, guid: 7aeab0bb3ff054beaa4464add2a8de43, type: 2}
-  m_ParentUI: {fileID: 0}
-  sourceAsset: {fileID: 0}
-  m_SortingOrder: 0
-  m_Position: 0
-  m_WorldSpaceSizeMode: 1
-  m_WorldSpaceWidth: 1920
-  m_WorldSpaceHeight: 1080
-  m_PivotReferenceSize: 0
-  m_Pivot: 0
-  m_WorldSpaceCollider: {fileID: 0}
---- !u!4 &140252807
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 140252804}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &168007501
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 168007504}
-  - component: {fileID: 168007503}
-  - component: {fileID: 168007502}
-  m_Layer: 0
-  m_Name: Earth map
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!23 &168007502
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 168007501}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 4eaf7924f99f440f9875f1227d46652c, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &168007503
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 168007501}
-  m_Mesh: {fileID: 4300000, guid: 14103d936af6845af83165f01caddc60, type: 2}
---- !u!4 &168007504
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 168007501}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &544384883
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 544384885}
-  - component: {fileID: 544384884}
+  - component: {fileID: 293842616}
+  - component: {fileID: 293842615}
   m_Layer: 0
   m_Name: Launch camera
   m_TagString: Untagged
@@ -295,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &544384884
+--- !u!20 &293842615
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 544384883}
+  m_GameObject: {fileID: 293842614}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -346,13 +187,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &544384885
+--- !u!4 &293842616
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 544384883}
+  m_GameObject: {fileID: 293842614}
   serializedVersion: 2
   m_LocalRotation: {x: 0.07939864, y: -0.33920944, z: 0.028746272, w: 0.9369133}
   m_LocalPosition: {x: 75, y: 38, z: -90}
@@ -361,7 +202,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1215458767
+--- !u!1 &330333576
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -369,251 +210,80 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1215458771}
-  - component: {fileID: 1215458769}
-  - component: {fileID: 1215458770}
-  - component: {fileID: 1215458768}
+  - component: {fileID: 330333579}
+  - component: {fileID: 330333578}
+  - component: {fileID: 330333577}
   m_Layer: 0
-  m_Name: Map camera
-  m_TagString: MainCamera
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1215458768
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1215458767}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eea85806c69a94acd89bcd7125a13c62, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.GlobePointPicker
-  useMissionUI: 1
---- !u!20 &1215458769
-Camera:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1215458767}
-  m_Enabled: 1
-  serializedVersion: 2
-  m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.002, g: 0.005, b: 0.014, a: 1}
-  m_projectionMatrixMode: 1
-  m_GateFitMode: 2
-  m_FOVAxisMode: 0
-  m_Iso: 200
-  m_ShutterSpeed: 0.005
-  m_Aperture: 16
-  m_FocusDistance: 10
-  m_FocalLength: 50
-  m_BladeCount: 5
-  m_Curvature: {x: 2, y: 11}
-  m_BarrelClipping: 0.25
-  m_Anamorphism: 0
-  m_SensorSize: {x: 36, y: 24}
-  m_LensShift: {x: 0, y: 0}
-  m_NormalizedViewPortRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
-  near clip plane: 0.01
-  far clip plane: 100
-  field of view: 45
-  orthographic: 0
-  orthographic size: 5
-  m_Depth: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingPath: -1
-  m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 0
-  m_TargetEye: 3
-  m_HDR: 1
-  m_AllowMSAA: 1
-  m_AllowDynamicResolution: 0
-  m_ForceIntoRT: 0
-  m_OcclusionCulling: 1
-  m_StereoConvergence: 10
-  m_StereoSeparation: 0.022
---- !u!114 &1215458770
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1215458767}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 05144fd69bf4649d898887e8a8a9eaa8, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.GlobeCameraControls
-  target: {fileID: 0}
-  useMissionUI: 1
-  degreesPerPixel: 0.2
-  zoomSensitivity: 0.001
---- !u!4 &1215458771
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1215458767}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.20441656, y: -0.0807268, z: 0.016918031, w: 0.97540295}
-  m_LocalPosition: {x: 3, y: 8, z: -18}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1807032524
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1807032532}
-  - component: {fileID: 1807032531}
-  - component: {fileID: 1807032530}
-  - component: {fileID: 1807032529}
-  - component: {fileID: 1807032528}
-  - component: {fileID: 1807032527}
-  - component: {fileID: 1807032526}
-  - component: {fileID: 1807032525}
-  m_Layer: 0
-  m_Name: Mission
+  m_Name: Earth map
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1807032525
-MonoBehaviour:
+--- !u!23 &330333577
+MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
+  m_GameObject: {fileID: 330333576}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 05ec99ca5fd214957bed1dc4a936fe76, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.MissionDirector
-  mapCamera: {fileID: 1215458769}
-  launchCamera: {fileID: 544384884}
-  mapRoot: {fileID: 168007501}
-  mapLayers: {fileID: 1807032531}
-  weather: {fileID: 1807032530}
-  picker: {fileID: 1215458768}
-  pointWeather: {fileID: 1807032529}
-  regional: {fileID: 1807032528}
-  events: {fileID: 1807032527}
-  spaceWeather: {fileID: 1807032526}
-  rocketPrefab: {fileID: 4660190931007675762, guid: afc05cced810d4799aad8abbbd94eb11, type: 3}
-  siteGroundTextures:
-  - {fileID: 2800000, guid: e389c036c3dfd491abb2e85b25e87a2a, type: 3}
-  - {fileID: 2800000, guid: cd71a786c561a4f3db07e8a2c54f295e, type: 3}
-  siteGroundTemplate: {fileID: 2100000, guid: eadabf9c6966741daa5bc34d361615c9, type: 2}
---- !u!114 &1807032526
-MonoBehaviour:
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 4eaf7924f99f440f9875f1227d46652c, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &330333578
+MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1bde804ccb53d43488ac5574dbb7cc93, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaSpaceWeather
---- !u!114 &1807032527
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 474379c6ac7a64c63add29faac80bcba, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaEventFeed
---- !u!114 &1807032528
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1f792263aefff466188fce17c842efb8, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaRegionalPreview
---- !u!114 &1807032529
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0e532ca75fe754da09dce3e3038b8756, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.PointWeather
---- !u!114 &1807032530
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a99158802c641478f971ac33a8cbb48b, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.LaunchWeatherProfile
---- !u!114 &1807032531
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eb568d0ed70e44c529ee034b794ee1c7, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaMapLayers
-  showLegacyUI: 0
-  earth: {fileID: 168007502}
-  offlineTexture: {fileID: 2800000, guid: eab115b7e49554ff5934ebff8596145a, type: 3}
-  cloudLegend: {fileID: 0}
-  layerIds:
-  - MODIS_Terra_CorrectedReflectance_TrueColor
-  - MODIS_Terra_Cloud_Fraction_Day
-  layerNames:
-  - Satellite true color
-  - Cloud fraction
---- !u!4 &1807032532
+  m_GameObject: {fileID: 330333576}
+  m_Mesh: {fileID: 4300000, guid: 14103d936af6845af83165f01caddc60, type: 2}
+--- !u!4 &330333579
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807032524}
+  m_GameObject: {fileID: 330333576}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -622,7 +292,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1981258118
+--- !u!1 &534478654
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -630,8 +300,285 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1981258120}
-  - component: {fileID: 1981258119}
+  - component: {fileID: 534478666}
+  - component: {fileID: 534478662}
+  - component: {fileID: 534478661}
+  - component: {fileID: 534478660}
+  - component: {fileID: 534478659}
+  - component: {fileID: 534478658}
+  - component: {fileID: 534478657}
+  - component: {fileID: 534478656}
+  - component: {fileID: 534478655}
+  - component: {fileID: 534478665}
+  - component: {fileID: 534478664}
+  - component: {fileID: 534478663}
+  m_Layer: 0
+  m_Name: Mission
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &534478655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05ec99ca5fd214957bed1dc4a936fe76, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.MissionDirector
+  mapCamera: {fileID: 1473694405}
+  launchCamera: {fileID: 293842615}
+  mapRoot: {fileID: 330333576}
+  mapLayers: {fileID: 534478662}
+  weather: {fileID: 534478661}
+  nasaWeather: {fileID: 534478660}
+  picker: {fileID: 1473694404}
+  pointWeather: {fileID: 534478659}
+  regional: {fileID: 534478658}
+  events: {fileID: 534478657}
+  spaceWeather: {fileID: 534478656}
+  rocketPrefab: {fileID: 4660190931007675762, guid: afc05cced810d4799aad8abbbd94eb11, type: 3}
+  siteGroundTextures:
+  - {fileID: 2800000, guid: e389c036c3dfd491abb2e85b25e87a2a, type: 3}
+  - {fileID: 2800000, guid: cd71a786c561a4f3db07e8a2c54f295e, type: 3}
+  siteGroundTemplate: {fileID: 2100000, guid: eadabf9c6966741daa5bc34d361615c9, type: 2}
+--- !u!114 &534478656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bde804ccb53d43488ac5574dbb7cc93, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaSpaceWeather
+--- !u!114 &534478657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474379c6ac7a64c63add29faac80bcba, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaEventFeed
+--- !u!114 &534478658
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f792263aefff466188fce17c842efb8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaRegionalPreview
+--- !u!114 &534478659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e532ca75fe754da09dce3e3038b8756, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.PointWeather
+--- !u!114 &534478660
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e638ce49ec2d4f56b8ac0d4e825b055d, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaWeatherProfile
+--- !u!114 &534478661
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a99158802c641478f971ac33a8cbb48b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.LaunchWeatherProfile
+--- !u!114 &534478662
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb568d0ed70e44c529ee034b794ee1c7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.NasaMapLayers
+  showLegacyUI: 0
+  earth: {fileID: 330333577}
+  offlineTexture: {fileID: 2800000, guid: eab115b7e49554ff5934ebff8596145a, type: 3}
+  cloudLegend: {fileID: 0}
+  layerIds:
+  - MODIS_Terra_CorrectedReflectance_TrueColor
+  - MODIS_Terra_Cloud_Fraction_Day
+  layerNames:
+  - Satellite true color
+  - Cloud fraction
+--- !u!114 &534478663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b37ee39c09294798a028c2a9d54b6641, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.FlightEarthBackdrop
+  driver: {fileID: 534478664}
+  director: {fileID: 534478655}
+  globeMesh: {fileID: 4300000, guid: 14103d936af6845af83165f01caddc60, type: 2}
+  globeMaterial: {fileID: 2100000, guid: 4eaf7924f99f440f9875f1227d46652c, type: 2}
+  backdropLayer: 31
+  minimumAltitudeMeters: 120000
+--- !u!114 &534478664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd358f277ce44a9c8295546543c7009b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.RocketFlightDriver
+  director: {fileID: 534478655}
+  nasaWeather: {fileID: 534478660}
+--- !u!114 &534478665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17a35c12d7ef4cf5a36b56e013c7543a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.MissionFlightSmoke
+--- !u!4 &534478666
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 534478654}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &893285808
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 893285811}
+  - component: {fileID: 893285810}
+  - component: {fileID: 893285809}
+  m_Layer: 0
+  m_Name: Mission UI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &893285809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893285808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9918edaf18de4ec0b2ba10b5a2187e7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.MissionUI
+  director: {fileID: 534478655}
+--- !u!114 &893285810
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893285808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name:
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 7aeab0bb3ff054beaa4464add2a8de43, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 0}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &893285811
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893285808}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &932214252
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 932214254}
+  - component: {fileID: 932214253}
   m_Layer: 0
   m_Name: Sun
   m_TagString: Untagged
@@ -639,13 +586,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!108 &1981258119
+--- !u!108 &932214253
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1981258118}
+  m_GameObject: {fileID: 932214252}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
@@ -704,16 +651,130 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!4 &1981258120
+--- !u!4 &932214254
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1981258118}
+  m_GameObject: {fileID: 932214252}
   serializedVersion: 2
   m_LocalRotation: {x: 0.28678823, y: -0.28678823, z: 0.09042398, w: 0.90957606}
   m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1473694403
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1473694407}
+  - component: {fileID: 1473694405}
+  - component: {fileID: 1473694406}
+  - component: {fileID: 1473694404}
+  m_Layer: 0
+  m_Name: Map camera
+  m_TagString: MainCamera
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1473694404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473694403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eea85806c69a94acd89bcd7125a13c62, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.GlobePointPicker
+  useMissionUI: 1
+--- !u!20 &1473694405
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473694403}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.002, g: 0.005, b: 0.014, a: 1}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.01
+  far clip plane: 100
+  field of view: 45
+  orthographic: 0
+  orthographic size: 5
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
+--- !u!114 &1473694406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473694403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05144fd69bf4649d898887e8a8a9eaa8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ESP.Presentation.GlobeCameraControls
+  target: {fileID: 0}
+  useMissionUI: 1
+  degreesPerPixel: 0.2
+  zoomSensitivity: 0.001
+--- !u!4 &1473694407
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473694403}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.20441656, y: -0.0807268, z: 0.016918031, w: 0.97540295}
+  m_LocalPosition: {x: 3, y: 8, z: -18}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -723,9 +784,9 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 168007504}
-  - {fileID: 1215458771}
-  - {fileID: 544384885}
-  - {fileID: 1981258120}
-  - {fileID: 1807032532}
-  - {fileID: 140252807}
+  - {fileID: 330333579}
+  - {fileID: 1473694407}
+  - {fileID: 293842616}
+  - {fileID: 932214254}
+  - {fileID: 534478666}
+  - {fileID: 893285811}

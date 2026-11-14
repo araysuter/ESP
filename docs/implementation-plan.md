@@ -1,6 +1,8 @@
 # ESP implementation plan
 
-Status: active hackathon, November 14, 2026. User confirms kickoff has happened; draft due at midnight ending November 14; final due November 15 at noon, interpreted in America/Detroit (EST). Unity and Blender are installed; the Unity rendered build and authenticated remote MCP are qualified. Game implementation has not begun. All remaining schedules must be compressed against the actual deadline.
+Status: active hackathon, November 14, 2026. Unity + URP infrastructure and macOS ARM packaging are qualified. The map/launch UI is on main; gravity/orbit, atmosphere and the new two-stage propulsion/staging/assisted-ascent core are merged into flight-core through PR #10. All .NET 9 CI suites pass. Both launch sites and a historical NASA GEOS weather profile reach a conservative 200 km orbit and coast for 60 seconds in the headless mission tests at 20 ms and 10 ms steps. The integrated macOS ARM player has completed a NASA-weather pad-to-orbit, map and site-reset rehearsal; see `mission-integration.md` for the current integration contract. Earlier setup observations below are historical, not the current installed state.
+
+Draft due midnight ending November 14; final due November 15 at noon America/Detroit. Reserve the final three hours for packaging and submission. No Windows build has been qualified.
 
 ## Current team starting point
 

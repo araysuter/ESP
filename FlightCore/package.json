@@ -1,0 +1,7 @@
+{
+  "name": "com.esp.flight-core",
+  "version": "0.1.0",
+  "displayName": "ESP Flight Core",
+  "description": "Pure C# double-precision flight and atmosphere library.",
+  "unity": "6000.0"
+}
