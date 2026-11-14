@@ -65,3 +65,17 @@ Open `UnityProject` in the pinned editor, then open
 and integration with the partner's `gravity` branch remain subsequent work.
 
 Unity batch coordinate checks passed: origin, equatorial/polar axes, millimeter displacement at Earth radius, and NaN rejection.
+
+## Partner branch checkpoint
+
+Inspected `gravity` commit `7ca825b` on November 14. It currently supplies
+`FlightCore.Vector3d` and `Gravity.Acceleration`, targeting netstandard2.1, plus
+gravity tests. It does not yet supply a vehicle state integrator, mission clock,
+propulsion, staging, or controls. Preserve that ownership with the partner.
+Before wiring flight, agree on an immutable state snapshot: mission time, frame
+convention, double position/velocity, attitude convention, stage state and actual
+telemetry. Inertial positions must first be rotated to ECEF at the snapshot time
+before calling the ECEF presentation helper.
+
+The partner branch includes generated bin/obj artifacts; remove those from its
+PR and retain source/project files. Repository ignore rules now cover new caches.

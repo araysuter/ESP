@@ -5,8 +5,10 @@
 **/Logs/
 **/UserSettings/
 **/Builds/
-*.csproj
-*.sln
+/UnityProject/*.csproj
+/UnityProject/*.sln
+**/bin/
+**/obj/
 .env
 .env.*
 *-token.txt
