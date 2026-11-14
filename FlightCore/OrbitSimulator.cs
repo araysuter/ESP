@@ -12,7 +12,7 @@ namespace FlightCore
     /// - Time: seconds (mission time)
     /// 
     /// Integration method: Velocity Verlet
-    /// Coordinate convention: Earth-centered inertial frame (ICRF)
+    /// Coordinate convention: Simplified Earth-centered inertial frame (not ICRF)
     /// 
     /// The simulation advances by exactly the configured time step on each Step() call.
     /// </remarks>
@@ -63,19 +63,22 @@ namespace FlightCore
         public void Step()
         {
             // Velocity Verlet integration
-            // First half-step for velocity
+            // First half-step for velocity (using current position)
             Vector3d acceleration = Gravity.Acceleration(_position);
             _velocity = _velocity + 0.5 * _timeStep * acceleration;
 
             // Full step for position
-            _position = _position + _timeStep * _velocity;
+            Vector3d newPosition = _position + _timeStep * _velocity;
 
-            // Second half-step for velocity
-            acceleration = Gravity.Acceleration(_position);
-            _velocity = _velocity + 0.5 * _timeStep * acceleration;
+            // Second half-step for velocity (using new position)
+            Vector3d newAcceleration = Gravity.Acceleration(newPosition);
+            _velocity = _velocity + 0.5 * _timeStep * newAcceleration;
 
             // Advance time
             _missionTime += _timeStep;
+            
+            // Update position only after the entire step succeeds
+            _position = newPosition;
         }
 
         /// <summary>
