@@ -1,0 +1,23 @@
+name: Atmosphere and flight core
+
+on:
+  pull_request:
+    branches: [main, flight-core]
+  push:
+    branches: [flight-core]
+
+permissions:
+  contents: read
+
+jobs:
+  numerical-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+      - name: Gravity and orbit tests
+        run: dotnet run --project FlightCore.Tests -c Release
+      - name: Atmosphere, weather and drag tests
+        run: dotnet run --project Atmosphere.Tests -c Release
