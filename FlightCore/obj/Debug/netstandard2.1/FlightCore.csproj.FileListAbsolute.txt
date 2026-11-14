@@ -1,0 +1,10 @@
+/Users/donghui/Documents/ESP/FlightCore/bin/Debug/netstandard2.1/FlightCore.deps.json
+/Users/donghui/Documents/ESP/FlightCore/bin/Debug/netstandard2.1/FlightCore.dll
+/Users/donghui/Documents/ESP/FlightCore/bin/Debug/netstandard2.1/FlightCore.pdb
+/Users/donghui/Documents/ESP/FlightCore/obj/Debug/netstandard2.1/FlightCore.GeneratedMSBuildEditorConfig.editorconfig
+/Users/donghui/Documents/ESP/FlightCore/obj/Debug/netstandard2.1/FlightCore.AssemblyInfoInputs.cache
+/Users/donghui/Documents/ESP/FlightCore/obj/Debug/netstandard2.1/FlightCore.AssemblyInfo.cs
+/Users/donghui/Documents/ESP/FlightCore/obj/Debug/netstandard2.1/FlightCore.csproj.CoreCompileInputs.cache
+/Users/donghui/Documents/ESP/FlightCore/obj/Debug/netstandard2.1/FlightCore.sourcelink.json
+/Users/donghui/Documents/ESP/FlightCore/obj/Debug/netstandard2.1/FlightCore.dll
+/Users/donghui/Documents/ESP/FlightCore/obj/Debug/netstandard2.1/FlightCore.pdb
