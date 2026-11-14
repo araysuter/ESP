@@ -36,21 +36,32 @@ namespace ESP.Presentation
             Mouse mouse = Mouse.current;
             if (mouse == null) { dragging = false; return; }
             Vector2 pointer = mouse.position.ReadValue();
+            bool insideWindow = pointer.x >= 0 && pointer.x < Screen.width && pointer.y >= 0 && pointer.y < Screen.height;
             bool overPanel = useMissionUI ? MissionUI.IsPointerOverUI(pointer) : (pointer.x>Screen.width-355 && pointer.y>Screen.height-350) || pointer.y < 180f || (pointer.x < 365f && pointer.y > Screen.height - 535f);
-            if (mouse.leftButton.wasPressedThisFrame) dragging = !overPanel;
-            if (mouse.leftButton.wasReleasedThisFrame) dragging = false;
+            if (mouse.leftButton.wasPressedThisFrame) dragging = insideWindow && !overPanel;
+            if (!insideWindow || mouse.leftButton.wasReleasedThisFrame) dragging = false;
             if (dragging && mouse.leftButton.isPressed)
             {
                 Vector2 delta = mouse.delta.ReadValue();
-                yaw -= delta.x * degreesPerPixel;
+                yaw += delta.x * degreesPerPixel;
                 pitch = Mathf.Clamp(pitch - delta.y * degreesPerPixel, -85f, 85f);
             }
-            if (!overPanel)
+            if (insideWindow && !overPanel)
             {
                 float scroll = mouse.scroll.ReadValue().y;
                 distance = Mathf.Clamp(distance * Mathf.Exp(-scroll * zoomSensitivity), 7.2f, 35f);
             }
             ApplyPose();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus) dragging = false;
+        }
+
+        private void OnDisable()
+        {
+            dragging = false;
         }
 
         public void Focus(double latitude,double longitude){yaw=90-(float)longitude;pitch=Mathf.Clamp((float)latitude,-85,85);ApplyPose();}

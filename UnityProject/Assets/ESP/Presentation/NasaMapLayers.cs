@@ -14,66 +14,135 @@ namespace ESP.Presentation
         public Texture cloudLegend;
         public string[] layerIds={"MODIS_Terra_CorrectedReflectance_TrueColor","MODIS_Terra_Cloud_Fraction_Day"};
         public string[] layerNames={"Satellite true color","Cloud fraction"};
-        string[] defaults=new string[2];
+        string[] defaults;
+        string[] timeDomains;
+        bool metadataLoading;
+        UnityWebRequest activeRequest;
         string status="Loading NASA layer availability…", shown="Offline Blue Marble composite";
         string requestedDate="";
         int selected=-1, displayed=-1, generation;
         Texture2D downloaded;
         bool available;
         public string Status=>status;
+        public string DisplayedDescription=>shown;
         public string DisplayedLayerId { get; private set; }="BlueMarble_ShadedRelief_Bathymetry";
         public string DisplayedDate { get; private set; }="";
         public event Action LayerChanged;
         bool autoRefresh=true;
-        IEnumerator AutoRefresh(){while(true){yield return new WaitForSecondsRealtime(900);if(!autoRefresh)continue;yield return StartCoroutine(Availability());if(selected>=0&&string.IsNullOrEmpty(requestedDate))Select(selected);}}
-        IEnumerator Start(){yield return StartCoroutine(Availability());StartCoroutine(AutoRefresh());}
+        IEnumerator AutoRefresh(){while(true){yield return new WaitForSecondsRealtime(900);if(!autoRefresh)continue;yield return StartCoroutine(Availability());}}
+        IEnumerator Start(){defaults=new string[layerIds.Length];timeDomains=new string[layerIds.Length];yield return StartCoroutine(Availability());StartCoroutine(AutoRefresh());}
 
         IEnumerator Availability()
         {
+            metadataLoading=true;
             using(var req=UnityWebRequest.Get("https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities"))
             {
                 req.timeout=20;yield return req.SendWebRequest();
-                if(req.result!=UnityWebRequest.Result.Success){status="NASA unavailable — previous map retained";yield break;}
+                metadataLoading=false;
+                if(req.result!=UnityWebRequest.Result.Success){status="NASA unavailable — previous map retained; retry a layer to reconnect";yield break;}
                 try{
                     var doc=XDocument.Parse(req.downloadHandler.text);
                     for(int i=0;i<layerIds.Length;i++){
                         var layer=doc.Descendants().FirstOrDefault(e=>e.Name.LocalName=="Layer"&&e.Elements().Any(n=>n.Name.LocalName=="Name"&&n.Value==layerIds[i]));
                         var dim=layer?.Elements().FirstOrDefault(e=>e.Name.LocalName=="Dimension"&&(string)e.Attribute("name")=="time");
+                        timeDomains[i]=dim?.Value;
                         defaults[i]=(string)dim?.Attribute("default");
-                        if(DateTime.TryParse(defaults[i],out var day)&&day.Date>DateTime.UtcNow.Date)defaults[i]=DateTime.UtcNow.ToString("yyyy-MM-dd");
+                        if(TryDay(defaults[i],out var day)&&day>DateTime.UtcNow.Date)defaults[i]=DateTime.UtcNow.ToString("yyyy-MM-dd");
                     }
                     available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'");
                     Debug.Log("ESP_NASA_CAPABILITIES_OK "+string.Join(",",defaults));
                 }catch(Exception){status="NASA metadata could not be read — previous map retained";}
             }
-            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0&&available)Select(0);
+            if(selected>=0&&available)Select(selected);
+            else if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0&&available)Select(0);
+        }
+        static bool TryDay(string value,out DateTime date)=>DateTime.TryParseExact(value,"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out date);
+        bool Advertised(int index,DateTime day)
+        {
+            if(string.IsNullOrEmpty(timeDomains[index]))return false;
+            foreach(var span in timeDomains[index].Split(',')){
+                var parts=span.Trim().Split('/');
+                if(parts.Length==1&&TryDay(parts[0],out var exact)&&exact==day)return true;
+                if(parts.Length>=2&&TryDay(parts[0],out var first)&&TryDay(parts[1],out var last)&&day>=first&&day<=last)return true;
+            }
+            return false;
         }
         public void Select(int index)
         {
+            if(index < -1 || index>=layerIds.Length)return;
             generation++;selected=index;
-            if(index<0){displayed=-1;earth.material.mainTexture=offlineTexture;shown="Offline Blue Marble composite";status="Bundled fallback — not current weather";DisplayedLayerId="BlueMarble_ShadedRelief_Bathymetry";DisplayedDate="";LayerChanged?.Invoke();return;}
-            if(!available||string.IsNullOrEmpty(defaults[index])){status="This layer has no verified available date";return;}
+            activeRequest?.Abort();
+            if(index<0){displayed=-1;earth.material.mainTexture=offlineTexture;if(downloaded)Destroy(downloaded);downloaded=null;shown="Offline Blue Marble composite — historical fallback, not current observations";status="Bundled fallback — not current weather";DisplayedLayerId="BlueMarble_ShadedRelief_Bathymetry";DisplayedDate="";LayerChanged?.Invoke();return;}
+            if(!available){status="Waiting for NASA availability…";if(!metadataLoading&&defaults!=null)StartCoroutine(Availability());return;}
             string date=string.IsNullOrWhiteSpace(requestedDate)?defaults[index]:requestedDate.Trim();
-            if(!DateTime.TryParseExact(date.Substring(0,Math.Min(10,date.Length)),"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out var parsed)||parsed.Date>DateTime.UtcNow.Date){status="Enter an available date as YYYY-MM-DD (no future dates)";return;}
-            StartCoroutine(Load(index,date,generation));
+            if(!TryDay(date,out var parsed)||parsed>DateTime.UtcNow.Date||!Advertised(index,parsed)){status="No verified date: use an advertised YYYY-MM-DD, no future dates";return;}
+            StartCoroutine(Load(index,parsed,generation));
         }
-        IEnumerator Load(int index,string date,int id)
+        Texture2D OfflineCopy()
         {
-            status="Requesting "+layerNames[index]+" for "+date+"…";
-            string url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+UnityWebRequest.EscapeURL(layerIds[index])+"&STYLES=&CRS=EPSG%3A4326&BBOX=-90%2C-180%2C90%2C180&WIDTH=2048&HEIGHT=1024&FORMAT=image%2Fjpeg&TIME="+UnityWebRequest.EscapeURL(date);
-            using(var req=UnityWebRequestTexture.GetTexture(url)){
-                req.timeout=30;yield return req.SendWebRequest();
+            var rt=RenderTexture.GetTemporary(2048,1024,0,RenderTextureFormat.ARGB32);
+            var previous=RenderTexture.active;
+            try{
+                Graphics.Blit(offlineTexture,rt);RenderTexture.active=rt;
+                var copy=new Texture2D(2048,1024,TextureFormat.RGBA32,false);
+                copy.ReadPixels(new Rect(0,0,2048,1024),0,0);copy.Apply();return copy;
+            }finally{RenderTexture.active=previous;RenderTexture.ReleaseTemporary(rt);}
+        }
+        IEnumerator Load(int index,DateTime newest,int id)
+        {
+            // Newest valid observations win; missing coverage always retains the bundled globe.
+            var result=OfflineCopy();var pixels=result.GetPixels32();var covered=new bool[pixels.Length];
+            DateTime first=DateTime.MaxValue,last=DateTime.MinValue;int successes=0;
+            try{
+                int days=index==0?3:1;
+                for(int offset=0;offset<days;offset++){
+                    var day=newest.AddDays(-offset);if(!Advertised(index,day))continue;
+                    string date=day.ToString("yyyy-MM-dd");
+                    status="Loading NASA "+layerNames[index]+" "+date+" ("+(offset+1)+"/"+days+")…";
+                    string url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+UnityWebRequest.EscapeURL(layerIds[index])+"&STYLES=&CRS=EPSG%3A4326&BBOX=-90%2C-180%2C90%2C180&WIDTH=2048&HEIGHT=1024&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME="+date;
+                    using(var req=UnityWebRequestTexture.GetTexture(url)){
+                        activeRequest=req;req.timeout=20;yield return req.SendWebRequest();
+                        if(activeRequest==req)activeRequest=null;
+                        if(id!=generation)yield break;
+                        if(req.result!=UnityWebRequest.Result.Success)continue;
+                        var texture=DownloadHandlerTexture.GetContent(req);
+                        if(texture.width!=2048||texture.height!=1024){Destroy(texture);continue;}
+                        var source=texture.GetPixels32();Destroy(texture);
+                        Color32[] mask=null;
+                        if(index==0){
+                            // Native MODIS JPEG tiles retain opaque black in PNG output.
+                            // NASA's paired no-data mask is opaque only where observations are absent.
+                            string maskUrl=url.Replace(UnityWebRequest.EscapeURL(layerIds[index]),"MODIS_Terra_Data_No_Data");
+                            using(var maskRequest=UnityWebRequestTexture.GetTexture(maskUrl)){
+                                activeRequest=maskRequest;maskRequest.timeout=20;yield return maskRequest.SendWebRequest();
+                                if(activeRequest==maskRequest)activeRequest=null;
+                                if(id!=generation)yield break;
+                                if(maskRequest.result!=UnityWebRequest.Result.Success)continue;
+                                var maskTexture=DownloadHandlerTexture.GetContent(maskRequest);
+                                if(maskTexture.width==2048&&maskTexture.height==1024)mask=maskTexture.GetPixels32();
+                                Destroy(maskTexture);if(mask==null)continue;
+                            }
+                        }
+                        bool any=false;
+                        for(int p=0;p<pixels.Length;p++){
+                            var c=source[p];if(covered[p]||c.a==0||(mask!=null&&mask[p].a>0))continue;
+                            // Respect NASA's no-data mask, never infer observation coverage from RGB.
+                            pixels[p]=(Color32)Color.Lerp((Color)pixels[p],(Color)c,c.a/255f);
+                            covered[p]=true;any=true;
+                        }
+                        if(any){successes++;if(day<first)first=day;if(day>last)last=day;}
+                    }
+                }
                 if(id!=generation)yield break;
-                if(req.result!=UnityWebRequest.Result.Success){status="Layer unavailable for requested date — previous map retained";yield break;}
-                var texture=DownloadHandlerTexture.GetContent(req);
-                if(texture.width!=2048||texture.height!=1024){Destroy(texture);status="Unexpected NASA response — previous map retained";yield break;}
-                texture.wrapModeU=TextureWrapMode.Repeat;texture.wrapModeV=TextureWrapMode.Clamp;
-                earth.material.mainTexture=texture;if(downloaded)Destroy(downloaded);downloaded=texture;
-                DisplayedLayerId=layerIds[index];DisplayedDate=date;LayerChanged?.Invoke();displayed=index;shown=layerNames[index]+" | requested observation day "+date;
-                status="NASA GIBS • fetched "+DateTime.UtcNow.ToString("HH:mm 'UTC'")+" • gaps/partial coverage possible";
-                Debug.Log("ESP_NASA_LAYER_OK "+layerIds[index]+" "+date);
+                if(successes==0){status="NASA imagery unavailable/empty — previous map retained";yield break;}
+                result.SetPixels32(pixels);result.Apply();result.wrapModeU=TextureWrapMode.Repeat;result.wrapModeV=TextureWrapMode.Clamp;
+                earth.material.mainTexture=result;if(downloaded)Destroy(downloaded);downloaded=result;result=null;
+                DisplayedLayerId=layerIds[index];DisplayedDate=last.ToString("yyyy-MM-dd");displayed=index;
+                shown=layerNames[index]+(index==0?" temporal mosaic ":" observation day ")+first.ToString("yyyy-MM-dd")+(first!=last?" to "+last.ToString("yyyy-MM-dd"):"")+" UTC • Blue Marble fills no-data; not instantaneous";
+                status="NASA GIBS • fetched "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'")+" • "+successes+" day(s) received • historical fallback in remaining gaps";
+                LayerChanged?.Invoke();Debug.Log("ESP_NASA_LAYER_OK "+layerIds[index]+" "+DisplayedDate);
                 if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0)StartCoroutine(CaptureTest(index));
-            }
+            }finally{if(result)Destroy(result);}
         }
         void OnGUI()
         {
@@ -81,7 +150,7 @@ namespace ESP.Presentation
             float y=Screen.height-170;GUI.Box(new Rect(16,y,Screen.width-32,154),GUIContent.none);
             GUI.Label(new Rect(30,y+8,Screen.width-60,22),shown);
             if(GUI.Button(new Rect(30,y+35,130,28),"Offline globe"))Select(-1);
-            GUI.enabled=available;
+            GUI.enabled=true;
             for(int i=0;i<layerNames.Length;i++)if(GUI.Button(new Rect(170+i*185,y+35,175,28),layerNames[i]))Select(i);
             GUI.enabled=true;
             GUI.Label(new Rect(30,y+70,110,22),"Date (optional)");requestedDate=GUI.TextField(new Rect(140,y+70,120,24),requestedDate,10);
@@ -100,6 +169,6 @@ namespace ESP.Presentation
             if(index==0)Select(1);
             else { Select(-1);Debug.Log("ESP_NASA_OFFLINE_RESTORE_OK"); }
         }
-        void OnDestroy(){if(downloaded)Destroy(downloaded);}
+        void OnDestroy(){activeRequest?.Abort();StopAllCoroutines();if(downloaded)Destroy(downloaded);}
     }
 }

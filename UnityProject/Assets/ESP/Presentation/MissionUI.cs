@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.InputSystem;
 
 namespace ESP.Presentation
 {
@@ -48,10 +49,7 @@ namespace ESP.Presentation
             root.Add(header);
 
             viewToggle = Button("LAUNCH VIEW", () => {
-                if (director == null) return;
-                if (director.IsMapView) director.GoToLaunch(director.SelectedSiteIndex);
-                else director.ShowMap();
-                Refresh();
+                ToggleView();
             }, false);
             Absolute(viewToggle, null, 24, 24, null);
             root.Add(viewToggle);
@@ -80,6 +78,8 @@ namespace ESP.Presentation
             Absolute(mapControls, 24, null, null, 24);
             var mapBar = Row();
             mapBar.pickingMode = PickingMode.Ignore;
+            mapBar.style.flexWrap = Wrap.Wrap;
+            mapControls.style.right = 24;
             string[] names = { "SURFACE", "SATELLITE", "CLOUDS" };
             for (int i = 0; i < names.Length; i++)
             {
@@ -87,7 +87,7 @@ namespace ESP.Presentation
                 layers[i] = Button(names[i], () => { selectedLayer = index; director?.SelectLayer(index); Refresh(); }, false);
                 mapBar.Add(layers[i]);
             }
-            mapBar.Add(Button("WEATHER  +", () => { weatherOpen = !weatherOpen; Refresh(); }, false));
+            mapBar.Add(Button("POINT WEATHER  +", () => { weatherOpen = !weatherOpen; if (weatherOpen) director?.RefreshPointWeather(); Refresh(); }, false));
             mapControls.Add(mapBar);
             weatherDetails = Panel();
             weatherDetails.style.marginTop = 8;
@@ -95,6 +95,10 @@ namespace ESP.Presentation
             weather = Label("", 12, Text, FontStyle.Normal);
             weather.style.whiteSpace = WhiteSpace.Normal;
             weatherDetails.Add(weather);
+            var refreshWeather = Button("REFRESH WEATHER", () => { director?.RefreshPointWeather(true); Refresh(); }, false);
+            refreshWeather.style.alignSelf = Align.FlexStart;
+            refreshWeather.style.marginTop = 4;
+            weatherDetails.Add(refreshWeather);
             regionalImage = new VisualElement();
             regionalImage.style.width = 180; regionalImage.style.height = 120;
             regionalImage.style.display = DisplayStyle.None;
@@ -176,6 +180,10 @@ namespace ESP.Presentation
 
         private void Update()
         {
+            var focused = root?.panel?.focusController?.focusedElement as VisualElement;
+            bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
+            if (!editingText && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
+                ToggleView();
             if (subscribedDirector != director)
             {
                 if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
@@ -207,6 +215,14 @@ namespace ESP.Presentation
             Vector2 panelPoint = RuntimePanelUtils.ScreenToPanel(activeRoot.panel,
                 new Vector2(screenBottomLeft.x, Screen.height - screenBottomLeft.y));
             return activeRoot.panel.Pick(panelPoint) != null;
+        }
+
+        private void ToggleView()
+        {
+            if (director == null) return;
+            if (director.IsMapView) director.GoToLaunch(director.SelectedSiteIndex);
+            else director.ShowMap();
+            Refresh();
         }
 
         private void OpenWeather() { weatherOpen = true; Refresh(); }
@@ -251,7 +267,7 @@ namespace ESP.Presentation
                 mapMission.text = string.Format("MISSION {0:00}:{1:00}:{2:00}  •  {3}× SELECTED", (int)(t / 3600), (int)(t / 60) % 60, (int)t % 60, mapFlight.TimeRate);
             }
             weatherDetails.style.display = weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
-            viewToggle.text = isMap ? "LAUNCH VIEW  ↗" : "←  MAP VIEW";
+            viewToggle.text = isMap ? "LAUNCH VIEW  ↗  [M]" : "←  MAP VIEW  [M]";
             viewToggle.SetEnabled(available);
             for (int i = 0; i < layers.Length; i++)
                 layers[i].style.color = i == selectedLayer ? Mint : Text;

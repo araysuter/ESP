@@ -75,6 +75,7 @@ public static class BuildMission
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scenePath, true) };
         AssetDatabase.SaveAssets(); PlayerSettings.productName = "ESP";
         PlayerSettings.runInBackground = true;
+        PlayerSettings.resizableWindow = true;
         PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720; PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scenePath }, locationPathName = buildPath, target = BuildTarget.StandaloneOSX, options = BuildOptions.Development });
         if (report.summary.result != BuildResult.Succeeded) throw new Exception("Mission build failed");

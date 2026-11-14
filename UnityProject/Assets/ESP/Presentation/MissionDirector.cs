@@ -55,11 +55,30 @@ namespace ESP.Presentation
         public int SelectedSiteIndex { get; private set; }
         public string SiteName => LaunchSites.All[SelectedSiteIndex].Name;
         public string FlightStatus => FlightDriver == null ? "Flight simulation unavailable" : FlightDriver.Status;
-        public string WeatherSummary => picker != null && picker.HasSelection && pointWeather != null
-            ? string.Format("{0:F2}°, {1:F2}°\n{2}\n{3}\n{4}\n{5}", picker.Latitude, picker.Longitude, pointWeather.Status, pointWeather.validtime, pointWeather.Details, regional != null ? regional.Status : "")
-            : (weather != null ? weather.Status : "Weather unavailable");
+        public string WeatherSummary
+        {
+            get
+            {
+                if (pointWeather == null) return "Modeled weather unavailable.";
+                bool picked = picker != null && picker.HasSelection;
+                var site = LaunchSites.All[SelectedSiteIndex];
+                double latitude = picked ? picker.Latitude : site.Latitude;
+                double longitude = picked ? picker.Longitude : site.Longitude;
+                string location = picked ? "SELECTED POINT" : site.Name;
+                return string.Format("{0}  ·  {1:F2}°, {2:F2}°\n{3}\n{4}\n{5}",
+                    location, latitude, longitude, pointWeather.Status, pointWeather.validtime, pointWeather.Details);
+            }
+        }
+        public void RefreshPointWeather(bool forceRefresh = false)
+        {
+            if (pointWeather == null) return;
+            var site = LaunchSites.All[SelectedSiteIndex];
+            bool picked = picker != null && picker.HasSelection;
+            pointWeather.Fetch(picked ? picker.Latitude : site.Latitude,
+                picked ? picker.Longitude : site.Longitude, forceRefresh);
+        }
         public Texture RegionalImage => regional != null ? regional.Image : null;
-        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedLayerId + " • " + (string.IsNullOrEmpty(mapLayers.DisplayedDate) ? "static composite" : mapLayers.DisplayedDate) + " • " + mapLayers.Status : "NASA Blue Marble";
+        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedDescription + " • " + mapLayers.Status : "NASA Blue Marble";
         public string NasaStatus => "NASA EONET: " + (events != null ? events.Status : "unavailable") + "\nNASA DONKI: " + (spaceWeather != null ? spaceWeather.Status : "unavailable");
         public double AltitudeMeters => FlightDriver?.AltitudeMeters ?? 0;
         public double SpeedMetersPerSecond => FlightDriver?.SpeedMetersPerSecond ?? 0;
@@ -92,7 +111,7 @@ namespace ESP.Presentation
             if (siteIndex < 0 || siteIndex >= LaunchSites.All.Length) throw new ArgumentOutOfRangeException(nameof(siteIndex));
             bool siteChanged = SelectedSiteIndex != siteIndex;
             SelectedSiteIndex = siteIndex;
-            if (siteChanged) { FlightDriver?.ResetMission(); RequestWeather(); }
+            if (siteChanged) { FlightDriver?.ResetMission(); RequestWeather(); if (picker == null || !picker.HasSelection) RefreshPointWeather(); }
             if (environment && !siteChanged)
             {
                 environment.SetActive(true);
