@@ -23,8 +23,10 @@ namespace FlightCore.Tests
         {
             TestAtEarthSurface();
             TestOffAxisPosition();
+            TestDistanceDoubling();
+            TestInvalidInputs();
             
-            Console.WriteLine("Basic test cases passed successfully.");
+            Console.WriteLine("All test cases passed successfully.");
         }
 
         /// <summary>
@@ -98,6 +100,86 @@ namespace FlightCore.Tests
             }
             
             Console.WriteLine($"  ✓ Off-axis position: acceleration = {acceleration}, magnitude = {accelerationMagnitude:F10}");
+        }
+
+        /// <summary>
+        /// Test case: Distance-doubling verification - acceleration should decrease by a factor of 4.
+        /// </summary>
+        static void TestDistanceDoubling()
+        {
+            Console.WriteLine("Testing distance-doubling rule...");
+            
+            // Earth's equatorial radius in meters
+            const double earthRadius = 6378137.0;
+            
+            // Test at Earth surface
+            var position1 = new Vector3d(earthRadius, 0.0, 0.0);
+            var acceleration1 = Gravity.Acceleration(position1);
+            
+            // Test at twice the distance from Earth center
+            var position2 = new Vector3d(2 * earthRadius, 0.0, 0.0);
+            var acceleration2 = Gravity.Acceleration(position2);
+            
+            // Acceleration should decrease by a factor of 4 (inverse square law)
+            double expectedRatio = 0.25; // 1/4
+            double actualRatio = acceleration2.X / acceleration1.X;
+            double tolerance = 1e-12;
+            
+            if (Math.Abs(actualRatio - expectedRatio) > tolerance)
+            {
+                throw new InvalidOperationException($"Expected acceleration ratio of {expectedRatio}, but got {actualRatio}");
+            }
+            
+            Console.WriteLine($"  ✓ Distance-doubling test: ratio = {actualRatio:F12} (expected ~0.25)");
+        }
+
+        /// <summary>
+        /// Test case: Invalid inputs should throw exceptions.
+        /// </summary>
+        static void TestInvalidInputs()
+        {
+            Console.WriteLine("Testing invalid inputs...");
+            
+            // Test with zero vector
+            try
+            {
+                var zeroPosition = new Vector3d(0.0, 0.0, 0.0);
+                var acceleration = Gravity.Acceleration(zeroPosition);
+                throw new InvalidOperationException("Should have thrown exception for zero vector input");
+            }
+            catch (ArgumentException)
+            {
+                // This is expected
+                Console.WriteLine("  ✓ Zero vector correctly rejected");
+            }
+            
+            // Test with NaN values
+            try
+            {
+                var nanPosition = new Vector3d(double.NaN, 1.0, 1.0);
+                var acceleration = Gravity.Acceleration(nanPosition);
+                throw new InvalidOperationException("Should have thrown exception for NaN input");
+            }
+            catch (ArgumentException)
+            {
+                // This is expected
+                Console.WriteLine("  ✓ NaN vector correctly rejected");
+            }
+            
+            // Test with infinity values
+            try
+            {
+                var infPosition = new Vector3d(double.PositiveInfinity, 1.0, 1.0);
+                var acceleration = Gravity.Acceleration(infPosition);
+                throw new InvalidOperationException("Should have thrown exception for infinity input");
+            }
+            catch (ArgumentException)
+            {
+                // This is expected
+                Console.WriteLine("  ✓ Infinity vector correctly rejected");
+            }
+            
+            Console.WriteLine("  ✓ Invalid inputs properly handled");
         }
     }
 }
