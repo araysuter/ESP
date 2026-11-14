@@ -1,0 +1,7 @@
+# Earth frames
+
+`EarthFrames` converts geodetic latitude, east-positive longitude and altitude in meters to and from WGS84 ECEF using semi-major axis 6,378,137 m and flattening 1/298.257223563. ECEF X intersects the equator at zero longitude, Y intersects it at 90° E, and Z points north. The inverse returns longitude in [-π, π], choosing zero at the poles; near-center coordinates are rejected. These calculations are double precision and independent of Unity. WGS84 constants: [NGA WGS 84 reference](https://earth-info.nga.mil/index.php?dir=wgs84&action=wgs84).
+
+The simplified inertial frame is aligned with ECEF at mission time zero. At mission time `t`, set `theta = Aerodynamics.EarthAngularVelocityRadiansPerSecond * t`, then use `EcefToInertial(ecef, theta)` and `InertialToEcef(inertial, theta)`. This is a mission-relative frame, not J2000 or ICRF; no Earth orientation, precession or real-world epoch is modeled. For a stationary surface point, inertial velocity is `Aerodynamics.CorotatingAirVelocity(inertialPosition, Vector3d.Zero)`. Wind must be transformed into the inertial frame before adding it. Position rotation alone does not transform velocity.
+
+Run `dotnet run --project Frames.Tests` to check representative launch sites, equator, poles, below-sea-level and high-altitude round trips, rotation, and co-rotating air. The program has not yet been run on the target environment.

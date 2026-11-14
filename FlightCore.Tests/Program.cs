@@ -27,6 +27,8 @@ namespace FlightCore.Tests
             TestOffAxisPosition();
             TestDistanceDoubling();
             TestInvalidInputs();
+            TestRegressionOriginHit();
+            TestCircularOrbit();
 
             Console.WriteLine("All test cases passed successfully.");
         }
@@ -186,6 +188,117 @@ namespace FlightCore.Tests
                 AssertArgumentException(() => new Vector3d(1.0, invalid, 1.0), "Vector Y");
                 AssertArgumentException(() => new Vector3d(1.0, 1.0, invalid), "Vector Z");
             }
+        }
+
+        static void TestCircularOrbit()
+        {
+            const double radius = 7_000_000.0; // m
+            const double elapsedTime = 5_820.0; // s, just under the analytic period
+            const double mu = Gravity.EarthGravitationalParameter;
+            double speed = Math.Sqrt(mu / radius);
+            double phase = elapsedTime * speed / radius;
+            var expectedPosition = new Vector3d(radius * Math.Cos(phase), radius * Math.Sin(phase), 0.0);
+            var expectedVelocity = new Vector3d(-speed * Math.Sin(phase), speed * Math.Cos(phase), 0.0);
+
+            // Rounded bounds above the reference errors of 1,705 m / 1.836 m/s
+            // at 10 s and 426 m / 0.459 m/s at 5 s.
+            double coarseError = RunCircularOrbit(10.0, 1_750.0, 1.9);
+            double fineError = RunCircularOrbit(5.0, 450.0, 0.5);
+
+            // Velocity Verlet is second order, so halving the step should quarter the error.
+            double convergence = coarseError / fineError;
+            Console.WriteLine($"  Coarse-to-fine position error ratio: {convergence:F4}");
+            if (!(convergence >= 3.8 && convergence <= 4.2))
+                throw new InvalidOperationException($"Expected convergence ratio in [3.8, 4.2], got {convergence:G17}.");
+
+            double RunCircularOrbit(double timeStep, double positionTolerance, double velocityTolerance)
+            {
+                // Relative drift limits allow small integration error in energy and rounding in angular momentum.
+                const double energyTolerance = 1e-8;
+                const double momentumTolerance = 1e-12;
+                var simulator = new OrbitSimulator(timeStep);
+                simulator.Initialize(new Vector3d(radius, 0.0, 0.0), new Vector3d(0.0, speed, 0.0));
+                double initialEnergy = SpecificEnergy(simulator.State);
+                Vector3d initialMomentum = SpecificAngularMomentum(simulator.State);
+                double initialMomentumMagnitude = initialMomentum.Magnitude();
+                double maxEnergyDrift = 0.0;
+                double maxMomentumDrift = 0.0;
+
+                int steps = (int)(elapsedTime / timeStep);
+                for (int i = 0; i < steps; i++)
+                {
+                    simulator.Step();
+                    var state = simulator.State;
+                    double energyDrift = Math.Abs((SpecificEnergy(state) - initialEnergy) / initialEnergy);
+                    double momentumDrift = (SpecificAngularMomentum(state) - initialMomentum).Magnitude()
+                        / initialMomentumMagnitude;
+                    maxEnergyDrift = Math.Max(maxEnergyDrift, energyDrift);
+                    maxMomentumDrift = Math.Max(maxMomentumDrift, momentumDrift);
+                }
+
+                var finalState = simulator.State;
+                if (finalState.MissionTime != elapsedTime)
+                    throw new InvalidOperationException($"Expected mission time {elapsedTime} s, got {finalState.MissionTime} s.");
+
+                double positionError = (finalState.Position - expectedPosition).Magnitude();
+                double velocityError = (finalState.Velocity - expectedVelocity).Magnitude();
+                Console.WriteLine($"  {timeStep:F0} s step: {positionError:F2} m position error, {velocityError:F6} m/s velocity error");
+                Console.WriteLine($"    Max relative drift: energy {maxEnergyDrift:E3}, angular momentum {maxMomentumDrift:E3}");
+                AssertAtMost(positionError, positionTolerance, "Position error");
+                AssertAtMost(velocityError, velocityTolerance, "Velocity error");
+                AssertAtMost(maxEnergyDrift, energyTolerance, "Relative specific-energy drift");
+                AssertAtMost(maxMomentumDrift, momentumTolerance, "Relative specific angular-momentum drift");
+                return positionError;
+            }
+        }
+
+        static double SpecificEnergy(OrbitStateSnapshot state)
+        {
+            var velocity = state.Velocity;
+            double speedSquared = velocity.X * velocity.X + velocity.Y * velocity.Y + velocity.Z * velocity.Z;
+            return 0.5 * speedSquared - Gravity.EarthGravitationalParameter / state.Position.Magnitude();
+        }
+
+        static Vector3d SpecificAngularMomentum(OrbitStateSnapshot state)
+        {
+            var position = state.Position;
+            var velocity = state.Velocity;
+            return new Vector3d(
+                position.Y * velocity.Z - position.Z * velocity.Y,
+                position.Z * velocity.X - position.X * velocity.Z,
+                position.X * velocity.Y - position.Y * velocity.X);
+        }
+
+        static void AssertAtMost(double value, double limit, string measurement)
+        {
+            if (!(value <= limit))
+                throw new InvalidOperationException($"{measurement} {value:G17} exceeds limit {limit:G17}.");
+        }
+
+        static void TestRegressionOriginHit()
+        {
+            var position = new Vector3d(1.0, 0.0, 0.0);
+            // After the first half-kick, velocity is exactly -1 m/s along X.
+            // The full drift then lands at the origin, where gravity throws.
+            double velocityX = -1.0 - 0.5 * Gravity.Acceleration(position).X;
+            var simulator = new OrbitSimulator(1.0);
+            simulator.Initialize(position, new Vector3d(velocityX, 0.0, 0.0));
+            var before = simulator.State;
+
+            try
+            {
+                simulator.Step();
+                throw new InvalidOperationException("Expected the second gravity evaluation to throw at the origin.");
+            }
+            catch (ArgumentException exception) when (exception.ParamName == "position")
+            {
+                var after = simulator.State;
+                if (!after.Position.Equals(before.Position) || !after.Velocity.Equals(before.Velocity)
+                    || after.MissionTime != before.MissionTime)
+                    throw new InvalidOperationException("Failed step changed the simulator snapshot.");
+            }
+
+            Console.WriteLine("  ✓ Failed step preserved position, velocity, and mission time.");
         }
     }
 }
