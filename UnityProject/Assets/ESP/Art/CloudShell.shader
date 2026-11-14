@@ -3,7 +3,7 @@ Shader "ESP/ObservedCloudShell"
     Properties
     {
         _CloudDensity ("Observed cloud fraction", 2D) = "black" {}
-        _Opacity ("Display opacity", Range(0, 1)) = 0.88
+        _Opacity ("Display opacity", Range(0, 1)) = 0.68
     }
     SubShader
     {
@@ -39,13 +39,16 @@ Shader "ESP/ObservedCloudShell"
             }
             half4 Frag(Varyings input) : SV_Target
             {
-                // Scalar data texture is linear, interpolated only after exact palette
-                // decoding. Missing pixels are zero: no invented cloud cover or motion.
-                half density = SAMPLE_TEXTURE2D(_CloudDensity, sampler_CloudDensity, input.uv).r;
+                // RG is fraction * support, support. Normalize AFTER filtering,
+                // including mipmaps, so missing data is never averaged as clear sky.
+                // Leave UVs unwrapped here: sampler Repeat maintains seam derivatives.
+                half2 observation = SAMPLE_TEXTURE2D(_CloudDensity, sampler_CloudDensity, input.uv).rg;
+                half density = saturate(observation.r / max(observation.g, 0.00392h));
+                half support = smoothstep(0.03h, 0.50h, observation.g);
                 Light sun = GetMainLight();
                 half illumination = 0.30h + 0.70h * saturate(dot(normalize(input.normalWS), sun.direction));
                 half3 white = half3(0.94h, 0.97h, 1.0h) * illumination;
-                return half4(white, saturate(density * _Opacity));
+                return half4(white, saturate(density * support * _Opacity));
             }
             ENDHLSL
         }

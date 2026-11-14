@@ -11,9 +11,9 @@ public static class BuildEarthPreview
     {
         var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
         var tex=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Earth/BlueMarble.jpg");
-        if(!tex||tex.width!=2048||tex.height!=1024)throw new Exception("Expected bundled NASA 2048x1024 image");
+        if(!tex||tex.width!=8192||tex.height!=4096)throw new Exception("Expected bundled NASA 8192x4096 image");
         var importer=(TextureImporter)AssetImporter.GetAtPath("Assets/ESP/Art/Earth/BlueMarble.jpg");
-        importer.wrapModeU=TextureWrapMode.Repeat;importer.wrapModeV=TextureWrapMode.Clamp;importer.maxTextureSize=2048;importer.SaveAndReimport();
+        importer.wrapModeU=TextureWrapMode.Repeat;importer.wrapModeV=TextureWrapMode.Clamp;importer.maxTextureSize=8192;importer.SaveAndReimport();
         var mesh=EarthEllipsoid.BuildMesh();
         if(Math.Abs(mesh.bounds.size.x-12.756274f)>.00001f||Math.Abs(mesh.bounds.size.y-12.713505f)>.00001f)throw new Exception("WGS84 bounds mismatch");
         // Check winding against outward normals away from the degenerate pole triangles.

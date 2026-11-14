@@ -6,18 +6,24 @@ using UnityEngine.Rendering.Universal;
 namespace ESP.Presentation
 {
     /// <summary>Scaled-space visual only. The flight state remains in the flight core.</summary>
+    [DefaultExecutionOrder(200)]
     public sealed class FlightEarthBackdrop : MonoBehaviour
     {
         public RocketFlightDriver driver;
         public MissionDirector director;
         public Mesh globeMesh;
         public Material globeMaterial;
+        public Shader starShader;
+        private Material starMaterial;
+        public Light earthSun;
         // Reserve this layer for the backdrop; no other scene objects should use it.
         [Range(0, 31)] public int backdropLayer = 31;
         public double minimumAltitudeMeters = 120000;
         private Camera background;
         private GameObject globe;
         private CloudShell cloudShell;
+        private Renderer globeRenderer;
+        private Light backgroundSun;
         private UniversalAdditionalCameraData launchData, backgroundData;
         private int originalMask;
         private CameraRenderType originalRenderType;
@@ -44,6 +50,12 @@ namespace ESP.Presentation
             Vector3 sourceY = new Vector3(0, (float)Math.Sin(lat), (float)Math.Cos(lat));
             Vector3 sourceZ = new Vector3((float)Math.Cos(lon), (float)(Math.Cos(lat) * Math.Sin(lon)), (float)(-Math.Sin(lat) * Math.Sin(lon)));
             globe.transform.rotation = Quaternion.LookRotation(sourceZ, sourceY);
+            // Share the actual selected map material, including newly downloaded imagery.
+            var selectedMaterial = mission.mapLayers != null && mission.mapLayers.earth != null
+                ? mission.mapLayers.earth.sharedMaterial : globeMaterial;
+            if (globeRenderer.sharedMaterial != selectedMaterial) globeRenderer.sharedMaterial = selectedMaterial;
+            if (backgroundSun != null && earthSun != null)
+                backgroundSun.transform.rotation = globe.transform.rotation * earthSun.transform.rotation;
             background.transform.position = mission.launchCamera.transform.position / 1000000f;
             background.transform.rotation = mission.launchCamera.transform.rotation;
             background.fieldOfView = mission.launchCamera.fieldOfView;
@@ -72,10 +84,24 @@ namespace ESP.Presentation
             launchData.renderType = CameraRenderType.Overlay;
             launch.cullingMask = originalMask & ~(1 << backdropLayer);
             backgroundData.cameraStack.Add(launch);
+            if (starShader) { starMaterial = new Material(starShader); StarField.Create(background, starMaterial, backdropLayer); }
             globe = new GameObject("Scaled WGS84 flight backdrop");
             globe.layer = backdropLayer;
             globe.AddComponent<MeshFilter>().sharedMesh = globeMesh;
-            globe.AddComponent<MeshRenderer>().sharedMaterial = globeMaterial;
+            globeRenderer = globe.AddComponent<MeshRenderer>();
+            globeRenderer.sharedMaterial = globeMaterial;
+            if (earthSun != null)
+            {
+                var sunObject = new GameObject("Earth-frame backdrop sunlight");
+                sunObject.layer = backdropLayer;
+                sunObject.transform.SetParent(globe.transform, false);
+                backgroundSun = sunObject.AddComponent<Light>();
+                backgroundSun.type = LightType.Directional;
+                backgroundSun.intensity = earthSun.intensity;
+                backgroundSun.color = earthSun.color;
+                backgroundSun.cullingMask = 1 << backdropLayer;
+                backgroundSun.shadows = LightShadows.None;
+            }
             cloudShell = globe.AddComponent<CloudShell>();
             configured = true;
             return true;
@@ -93,6 +119,7 @@ namespace ESP.Presentation
             }
             if (background != null) Destroy(background.gameObject);
             if (globe != null) Destroy(globe);
+            if (starMaterial != null) Destroy(starMaterial);
             background = null; globe = null; cloudShell = null; configured = false;
         }
 

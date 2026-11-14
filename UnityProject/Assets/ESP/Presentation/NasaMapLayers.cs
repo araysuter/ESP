@@ -103,6 +103,7 @@ namespace ESP.Presentation
             var result=cloudLayer?new Texture2D(2048,1024,TextureFormat.RGBA32,true,true):OfflineCopy();
             var pixels=cloudLayer?new Color32[2048*1024]:result.GetPixels32();
             var covered=new bool[pixels.Length];
+            var cloudBlend=cloudLayer?new CloudShell.ObservationBlend(2048,1024):null;
             DateTime first=DateTime.MaxValue,last=DateTime.MinValue;int successes=0,validPixels=0,unknownPixels=0;
             try{
                 int days=3;
@@ -135,19 +136,15 @@ namespace ESP.Presentation
                             }
                         }
                         bool any=false;
-                        for(int p=0;p<pixels.Length;p++){
+                        if(cloudLayer){
+                            int observed=cloudBlend.Add(source,offset,covered,out int unknown);
+                            unknownPixels+=unknown;any=observed>0;
+                            Debug.Log("ESP_CLOUD_OBSERVATION date="+date+" valid="+observed+" unknown="+unknown);
+                        }
+                        else for(int p=0;p<pixels.Length;p++){
                             var c=source[p];if(covered[p]||c.a==0||(mask!=null&&mask[p].a>0))continue;
-                            if(cloudLayer){
-                                // Exact official 0–100% MODIS palette only. Fill and unknown
-                                // colors stay transparent; never infer clouds from white pixels.
-                                if(!CloudShell.TryCloudFraction(c,out var percent)){unknownPixels++;continue;}
-                                byte density=(byte)Mathf.RoundToInt(percent*2.55f*c.a/255f);
-                                pixels[p]=new Color32(density,255,0,c.a);
-                            }else{
-                                // Respect NASA's no-data mask, never infer observation coverage from RGB.
-                                pixels[p]=(Color32)Color.Lerp((Color)pixels[p],(Color)c,c.a/255f);
-                            }
-                            // A valid clear-sky (0%) sample also blocks older cloudy samples.
+                            // Respect NASA's no-data mask, never infer observation coverage from RGB.
+                            pixels[p]=(Color32)Color.Lerp((Color)pixels[p],(Color)c,c.a/255f);
                             covered[p]=true;any=true;validPixels++;
                         }
                         if(any){successes++;if(day<first)first=day;if(day>last)last=day;}
@@ -155,6 +152,7 @@ namespace ESP.Presentation
                 }
                 if(id!=generation)yield break;
                 if(successes==0){status="NASA imagery unavailable/empty — previous map retained";yield break;}
+                if(cloudLayer){pixels=cloudBlend.Finish();validPixels=covered.Count(value=>value);}
                 result.SetPixels32(pixels);result.Apply(cloudLayer,false);
                 result.wrapModeU=TextureWrapMode.Repeat;result.wrapModeV=TextureWrapMode.Clamp;
                 result.filterMode=cloudLayer?FilterMode.Trilinear:FilterMode.Bilinear;
@@ -162,6 +160,10 @@ namespace ESP.Presentation
                     if(!clouds)clouds=earth.GetComponent<CloudShell>();
                     if(!clouds)clouds=earth.gameObject.AddComponent<CloudShell>();
                     if(!clouds.Show(result,CloudShader)){status="Cloud renderer unavailable — previous map retained";yield break;}
+                    // True-color satellite imagery already contains clouds and day-swath
+                    // boundaries. Never double it beneath the independently decoded shell.
+                    earth.material.mainTexture=offlineTexture;
+                    if(downloaded)Destroy(downloaded);downloaded=null;
                     if(cloudDownloaded)Destroy(cloudDownloaded);cloudDownloaded=result;result=null;
                 }else{
                     if(clouds)clouds.Hide();
@@ -169,13 +171,22 @@ namespace ESP.Presentation
                 }
                 DisplayedLayerId=layerIds[index];DisplayedDate=last.ToString("yyyy-MM-dd");displayed=index;
                 string dateRange=first.ToString("yyyy-MM-dd")+(first!=last?" to "+last.ToString("yyyy-MM-dd"):"");
-                shown=(cloudLayer?"Observed cloud shell":"Satellite true-color")+" temporal mosaic "+dateRange+" UTC • "+(cloudLayer?"transparent gaps; representative 10 km display height":"Blue Marble fills no-data")+"; not instantaneous";
-                double coverage=100.0*validPixels/pixels.Length;
-                status="NASA GIBS • "+dateRange+" UTC • "+coverage.ToString("F0")+"% observed • fetched "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'")+" • "+(cloudLayer?"cloud fraction, not live 3D weather":"historical fallback in gaps");
+                shown=(cloudLayer?"Smoothed cloud observation blend":"Satellite true-color temporal mosaic")+" "+dateRange+" UTC • "+(cloudLayer?"Blue Marble ground; transparent unsampled areas; 10 km display height":"Blue Marble fills no-data")+"; not instantaneous";
+                double coverage=AreaCoverage(covered,2048,1024);
+                status="NASA GIBS • "+dateRange+" UTC • "+coverage.ToString("F1")+"% area observed / "+(100-coverage).ToString("F1")+"% missing • fetched "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'")+" • "+(cloudLayer?"smoothed dated cloud blend":"historical fallback in gaps");
                 LayerChanged?.Invoke();Debug.Log("ESP_NASA_LAYER_OK "+layerIds[index]+" "+DisplayedDate);
-                if(cloudLayer)Debug.Log("ESP_CLOUD_SHELL_OK valid="+validPixels+" unknown="+unknownPixels+" days="+successes+" range="+dateRange);
+                if(cloudLayer)Debug.Log("ESP_CLOUD_SHELL_OK valid="+validPixels+" missing="+(pixels.Length-validPixels)+" observedAreaPercent="+coverage.ToString("F3")+" unknown="+unknownPixels+" days="+successes+" range="+dateRange+" composite=normalized-observation-blend base=BlueMarble");
                 if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0)StartCoroutine(CaptureTest(index));
             }finally{if(result)Destroy(result);}
+        }
+        static double AreaCoverage(bool[] covered,int width,int height)
+        {
+            double observed=0,total=0;
+            for(int y=0;y<height;y++){
+                double area=Math.Cos(((y+.5)/height-.5)*Math.PI);
+                for(int x=0;x<width;x++){total+=area;if(covered[y*width+x])observed+=area;}
+            }
+            return 100*observed/total;
         }
         void OnGUI()
         {
@@ -189,7 +200,7 @@ namespace ESP.Presentation
             GUI.Label(new Rect(30,y+70,110,22),"Date (optional)");requestedDate=GUI.TextField(new Rect(140,y+70,120,24),requestedDate,10);
             if(GUI.Button(new Rect(270,y+70,140,24),"Latest date")){requestedDate="";if(selected>=0)Select(selected);}
             if(GUI.Button(new Rect(420,y+70,90,24),"Load date")&&selected>=0)Select(selected);
-            if(displayed==1)GUI.Label(new Rect(560,y+35,330,65),"White opacity = observed cloud fraction\nTransparent = clear or missing observations\nRepresentative display height: 10 km");
+            if(displayed==1)GUI.Label(new Rect(560,y+35,330,65),"White = smoothed dated cloud fractions\nTransparent = clear or unsampled areas\nRepresentative display height: 10 km");
             autoRefresh=GUI.Toggle(new Rect(900,y+40,240,25),autoRefresh,"Refresh latest imagery every 15 min");
             GUI.Label(new Rect(30,y+100,Screen.width-60,22),status);
             GUI.Label(new Rect(30,y+125,Screen.width-60,22),"Drag to orbit • Scroll to zoom • Satellite composites are not live wind/forecast data; no flight forces applied.");

@@ -89,6 +89,125 @@ namespace ESP.Presentation
             percent = 0;
             return pixel.a > 0 && Fractions.TryGetValue((pixel.r << 16) | (pixel.g << 8) | pixel.b, out percent);
         }
+
+        /// <summary>
+        /// Bounded, display-only reconstruction of dated observations. RG stores
+        /// fraction * support, support; even mipmaps must keep missing != clear.
+        /// The original observation mask is counted separately by the caller.
+        /// </summary>
+        public sealed class ObservationBlend
+        {
+            readonly int width, height;
+            readonly Vector2[] accumulated, samples, scratch;
+            readonly float[] support;
+
+            public ObservationBlend(int width, int height)
+            {
+                this.width = width; this.height = height;
+                accumulated = new Vector2[width * height];
+                samples = new Vector2[accumulated.Length];
+                scratch = new Vector2[accumulated.Length];
+                support = new float[accumulated.Length];
+            }
+
+            public int Add(Color32[] source, int daysOld, bool[] observed, out int unknown)
+            {
+                unknown = 0; int valid = 0;
+                for (int i = 0; i < source.Length; i++)
+                {
+                    samples[i] = Vector2.zero;
+                    if (TryCloudFraction(source[i], out byte percent))
+                    {
+                        float weight = source[i].a / 255f;
+                        samples[i] = new Vector2(percent * .01f * weight, weight);
+                        observed[i] = true; valid++;
+                    }
+                    else if (source[i].a > 0 &&
+                        !(source[i].r == 192 && source[i].g == 192 && source[i].b == 192)) unknown++;
+                }
+                if (valid == 0) return 0;
+                // Two small box filters approximate a tent kernel. Each source day
+                // feathers to zero support at its swath edges, rather than abruptly
+                // replacing a different day's weather. No large missing region is filled.
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    SmoothLongitude(samples, scratch);
+                    SmoothLatitude(scratch, samples);
+                }
+                float recency = Mathf.Pow(.65f, daysOld);
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    accumulated[i] += samples[i] * recency;
+                    support[i] = Mathf.Max(support[i], samples[i].y);
+                }
+                return valid;
+            }
+
+            public Color32[] Finish()
+            {
+                var field = new Vector2[accumulated.Length];
+                for (int i = 0; i < field.Length; i++)
+                {
+                    float fraction = accumulated[i].y > 0 ? accumulated[i].x / accumulated[i].y : 0;
+                    field[i] = new Vector2(fraction * support[i], support[i]);
+                }
+                // All longitudes meet at each pole. A single validity-weighted ring
+                // value prevents the UV fan's wedges from meeting with different colors.
+                CollapsePolarRing(field, 0);
+                CollapsePolarRing(field, height - 1);
+                var pixels = new Color32[field.Length];
+                for (int i = 0; i < pixels.Length; i++)
+                    pixels[i] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(field[i].x) * 255),
+                        (byte)Mathf.RoundToInt(Mathf.Clamp01(field[i].y) * 255), 0, 255);
+                return pixels;
+            }
+
+            void SmoothLongitude(Vector2[] input, Vector2[] output)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    float latitude = ((y + .5f) / height - .5f) * Mathf.PI;
+                    // Constant angular footprint on the sphere, not stretched polar
+                    // scan lines. Running sums keep polar filtering O(pixel count).
+                    int radius = Mathf.Min(width / 2 - 1,
+                        Mathf.CeilToInt(2 / Mathf.Max(.001f, Mathf.Cos(latitude))));
+                    Vector2 sum = Vector2.zero;
+                    for (int dx = -radius; dx <= radius; dx++) sum += input[y * width + Wrap(dx)];
+                    for (int x = 0; x < width; x++)
+                    {
+                        output[y * width + x] = sum / (2 * radius + 1);
+                        sum += input[y * width + Wrap(x + radius + 1)] - input[y * width + Wrap(x - radius)];
+                    }
+                }
+            }
+
+            void SmoothLatitude(Vector2[] input, Vector2[] output)
+            {
+                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    Vector2 sum = Vector2.zero;
+                    for (int dy = -2; dy <= 2; dy++)
+                    {
+                        int sy = y + dy, sx = x;
+                        // Crossing a pole continues on the opposite meridian.
+                        if (sy < 0) { sy = -sy - 1; sx = Wrap(x + width / 2); }
+                        else if (sy >= height) { sy = 2 * height - sy - 1; sx = Wrap(x + width / 2); }
+                        sum += input[sy * width + sx];
+                    }
+                    output[y * width + x] = sum / 5;
+                }
+            }
+
+            int Wrap(int x) => (x % width + width) % width;
+            void CollapsePolarRing(Vector2[] field, int y)
+            {
+                Vector2 mean = Vector2.zero;
+                for (int x = 0; x < width; x++) mean += field[y * width + x];
+                mean /= width;
+                for (int x = 0; x < width; x++) field[y * width + x] = mean;
+            }
+        }
         private void OnDestroy()
         {
             if (shell) Destroy(shell);
