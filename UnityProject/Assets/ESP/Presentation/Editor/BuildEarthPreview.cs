@@ -34,6 +34,10 @@ public static class BuildEarthPreview
         camera.gameObject.AddComponent<NasaEventFeed>();
         camera.gameObject.AddComponent<NasaSpaceWeather>();
         camera.gameObject.AddComponent<NasaEventPanel>();
+        camera.gameObject.AddComponent<GlobePointPicker>();
+        camera.gameObject.AddComponent<PointWeather>();
+        camera.gameObject.AddComponent<NasaRegionalPreview>();
+        camera.gameObject.AddComponent<LocationInspector>();
         if(!EditorSceneManager.SaveScene(scene,"Assets/ESP/Art/Earth/EarthPreview.unity"))throw new Exception("Scene save failed");AssetDatabase.SaveAssets();
         PlayerSettings.productName="ESP Earth Preview";
         var result=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{"Assets/ESP/Art/Earth/EarthPreview.unity"},locationPathName=Environment.GetEnvironmentVariable("ESP_BUILD_PATH"),target=BuildTarget.StandaloneOSX,options=BuildOptions.Development});

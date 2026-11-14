@@ -20,12 +20,19 @@ namespace ESP.Presentation
         Texture2D downloaded;
         bool available;
         public string Status=>status;
-        IEnumerator Start()
+        public string DisplayedLayerId { get; private set; }="BlueMarble_ShadedRelief_Bathymetry";
+        public string DisplayedDate { get; private set; }="";
+        public event Action LayerChanged;
+        bool autoRefresh=true;
+        IEnumerator AutoRefresh(){while(true){yield return new WaitForSecondsRealtime(900);if(!autoRefresh)continue;yield return StartCoroutine(Availability());if(selected>=0&&string.IsNullOrEmpty(requestedDate))Select(selected);}}
+        IEnumerator Start(){yield return StartCoroutine(Availability());StartCoroutine(AutoRefresh());}
+
+        IEnumerator Availability()
         {
             using(var req=UnityWebRequest.Get("https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities"))
             {
                 req.timeout=20;yield return req.SendWebRequest();
-                if(req.result!=UnityWebRequest.Result.Success){status="NASA unavailable — bundled offline map retained";yield break;}
+                if(req.result!=UnityWebRequest.Result.Success){status="NASA unavailable — previous map retained";yield break;}
                 try{
                     var doc=XDocument.Parse(req.downloadHandler.text);
                     for(int i=0;i<layerIds.Length;i++){
@@ -36,14 +43,14 @@ namespace ESP.Presentation
                     }
                     available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'");
                     Debug.Log("ESP_NASA_CAPABILITIES_OK "+string.Join(",",defaults));
-                }catch(Exception){status="NASA metadata could not be read — offline map retained";}
+                }catch(Exception){status="NASA metadata could not be read — previous map retained";}
             }
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0&&available)Select(0);
         }
         public void Select(int index)
         {
             generation++;selected=index;
-            if(index<0){displayed=-1;earth.material.mainTexture=offlineTexture;shown="Offline Blue Marble composite";status="Bundled fallback — not current weather";return;}
+            if(index<0){displayed=-1;earth.material.mainTexture=offlineTexture;shown="Offline Blue Marble composite";status="Bundled fallback — not current weather";DisplayedLayerId="BlueMarble_ShadedRelief_Bathymetry";DisplayedDate="";LayerChanged?.Invoke();return;}
             if(!available||string.IsNullOrEmpty(defaults[index])){status="This layer has no verified available date";return;}
             string date=string.IsNullOrWhiteSpace(requestedDate)?defaults[index]:requestedDate.Trim();
             if(!DateTime.TryParseExact(date.Substring(0,Math.Min(10,date.Length)),"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out var parsed)||parsed.Date>DateTime.UtcNow.Date){status="Enter an available date as YYYY-MM-DD (no future dates)";return;}
@@ -61,7 +68,7 @@ namespace ESP.Presentation
                 if(texture.width!=2048||texture.height!=1024){Destroy(texture);status="Unexpected NASA response — previous map retained";yield break;}
                 texture.wrapModeU=TextureWrapMode.Repeat;texture.wrapModeV=TextureWrapMode.Clamp;
                 earth.material.mainTexture=texture;if(downloaded)Destroy(downloaded);downloaded=texture;
-                displayed=index;shown=layerNames[index]+" | requested observation day "+date;
+                DisplayedLayerId=layerIds[index];DisplayedDate=date;LayerChanged?.Invoke();displayed=index;shown=layerNames[index]+" | requested observation day "+date;
                 status="NASA GIBS • fetched "+DateTime.UtcNow.ToString("HH:mm 'UTC'")+" • gaps/partial coverage possible";
                 Debug.Log("ESP_NASA_LAYER_OK "+layerIds[index]+" "+date);
                 if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0)StartCoroutine(CaptureTest(index));
@@ -79,6 +86,7 @@ namespace ESP.Presentation
             if(GUI.Button(new Rect(270,y+70,140,24),"Latest date")){requestedDate="";if(selected>=0)Select(selected);}
             if(GUI.Button(new Rect(420,y+70,90,24),"Load date")&&selected>=0)Select(selected);
             if(displayed==1&&cloudLegend)GUI.DrawTexture(new Rect(560,y+35,300,65),cloudLegend,ScaleMode.ScaleToFit);
+            autoRefresh=GUI.Toggle(new Rect(900,y+40,240,25),autoRefresh,"Refresh latest imagery every 15 min");
             GUI.Label(new Rect(30,y+100,Screen.width-60,22),status);
             GUI.Label(new Rect(30,y+125,Screen.width-60,22),"Drag to orbit • Scroll to zoom • Satellite composites are not live wind/forecast data; no flight forces applied.");
         }
