@@ -8,12 +8,11 @@ namespace FlightCore
     /// <remarks>
     /// This simulator uses a simplified Earth-centered inertial frame with SI units:
     /// - Position: meters
-    /// - Velocity: meters/second  
+    /// - Velocity: meters/second
     /// - Time: seconds (mission time)
-    /// 
+    ///
     /// Integration method: Velocity Verlet
-    /// Coordinate convention: Simplified Earth-centered inertial frame (not ICRF)
-    /// 
+    ///
     /// The simulation advances by exactly the configured time step on each Step() call.
     /// </remarks>
     public class OrbitSimulator
@@ -37,7 +36,7 @@ namespace FlightCore
         {
             if (timeStep <= 0.0)
                 throw new ArgumentException("Time step must be positive.", nameof(timeStep));
-            
+
             if (double.IsNaN(timeStep) || double.IsInfinity(timeStep))
                 throw new ArgumentException("Time step must be finite.", nameof(timeStep));
 
@@ -66,17 +65,17 @@ namespace FlightCore
             // First half-step for velocity (using current position)
             Vector3d acceleration = Gravity.Acceleration(_position);
             Vector3d halfStepVelocity = _velocity + 0.5 * _timeStep * acceleration;
-            
+
             // Full step for position
             Vector3d newPosition = _position + _timeStep * halfStepVelocity;
-            
+
             // Second half-step for velocity (using new position)
             Vector3d newAcceleration = Gravity.Acceleration(newPosition);
             Vector3d finalVelocity = halfStepVelocity + 0.5 * _timeStep * newAcceleration;
-            
+
             // Advance time
             double newMissionTime = _missionTime + _timeStep;
-            
+
             // Update state only after all calculations succeed
             _position = newPosition;
             _velocity = finalVelocity;
