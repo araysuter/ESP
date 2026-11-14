@@ -61,19 +61,12 @@ namespace ESP.Presentation
             if (director == null || director.mapCamera == null || icon == null) return;
             var driver = director.FlightDriver as RocketFlightDriver;
             var simulation = driver != null ? driver.Simulation : null;
-            Vector3 point, up;
+            Vector3 point;
             if (simulation != null && simulation.State.IsLaunched)
             {
                 var state = simulation.State;
                 var ecef = EarthFrames.InertialToEcef(state.Position, Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
                 point = new Vector3((float)(ecef.X / 1000000), (float)(ecef.Z / 1000000), (float)(ecef.Y / 1000000));
-                var geo = EarthFrames.EcefToGeodetic(ecef);
-                double lat = geo.LatitudeRadians, lon = geo.LongitudeRadians;
-                double pitch = simulation.ActualPitchDegrees * Math.PI / 180, heading = simulation.ActualHeadingDegrees * Math.PI / 180;
-                double east = Math.Cos(pitch) * Math.Sin(heading), north = Math.Cos(pitch) * Math.Cos(heading), vertical = Math.Sin(pitch);
-                up = new Vector3((float)(-Math.Sin(lon) * east - Math.Sin(lat) * Math.Cos(lon) * north + Math.Cos(lat) * Math.Cos(lon) * vertical),
-                    (float)(Math.Cos(lat) * north + Math.Sin(lat) * vertical),
-                    (float)(Math.Cos(lon) * east - Math.Sin(lat) * Math.Sin(lon) * north + Math.Cos(lat) * Math.Sin(lon) * vertical)).normalized;
             }
             else
             {
@@ -81,7 +74,6 @@ namespace ESP.Presentation
                 double lat = site.Latitude * Math.PI / 180, lon = site.Longitude * Math.PI / 180;
                 var ecef = EarthFrames.GeodeticToEcef(lat, lon, site.ElevationMeters);
                 point = new Vector3((float)(ecef.X / 1000000), (float)(ecef.Z / 1000000), (float)(ecef.Y / 1000000));
-                up = new Vector3((float)(Math.Cos(lat) * Math.Cos(lon)), (float)Math.Sin(lat), (float)(Math.Cos(lat) * Math.Sin(lon)));
             }
             var camera = director.mapCamera;
             // Test the true anchor against the ellipsoid, so enlargement never reveals a rear-side vehicle.
@@ -101,7 +93,10 @@ namespace ESP.Presentation
             // physical pixel sizing otherwise disappears under a launch-site label.
             float iconHeight = height * .12f;
             icon.position = point + point.normalized * .01f;
-            icon.rotation = Quaternion.FromToRotation(Vector3.up, up);
+            // This is an enlarged model marker, not a scale or attitude rendering.
+            // Face it toward the map camera so a vertical pad rocket is not end-on.
+            // Actual pitch/heading remain available on the flight navball.
+            icon.rotation = camera.transform.rotation * Quaternion.Euler(0, 155, -12);
             icon.localScale = Vector3.one * (iconHeight / modelHeight);
         }
 

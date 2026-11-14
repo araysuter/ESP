@@ -38,5 +38,7 @@ Official references:
 - [NASA visualization catalog and utility masks](https://nasa-gibs.github.io/gibs-api-docs/available-visualizations/)
 - [Live WMS capabilities, including layer time domains](https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities)
 
-Source inspection and network samples were verified outside Unity. Packaged
-rendering, request cancellation, and offline interaction require player rehearsal.
+Packaged macOS rendering in the project VM passed on November 14: the
+November 12–14 temporal mosaic displayed without black swath holes, the cloud
+layer loaded, and restoring the bundled globe completed. Cancellation still
+requires the rapid layer-switch rehearsal recorded with the release QA.

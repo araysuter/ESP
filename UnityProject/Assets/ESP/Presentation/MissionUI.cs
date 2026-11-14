@@ -366,6 +366,7 @@ namespace ESP.Presentation
             weatherDetails.style.display = weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
+            if (director != null && director.mapLayers != null) selectedLayer = director.mapLayers.SelectedIndex + 1;
             for (int i = 0; i < layers.Length; i++) Selected(layers[i], i == selectedLayer);
             Selected(weatherToggle, weatherOpen);
             Selected(detailsToggle, detailsOpen);
@@ -394,7 +395,7 @@ namespace ESP.Presentation
             status.text = isMap ? "EARTH / SELECT A LAUNCH SITE" : (director.FlightStatus ?? "READY").ToUpperInvariant();
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
-            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nVehicle map markers are enlarged for visibility; position is georeferenced.\n" + vehicleInfo;
+            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nVehicle map markers are enlarged and camera-facing; position is georeferenced. Flight attitude is shown on the navball.\n" + vehicleInfo;
             flightDetailText.text = isMap ? mapInfo : (director.FlightStatus ?? "READY") + "\n\n" +
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") + "\n\n" + vehicleInfo +
                 "\nPitch: W/S or ↑/↓  ·  Stage: Space  ·  Map: M\nThrottle changes switch assistance off. Roll is not modeled.";

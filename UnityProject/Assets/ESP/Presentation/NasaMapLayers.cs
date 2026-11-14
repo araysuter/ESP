@@ -30,6 +30,7 @@ namespace ESP.Presentation
         Texture2D downloaded, cloudDownloaded;
         bool available;
         public string Status=>status;
+        public int SelectedIndex=>selected;
         public string DisplayedDescription=>shown;
         public string DisplayedLayerId { get; private set; }="BlueMarble_ShadedRelief_Bathymetry";
         public string DisplayedDate { get; private set; }="";
