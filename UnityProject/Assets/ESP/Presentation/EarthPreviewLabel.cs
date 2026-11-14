@@ -13,6 +13,7 @@ namespace ESP.Presentation
 
         private void Start()
         {
+            Application.targetFrameRate=30;Application.runInBackground=true;
             capture = Array.IndexOf(Environment.GetCommandLineArgs(), "-espCapture") >= 0;
         }
 
@@ -35,7 +36,7 @@ namespace ESP.Presentation
 
             GUI.Box(new Rect(20, 20, 330, 110), GUIContent.none);
             GUI.Label(new Rect(34, 29, 300, 25), "EARTH IMAGERY PREVIEW", titleStyle);
-            GUI.Label(new Rect(34, 57, 300, 20), "NASA Blue Marble  /  WGS84", detailStyle);
+            GUI.Label(new Rect(34, 57, 300, 20), "NASA observations  /  WGS84", detailStyle);
             GUI.Label(new Rect(34, 77, 300, 20), "Map scale: 1 unit = 1,000 km", detailStyle);
             GUI.Label(new Rect(34, 97, 300, 20), "Not a simulated flight", detailStyle);
         }
@@ -43,9 +44,9 @@ namespace ESP.Presentation
         private void Update()
         {
             if (!capture) return;
-            if (Time.frameCount == 60)
+            if (Time.frameCount == (Array.IndexOf(Environment.GetCommandLineArgs(), "-espLiveTest")>=0 ? 1800 : 60))
                 ScreenCapture.CaptureScreenshot(Path.Combine(Application.persistentDataPath, "esp-earth.png"));
-            if (Time.frameCount == 100) Application.Quit();
+            if (Time.frameCount == (Array.IndexOf(Environment.GetCommandLineArgs(), "-espLiveTest")>=0 ? 1850 : 100)) Application.Quit();
         }
     }
 }
