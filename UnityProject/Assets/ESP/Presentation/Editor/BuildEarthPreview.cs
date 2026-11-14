@@ -29,6 +29,11 @@ public static class BuildEarthPreview
         var sun=new GameObject("Sun").AddComponent<Light>();sun.type=LightType.Directional;sun.intensity=1.5f;sun.transform.rotation=Quaternion.LookRotation(new Vector3(-1,-.25f,.5f));
         RenderSettings.ambientMode=UnityEngine.Rendering.AmbientMode.Flat;RenderSettings.ambientLight=new Color(.1f,.12f,.16f);
         var camera=new GameObject("Globe Camera").AddComponent<Camera>();camera.tag="MainCamera";camera.transform.position=new Vector3(3,8,-18);camera.transform.LookAt(Vector3.zero);camera.nearClipPlane=.01f;camera.farClipPlane=100;camera.fieldOfView=45;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.002f,.005f,.014f);camera.gameObject.AddComponent<EarthPreviewLabel>();
+        camera.gameObject.AddComponent<GlobeCameraControls>();
+        var layers=camera.gameObject.AddComponent<NasaMapLayers>();layers.earth=globe.GetComponent<Renderer>();layers.offlineTexture=tex;layers.cloudLegend=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Earth/CloudFractionLegend.png");
+        camera.gameObject.AddComponent<NasaEventFeed>();
+        camera.gameObject.AddComponent<NasaSpaceWeather>();
+        camera.gameObject.AddComponent<NasaEventPanel>();
         if(!EditorSceneManager.SaveScene(scene,"Assets/ESP/Art/Earth/EarthPreview.unity"))throw new Exception("Scene save failed");AssetDatabase.SaveAssets();
         PlayerSettings.productName="ESP Earth Preview";
         var result=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{"Assets/ESP/Art/Earth/EarthPreview.unity"},locationPathName=Environment.GetEnvironmentVariable("ESP_BUILD_PATH"),target=BuildTarget.StandaloneOSX,options=BuildOptions.Development});
