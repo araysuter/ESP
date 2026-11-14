@@ -1,0 +1,13 @@
+.DS_Store
+**/Library/
+**/Temp/
+**/Obj/
+**/Logs/
+**/UserSettings/
+**/Builds/
+*.csproj
+*.sln
+.env
+.env.*
+*-token.txt
+**/private/
