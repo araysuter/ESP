@@ -14,7 +14,7 @@ namespace ESP.Presentation
         private VisualElement regionalImage;
         private Label rocketMarker, mapMission;
         private MissionDirector subscribedDirector;
-        private Button viewToggle, action, assist;
+        private Button viewToggle, action, assist, vehicleChoice, modelCredit;
         private readonly Button[] rateButtons = new Button[3];
         private static readonly int[] Rates = { 1, 5, 20 };
         private Slider throttle;
@@ -119,6 +119,12 @@ namespace ESP.Presentation
             status = Label("", 11, Mint, FontStyle.Normal);
             status.style.whiteSpace = WhiteSpace.Normal;
             status.style.maxWidth = 1100;
+            vehicleChoice = Button("ESP DEMO ROCKET", () => { if (director != null) director.SelectVehicle((director.VehicleIndex + 1) % 3); Refresh(); }, false);
+            vehicleChoice.style.alignSelf = Align.FlexStart;
+            flightHeading.Add(vehicleChoice);
+            modelCredit = Button("MODEL CREDIT", () => Application.OpenURL(director.VehicleIndex == 1 ? "https://sketchfab.com/3d-models/spacex-starship-block-3-6f6c6f88a3eb4b4d822fdca66733fbb2" : "https://science.nasa.gov/3d-resources/space-launch-system-sls-block-1/"), false);
+            modelCredit.style.fontSize = 10; modelCredit.style.alignSelf = Align.FlexStart;
+            flightHeading.Add(modelCredit);
             flightHeading.Add(site); flightHeading.Add(status);
             flightControls.Add(flightHeading);
             var flightOptions = Row();
@@ -255,6 +261,10 @@ namespace ESP.Presentation
             nasaStatus.text = director.NasaStatus;
             regionalImage.style.display = director.RegionalImage != null ? DisplayStyle.Flex : DisplayStyle.None;
             regionalImage.style.backgroundImage = director.RegionalImage != null ? new StyleBackground((Texture2D)director.RegionalImage) : new StyleBackground(StyleKeyword.None);
+            vehicleChoice.text = director.VehicleLabel + "  ›";
+            vehicleChoice.SetEnabled(director.CanLaunch);
+            modelCredit.style.display = director.VehicleIndex == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            modelCredit.text = director.VehicleIndex == 1 ? "Model: Clarence365 · CC BY 4.0 · adapted ↗" : "Model: NASA · ESP adaptation ↗";
             site.text = director.SiteName ?? "Launch site";
             status.text = (director.FlightStatus ?? "READY").ToUpperInvariant();
             var flight = director.FlightDriver as RocketFlightDriver;

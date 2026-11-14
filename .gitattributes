@@ -13,3 +13,6 @@ UnityProject/Assets/ESP/Art/Earth/CloudFractionLegend.png -filter -diff -merge -
 
 # Small bundled regional NASA visual composites.
 UnityProject/Assets/ESP/Art/Sites/*.jpg -filter -diff -merge -text
+
+# Small runtime maps (all under 4 MB), committed directly for a reproducible clean clone.
+UnityProject/Assets/ESP/Art/Vehicles/**/*.png -filter -diff -merge -text

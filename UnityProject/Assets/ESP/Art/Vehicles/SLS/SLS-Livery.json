@@ -1,0 +1,726 @@
+{
+  "status": "PRIVATE REVIEW; publication of NASA identifiers not cleared by this script",
+  "include_nasa_logos": false,
+  "source_geometry_unchanged": true,
+  "references": {
+    "front": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+    "aft_detail": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220316-ph-geb01_0030large.jpg",
+    "upper_detail": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220421-ph-jbs01_0035large.jpg",
+    "worm": "https://www.nasa.gov/wp-content/uploads/2023/03/artemis_i_boosters_with_nasa_worm.jpg",
+    "upper_illustration": "https://www.nasa.gov/wp-content/uploads/2023/03/lower_case_usa_500h.jpg",
+    "guide": "https://www.nasa.gov/wp-content/uploads/2022/03/sls-reference-guide-2022-v2-508-0.pdf"
+  },
+  "artwork": [],
+  "markings": [
+    {
+      "name": "CoreAssembly__Decal_Core_Aft_White_Paint",
+      "source_target": "CoreAssembly__NASA_00",
+      "height_m": 5.265312027931214,
+      "angle_degrees": 0.0,
+      "size_m": [
+        26.389378290154262,
+        3.4693759441375733
+      ],
+      "artwork": "white",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220316-ph-geb01_0030large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_0",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 6.0,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_1",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 9.0,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_2",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 14.8,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_3",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 19.3,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_4",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 23.8,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_5",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 28.4,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_6",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 32.9,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_7",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 37.4,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_8",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 41.9,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Band_9",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 46.4,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_NoseBand",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 49.2,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.42
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Checker_0",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 12.0,
+      "angle_degrees": -90.0,
+      "size_m": [
+        3.3,
+        0.6
+      ],
+      "artwork": "checker",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Checker_1",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 30.6,
+      "angle_degrees": -90.0,
+      "size_m": [
+        3.3,
+        0.6
+      ],
+      "artwork": "checker",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Checker_2",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 44.4,
+      "angle_degrees": -90.0,
+      "size_m": [
+        3.3,
+        0.6
+      ],
+      "artwork": "checker",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_RollBar_0",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 17.1,
+      "angle_degrees": -96.87549354156988,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_RollBar_1",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 21.6,
+      "angle_degrees": -83.12450645843012,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_RollBar_2",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 26.1,
+      "angle_degrees": -96.87549354156988,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_RollBar_3",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 35.2,
+      "angle_degrees": -83.12450645843012,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_RollBar_4",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 39.7,
+      "angle_degrees": -96.87549354156988,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Target_0",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 10.5,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.8,
+        0.8
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Target_1",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 45.8,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.8,
+        0.8
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_Target_2",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 52.0,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.5,
+        0.5
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "LeftSRB__Decal_LeftSRB_AftSkirtTarget",
+      "source_target": "LeftSRB__NASA_01",
+      "height_m": 2.8,
+      "angle_degrees": 90.0,
+      "size_m": [
+        0.8,
+        0.8
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220316-ph-geb01_0030large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_0",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 6.0,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_1",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 9.0,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_2",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 14.8,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_3",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 19.3,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_4",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 23.8,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_5",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 28.4,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_6",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 32.9,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_7",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 37.4,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_8",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 41.9,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Band_9",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 46.4,
+      "angle_degrees": 0.0,
+      "size_m": [
+        11.938052083641214,
+        0.12
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Checker_0",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 12.0,
+      "angle_degrees": -90.0,
+      "size_m": [
+        3.3,
+        0.6
+      ],
+      "artwork": "checker",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Checker_1",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 30.6,
+      "angle_degrees": -90.0,
+      "size_m": [
+        3.3,
+        0.6
+      ],
+      "artwork": "checker",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Checker_2",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 44.4,
+      "angle_degrees": -90.0,
+      "size_m": [
+        3.3,
+        0.6
+      ],
+      "artwork": "checker",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_RollBar_0",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 17.1,
+      "angle_degrees": -96.87549354156988,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_RollBar_1",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 21.6,
+      "angle_degrees": -83.12450645843012,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_RollBar_2",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 26.1,
+      "angle_degrees": -96.87549354156988,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_RollBar_3",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 35.2,
+      "angle_degrees": -83.12450645843012,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_RollBar_4",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 39.7,
+      "angle_degrees": -96.87549354156988,
+      "size_m": [
+        0.32,
+        2.8
+      ],
+      "artwork": "black",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Target_0",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 10.5,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.8,
+        0.8
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Target_1",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 45.8,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.8,
+        0.8
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_Target_2",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 52.0,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.5,
+        0.5
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "RightSRB__Decal_RightSRB_AftSkirtTarget",
+      "source_target": "RightSRB__NASA_02",
+      "height_m": 2.8,
+      "angle_degrees": 90.0,
+      "size_m": [
+        0.8,
+        0.8
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220316-ph-geb01_0030large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "CoreAssembly__Decal_Core_Intertank_Band",
+      "source_target": "CoreAssembly__NASA_00",
+      "height_m": 46.2,
+      "angle_degrees": 0.0,
+      "size_m": [
+        26.389378290154262,
+        0.35
+      ],
+      "artwork": "white",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "CoreAssembly__Decal_Core_Target_0",
+      "source_target": "CoreAssembly__NASA_00",
+      "height_m": 25.4,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.9,
+        0.9
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "CoreAssembly__Decal_Core_Target_1",
+      "source_target": "CoreAssembly__NASA_00",
+      "height_m": 64.0,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.9,
+        0.9
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220318-ph-kls03_0079large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "CoreAssembly__Decal_Core_Aft_Engine_Target",
+      "source_target": "CoreAssembly__NASA_00",
+      "height_m": 5.3,
+      "angle_degrees": 90.0,
+      "size_m": [
+        0.9,
+        0.9
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220316-ph-geb01_0030large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "UpperAssembly__Decal_ICPS_US_Flag",
+      "source_target": "UpperAssembly__NASA_03",
+      "height_m": 74.2,
+      "angle_degrees": -69.94647717042118,
+      "size_m": [
+        1.5,
+        0.7894736842105263
+      ],
+      "artwork": "flag",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220421-ph-jbs01_0035large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "UpperAssembly__Decal_LAS_US_Flag",
+      "source_target": "UpperAssembly__NASA_03",
+      "height_m": 86.0,
+      "angle_degrees": -90.0,
+      "size_m": [
+        1.25,
+        0.6578947368421053
+      ],
+      "artwork": "flag",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/lower_case_usa_500h.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "UpperAssembly__Decal_Upper_Adapter_Target",
+      "source_target": "UpperAssembly__NASA_03",
+      "height_m": 76.4,
+      "angle_degrees": -90.0,
+      "size_m": [
+        0.65,
+        0.65
+      ],
+      "artwork": "target",
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/ksc-20220421-ph-jbs01_0035large.jpg",
+      "confidence": "photo-estimated major marking"
+    },
+    {
+      "name": "UpperAssembly__Decal_United_States",
+      "text": "United States",
+      "height_m": 85.35,
+      "reference": "https://www.nasa.gov/wp-content/uploads/2023/03/lower_case_usa_500h.jpg",
+      "confidence": "reference text, photo-estimated scale; Blender font is an approximation"
+    }
+  ],
+  "paint_changes": [
+    "core aft engine section white below 7m",
+    "LVSA foam orange below 72.15m",
+    "slightly darker orange foam visualization"
+  ],
+  "limitations": [
+    "Not a complete photogrammetric survey; small/internal targets omitted",
+    "Mark dimensions/heights/azimuths estimated from cited photographs",
+    "Source printable mesh differs in detail from flight hardware",
+    "No unverified giant USA or SLS logo added to orange tank",
+    "ESA and mission emblems are not supplied; separate artwork/permission review needed",
+    "United States lettering uses approximate Blender font"
+  ],
+  "unity": "Use atlas RGB and alpha with URP/Lit alpha clipping; preserve UVs and group prefixes. Do not replace this material with the plain color palette."
+}

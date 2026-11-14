@@ -1,0 +1,134 @@
+# Blender 5.2.3 LTS MTL File: 'Starship Block 3 V4.blend'
+# www.blender.org
+
+newmtl V3_Aft_Flaps_002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Aft_Flaps_002_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Aft_Flaps_002_Normal.png
+
+newmtl V3_Aft_Flaps_003
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Aft_Flaps_003_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Aft_Flaps_003_Normal.png
+
+newmtl V3_Cargo_Door
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Cargo_Door_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Cargo_Door_Normal.png
+
+newmtl V3_Foward_Flap_002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Foward_Flap_002_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Foward_Flap_002_Normal.png
+
+newmtl V3_Foward_Flap_003
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Foward_Flap_003_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Foward_Flap_003_Normal.png
+
+newmtl V3_Raptor_3
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_Normal.png
+
+newmtl V3_Raptor_3_001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_001_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_001_Normal.png
+
+newmtl V3_Raptor_3_002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_002_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_002_Normal.png
+
+newmtl V3_Raptor_3_Vaccum
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_Vaccum_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_Vaccum_Normal.png
+
+newmtl V3_Raptor_3_Vaccum_001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_Vaccum_001_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_Vaccum_001_Normal.png
+
+newmtl V3_Raptor_3_Vaccum_002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_Vaccum_002_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_Vaccum_002_Normal.png
+
+newmtl V3_Starship_Block_3_V4
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Starship_Block_3_V4_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Starship_Block_3_V4_Normal.png

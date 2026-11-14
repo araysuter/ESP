@@ -1,6 +1,6 @@
 # Starship V3 source-faithful import review
 
-Status: reference review prepared November 14, 2026. The Clarence365 archive has been downloaded and its member listing inspected; Blender scene inspection is pending. No geometry, materials, fin poses, scale, polygon count, or Unity performance are approved by this document. The rejected Stephen Melton model must not be refined or shipped as the selected V3 vehicle.
+Status: reference review prepared November 14, 2026. The Clarence365 archive and corrected Blender source renders have been inspected. Source geometry and nozzle extraction passed the coordinator-run checks below; runtime material baking completed and its corrected preview passed the material-region review. Unity appearance/performance are still pending. The rejected Stephen Melton model must not be refined or shipped as the selected V3 vehicle.
 
 ## Selected source and attribution
 
@@ -58,3 +58,36 @@ Use `--no-render` for inventory alone. Camera fitting infers the longest source 
 ## Measured adaptation checkpoint
 
 The pinned Blender source passed texture relinking and actual nozzle-lip extraction: 33 Super Heavy and six Starship engines. Uniform scaling to the measured 9 m tank barrel yields a 124.1863 m stack; the model is not stretched to a nominal published height. Three outward grid fins and the existing hot-stage geometry are preserved. Runtime PBR baking and Unity validation remain pending.
+
+## Inspected source and adaptation checkpoint
+
+The pinned blend SHA-256 is `5a8003c070f9c0211f622d11c1fab421e04ab4c1f3787c1d5d030b87df7195f6`. The source scene is assembled at saved frame 158, contains 29 mesh objects and **913,257 triangles**, and has no actions that require rewinding to a different frame. `V4` in the source filenames/object names is the artist's revision label; the selected vehicle is Block 3.
+
+The three extended grid fins and four solid ship flaps are retained in their authored poses. Thirteen booster engines are separate objects; the outer twenty are already joined into `Superheavy Block 3 V4`. All six ship engines are separate. No replacement engine ring or fin geometry is needed.
+
+All material-used external images were successfully relinked and loaded in the corrected inspection run. The adapter normalizes spaces/underscores, JPG/JPEG and Blender image suffixes. The unused `Fgy5af9WAAAPmuT.jpg` reference image is not supplied and is not required by any material. The corrected source render was visually reviewed; the earlier magenta screenshot was a missing-texture failure, not the source's intended material appearance.
+
+`prepare_starship_v3.py --no-bake` passed on the coordinator's Blender instance. Fitting the dominant cylindrical tank surface and applying one uniform factor of **4.937997046 metres per source unit** gives a 9 m barrel and **124.186294855 m** overall height. This is the source model's measured aspect ratio; it has not been independently stretched to a published stack height.
+
+The diagnostic found **33 booster and six ship nozzle openings** from actual connected lip vertices. For vacuum bells where the absolute lowest world-Z vertices did not isolate the complete opening, it progressively inspects a wider lip band and fits complete 3D circumferences and their planes. All resulting source exhaust directions were local down; the initial failed lowest-vertex selection was not evidence of a gimbal tilt. The manifest records measured centers, opening radii and normalized exhaust directions. Its count/residual checks fail explicitly when source geometry cannot be identified.
+
+The source remains an artistic model. S45/RBXX markings, small geometric offsets, exact fin angles and fine surface features are retained rather than being asserted to match a particular flown stack. The lower grid-fin layout matches the V3 visual reference; this does not validate every dimension.
+
+## Runtime export contract
+
+The adapter writes three `ESP-Starship-Booster`, `ESP-Starship-BoosterDetails`, and `ESP-Starship-Ship` OBJ/MTL pairs, `ESP-Starship-import.json`, `ESP-Starship.blend`, `ESP-Starship-preview.png` and a `Textures/` directory. The source scene retains its original material graphs and UV layers; the runtime scene contains copies of the same evaluated meshes. A separate `ESP_RuntimeUV` layer supports atlas baking, with the source UV layer preserved. No decimation is applied.
+
+- Mesh names begin with `Booster__` or `Ship__`. Export axes map Blender `(x,y,z)` to Unity `(x,z,-y)`, in metres with a common bottom-center frame.
+- `nozzle_anchors[]` contains `name`, `stage`, `unity_position_m`, `opening_radius_m`, `unity_exhaust_direction`, `source_object` and `engine_kind`. Rotate each anchor from local down to its recorded direction. Keep sea-level and vacuum opening radii distinct.
+- `materials[]` contains `name`, `base_color_texture`, `metallic_smoothness_texture`, `normal_texture`, `base_color`, `metallic`, `smoothness` and `source_materials`. Texture filenames are relative to the export directory.
+- Base color is sRGB. The packed PBR texture is linear, with metallic in R and smoothness in A. Normal maps are tangent-space +Y and require Unity normal-map import. Bind those explicit maps to URP Lit; an OBJ material's scalar fields cannot represent the source graphs.
+
+Baking samples the source base color, metallic and roughness inputs without lighting, and bakes its normal/bump response. The static conversion omits unused procedural reentry-emission controls; it does not claim to reproduce arbitrary future material animation. Default map sizes are 2048 for the two body meshes, 1024 for flaps and 512 for other detail; packed/normal maps cap at 1024. Runtime appearance must be compared against the corrected source render before qualification.
+
+## Corrected bake review
+
+The coordinator completed the full bake/export/preview with 913,257 triangles and all 39 measured anchors. The first preview exposed a material-assignment bug: clearing mesh material slots reset face indices to zero. That export was rejected. The corrected adapter saves and restores every source face material index, asserts the assignments before baking, and uses the same camera direction as the source inspection.
+
+The corrected preview restores the dark ship heatshield and steel boundaries, preserves the authored fins and engine hardware, and passes the broad material-region and silhouette review. The booster surface detail is visibly softer than the source procedural shader. Check it at actual in-game camera distances; a 4096 base-color atlas and 2048 packed/normal maps for the two body meshes are an available quality increase if required. Current defaults remain 2048/1024. No claim of pixel-identical material rendering or packaged performance is made.
+
+Unity validation: the original one-sided URP import hid thin/inward hull surfaces visible in Blender. Explicit opaque, two-sided Starship materials restored those panels without reconstructing the geometry. The split export imported at (13.70, 124.19, 17.35) m bounds and the macOS package built successfully. The representative flight completed staging, verified orbit after 60 s coast, map view and site-change reset. Its NASA analysis was stale in that run; telemetry correctly labeled Open-Meteo fallback.

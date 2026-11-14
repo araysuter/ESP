@@ -23,3 +23,7 @@ jobs:
         run: dotnet run --configuration Release --project Mission.Tests/Mission.Tests.csproj
       - name: Historical weather force probe
         run: dotnet run --configuration Release --project Atmosphere.Probe/Atmosphere.Probe.csproj -- data/weather/geos-fp-lc39a-20261114T0900Z.json --at 2026-11-14T10:00:00Z
+      - name: Parallel solid booster checks
+        run: dotnet run --configuration Release --project Booster.Tests/Booster.Tests.csproj
+      - name: Representative vehicle missions
+        run: dotnet run --configuration Release --project Vehicle.Tests/Vehicle.Tests.csproj

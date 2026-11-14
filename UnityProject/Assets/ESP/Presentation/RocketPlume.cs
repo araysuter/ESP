@@ -1,0 +1,136 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+namespace ESP.Presentation
+{
+    /// <summary>
+    /// Cosmetic exhaust only. Call SetFlow with simulated engine output and local
+    /// ambient pressure. Anchors point along local -Y; the fallback sits at the
+    /// vehicle base. No force, fuel, or weather is calculated here.
+    /// </summary>
+    public sealed class RocketPlume : MonoBehaviour
+    {
+        public enum PlumeStyle { Methane, Hydrolox, Solid }
+        public PlumeStyle style = PlumeStyle.Methane;
+        public int stageIndex;
+        public bool solidBooster;
+        public Transform[] nozzles;
+        public Shader plumeShader;
+        [Min(.01f)] public float nozzleRadius = 1f;
+        [Min(.01f)] public float plumeLength = 12f;
+        private readonly List<Transform> visuals = new List<Transform>();
+        private readonly List<Renderer> renderers = new List<Renderer>();
+        private Mesh mesh;
+        private Material material;
+        private MaterialPropertyBlock properties;
+        private float throttle, pressure = 101325f;
+        private float appliedThrottle = -1f, appliedVacuum = -1f;
+
+        public static bool IsExhaustRenderer(Renderer renderer) => renderer != null && renderer.sharedMaterial != null &&
+            renderer.sharedMaterial.shader != null && renderer.sharedMaterial.shader.name == "ESP/ProceduralPlume";
+
+        private void Awake()
+        {
+            if (plumeShader == null) plumeShader = Shader.Find("ESP/ProceduralPlume");
+            if (plumeShader == null) { Debug.LogWarning("ESP plume shader unavailable"); enabled = false; return; }
+            material = new Material(plumeShader) { name = "ESP procedural plume (runtime)" };
+            properties = new MaterialPropertyBlock();
+            mesh = BuildMesh();
+            if (nozzles == null || nozzles.Length == 0)
+            {
+                var fallback = new GameObject("Fallback nozzle").transform;
+                fallback.SetParent(transform, false);
+                nozzles = new[] { fallback };
+            }
+            foreach (Transform nozzle in nozzles)
+            {
+                if (nozzle == null) continue;
+                var child = new GameObject("Procedural plume");
+                child.transform.SetParent(nozzle, false);
+                child.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var renderer = child.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = material;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.lightProbeUsage = LightProbeUsage.Off;
+                renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                visuals.Add(child.transform); renderers.Add(renderer);
+            }
+            Apply();
+        }
+
+        /// <param name="fraction">Actual engine flow fraction, zero when engine is off or fuel is exhausted.</param>
+        /// <param name="ambientPressurePascals">Ambient static pressure in pascals.</param>
+        public void SetFlow(float fraction, float ambientPressurePascals)
+        {
+            throttle = float.IsNaN(fraction) || float.IsInfinity(fraction) ? 0 : Mathf.Clamp01(fraction);
+            pressure = float.IsNaN(ambientPressurePascals) || float.IsInfinity(ambientPressurePascals) ? 101325 : Mathf.Max(0, ambientPressurePascals);
+            if (material != null) Apply();
+        }
+        private void Apply()
+        {
+            // Art response to pressure, not a nozzle-flow solver. The fractional
+            // power preserves a gradual change through the upper atmosphere.
+            float vacuum = 1f - Mathf.Pow(Mathf.Clamp01(pressure / 101325f), .35f);
+            if (Mathf.Abs(appliedThrottle - throttle) < .0005f &&
+                Mathf.Abs(appliedVacuum - vacuum) < .0005f) return;
+            appliedThrottle = throttle; appliedVacuum = vacuum;
+            Color core = style == PlumeStyle.Hydrolox ? new Color(.76f, .88f, 1f) : style == PlumeStyle.Solid ? new Color(1f, .94f, .78f) : new Color(.85f, .94f, 1f);
+            Color sheath = style == PlumeStyle.Hydrolox ? new Color(.12f, .36f, 1f) : style == PlumeStyle.Solid ? new Color(1f, .27f, .025f) : new Color(.26f, .32f, 1f);
+            Color tail = style == PlumeStyle.Solid ? new Color(1f, .12f, .012f) : style == PlumeStyle.Hydrolox ? new Color(.16f, .31f, .8f) : new Color(.75f, .22f, .36f);
+            properties.SetFloat("_Throttle", throttle);
+            properties.SetFloat("_Vacuum", vacuum);
+            properties.SetColor("_CoreColor", core);
+            properties.SetColor("_SheathColor", sheath);
+            properties.SetColor("_TailColor", tail);
+            properties.SetFloat("_MachStrength", style == PlumeStyle.Solid ? .08f : .8f);
+            properties.SetFloat("_Density", style == PlumeStyle.Solid ? 1.1f : .65f);
+            for (int i = 0; i < visuals.Count; i++)
+            {
+                float length = Mathf.Max(.01f, plumeLength) * (.28f + .72f * Mathf.Sqrt(throttle)) * Mathf.Lerp(1f, 1.6f, vacuum);
+                float radius = Mathf.Max(.01f, nozzleRadius);
+                visuals[i].localScale = new Vector3(radius, length, radius);
+                properties.SetFloat("_Seed", i * 2.399963f);
+                renderers[i].SetPropertyBlock(properties);
+                renderers[i].enabled = throttle > .001f;
+            }
+        }
+        private static Mesh BuildMesh()
+        {
+            // Rounded envelope avoids intersecting luminous cards. The shader
+            // supplies the soft core and sheath; no particles or lights per engine.
+            // 960 triangles per nozzle; one shared mesh and material per group.
+            const int sides = 12, segments = 40;
+            var vertices = new Vector3[(sides + 1) * (segments + 1)];
+            var uv = new Vector2[vertices.Length];
+            var triangles = new int[sides * segments * 6];
+            int t = 0;
+            for (int row = 0; row <= segments; row++)
+            {
+                float v = (float)row / segments;
+                for (int side = 0; side <= sides; side++)
+                {
+                    float u = (float)side / sides, angle = u * Mathf.PI * 2f;
+                    int i = row * (sides + 1) + side;
+                    vertices[i] = new Vector3(Mathf.Cos(angle), -v, Mathf.Sin(angle));
+                    uv[i] = new Vector2(u, v);
+                    if (row == segments || side == sides) continue;
+                    int next = i + sides + 1;
+                    triangles[t++] = i; triangles[t++] = next; triangles[t++] = i + 1;
+                    triangles[t++] = i + 1; triangles[t++] = next; triangles[t++] = next + 1;
+                }
+            }
+            var result = new Mesh { name = "Original exhaust envelope" };
+            result.vertices = vertices; result.uv = uv; result.triangles = triangles;
+            // Covers the shader's maximum radial expansion at any pressure.
+            result.bounds = new Bounds(new Vector3(0, -.5f, 0), new Vector3(9, 1.02f, 9));
+            return result;
+        }
+        private void OnDestroy()
+        {
+            if (material != null) Destroy(material);
+            if (mesh != null) Destroy(mesh);
+        }
+    }
+}

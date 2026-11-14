@@ -35,6 +35,18 @@ namespace ESP.Presentation
         public NasaSpaceWeather spaceWeather;
         public event Action PointSelected;
         public GameObject rocketPrefab;
+        public GameObject[] vehiclePrefabs;
+        public int VehicleIndex { get; private set; }
+        public string VehicleLabel => VehicleIndex == 1 ? "STARSHIP · ESTIMATED SPECS" : VehicleIndex == 2 ? "SLS · ESTIMATED SPECS" : "ESP DEMO ROCKET";
+        public void SelectVehicle(int index)
+        {
+            if (vehiclePrefabs == null || index < 0 || index >= vehiclePrefabs.Length || vehiclePrefabs[index] == null || !CanLaunch) return;
+            VehicleIndex = index; rocketPrefab = vehiclePrefabs[index];
+            FlightDriver?.ResetMission();
+            if (environment) Destroy(environment);
+            environment = null; RocketVisual = null;
+            GoToLaunch(SelectedSiteIndex);
+        }
         public Texture[] siteGroundTextures;
         public Material siteGroundTemplate;
         public IMissionFlightDriver FlightDriver { get; set; }
@@ -111,6 +123,15 @@ namespace ESP.Presentation
             if (mapRoot) mapRoot.SetActive(false);
             if (mapCamera) mapCamera.gameObject.SetActive(false);
             if (launchCamera) launchCamera.gameObject.SetActive(true);
+            if (CanLaunch && RocketVisual != null && launchCamera != null)
+            {
+                var bounds = new Bounds(RocketVisual.position, Vector3.zero);
+                foreach (var r in RocketVisual.GetComponentsInChildren<Renderer>())
+                    if (r.enabled && !RocketPlume.IsExhaustRenderer(r)) bounds.Encapsulate(r.bounds);
+                float scale = Mathf.Max(1, bounds.size.magnitude / 60f);
+                launchCamera.transform.position = bounds.center + new Vector3(75, 20, -90) * scale;
+                launchCamera.transform.LookAt(bounds.center);
+            }
         }
         private void OnPointSelected(double lat, double lon)
         {
@@ -137,7 +158,7 @@ namespace ESP.Presentation
             if (snapshot != null && !snapshot.IsCurrent(DateTime.UtcNow)) snapshot = null;
             FlightDriver.Launch(LaunchSites.All[SelectedSiteIndex], snapshot);
         }
-        public void ResetMission() { FlightDriver?.ResetMission(); }
+        public void ResetMission() { FlightDriver?.ResetMission(); if (!IsMapView) SetLaunchView(); }
         public void Stage() { FlightDriver?.Stage(); }
         public void SetThrottle(float value) { FlightDriver?.SetThrottle(Mathf.Clamp01(value)); }
         public void SelectLayer(int index) { if (mapLayers != null && index >= 0 && index <= 2) mapLayers.Select(index - 1); }

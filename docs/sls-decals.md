@@ -69,3 +69,5 @@ All positions remain meters, with the existing common rocket origin. OBJ convers
 Python syntax, reference/artwork files, Blender decal projection and both review renders are checked. The local logo review produced 57 marking objects and verified unchanged original vertex positions and topology. The standalone atlas exists; a relative-path export warning is being corrected before game integration. No claim is made yet that the revised material survives Unity import or that all photogrammetric markings are complete.
 
 Coordinator verification: revised export produced 58 review markings (54 in the no-logo baseline), no missing-atlas warning, and unchanged original geometry. The baseline Unity prefab import succeeded at 98.30 m height. Packaged visual inspection remains pending.
+
+The no-logo baseline also passed a packaged macOS ascent, sequential staging, verified unpowered orbit and site-change reset. The revised camera excludes only actual exhaust renderers, not entire SLS stage hierarchies.

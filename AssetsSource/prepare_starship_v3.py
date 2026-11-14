@@ -218,7 +218,11 @@ def main():
         obj=bpy.data.objects.new(name,mesh);scene.collection.objects.link(obj)
         obj.matrix_world=source_obj.matrix_world.copy();obj['source_object']=source_obj.name
         select(obj)
-        originals=list(mesh.materials);mesh.materials.clear()
+        originals=list(mesh.materials)
+        # Clearing slots resets polygon indices in Blender. Capture and restore
+        # them so heatshield, steel and decals retain their authored assignment.
+        source_material_indices=[poly.material_index for poly in mesh.polygons]
+        mesh.materials.clear()
         mats=[]
         source_uv=mesh.uv_layers.active.name if mesh.uv_layers.active else None
         if source_uv is None:raise ValueError('Source UV layer absent: '+source_obj.name)
@@ -231,6 +235,9 @@ def main():
             for node in list(copy.node_tree.nodes):
                 if node.type=='TEX_IMAGE' and not node.inputs['Vector'].is_linked:
                     copy.node_tree.links.new(uv.outputs['UV'],node.inputs['Vector'])
+        for poly,index in zip(mesh.polygons,source_material_indices):poly.material_index=index
+        if [poly.material_index for poly in mesh.polygons] != source_material_indices:
+            raise ValueError('Source material assignments changed: '+source_obj.name)
         mesh.uv_layers.new(name='ESP_RuntimeUV');mesh.uv_layers.active_index=len(mesh.uv_layers)-1
         bpy.ops.object.mode_set(mode='EDIT');bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.uv.smart_project(angle_limit=math.radians(66),island_margin=.012)
@@ -312,15 +319,26 @@ def main():
     manifest['triangles']=sum(p['triangles'] for p in manifest['parts'])
     for img in used:
         if not img.packed_file:img.pack()
-    for obj in runtime:obj.select_set(True)
-    # OBJ exports exactly the mapped flight meshes; source archive and studio are
-    # separate scenes and therefore cannot leak into the runtime asset.
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in runtime:obj.select_set(True)
-    bpy.context.view_layer.objects.active=runtime[0]
-    bpy.ops.wm.obj_export(filepath=str(output/'ESP-Starship.obj'),export_selected_objects=True,
-                          forward_axis='NEGATIVE_Z',up_axis='Y',export_materials=True,
-                          export_uv=True,export_normals=True,export_object_groups=True,export_triangulated_mesh=True,path_mode='RELATIVE')
+    # Stage files retain the same common frame and all original triangles.
+    # Separate exports keep individual publication payloads smaller; each OBJ
+    # receives its own MTL while referencing the unchanged shared texture paths.
+    manifest['model_files']=[]
+    groups=[('Booster',[obj for obj in runtime if obj.name=='Booster__Superheavy_Block_3_V4']),
+            ('BoosterDetails',[obj for obj in runtime if obj.name.startswith('Booster__') and obj.name!='Booster__Superheavy_Block_3_V4']),
+            ('Ship',[obj for obj in runtime if obj.name.startswith('Ship__')])]
+    for stage,selected in groups:
+        if not selected:raise ValueError('No runtime meshes for export group: '+stage)
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in selected:obj.select_set(True)
+        bpy.context.view_layer.objects.active=selected[0]
+        filename='ESP-Starship-'+stage+'.obj'
+        bpy.ops.wm.obj_export(filepath=str(output/filename),export_selected_objects=True,
+                              forward_axis='NEGATIVE_Z',up_axis='Y',export_materials=True,
+                              export_uv=True,export_normals=True,export_object_groups=True,
+                              export_triangulated_mesh=True,path_mode='RELATIVE')
+        manifest['model_files'].append(filename)
+        print('V3_STAGE_EXPORTED',json.dumps({'stage':stage,'file':filename,
+              'bytes':(output/filename).stat().st_size}),flush=True)
     manifest['export_axes']='Blender (x,y,z) to Unity (x,z,-y), metres, common bottom-center frame'
     manifest['runtime_ready']=True
     (output/'ESP-Starship-import.json').write_text(json.dumps(manifest,indent=2)+'\n')
@@ -334,7 +352,7 @@ def main():
         ob=bpy.data.objects.new(name,light);scene.collection.objects.link(ob);ob.location=position
         ob.rotation_euler=(target-ob.location).to_track_quat('-Z','Y').to_euler()
     camera_data=bpy.data.cameras.new('V3 preview');camera=bpy.data.objects.new('V3 preview',camera_data)
-    scene.collection.objects.link(camera);camera.location=(220,-170,90)
+    scene.collection.objects.link(camera);camera.location=target+Vector((.7,-1,.12))*height*3
     camera.rotation_euler=(target-camera.location).to_track_quat('-Z','Y').to_euler()
     camera_data.type='ORTHO';camera_data.ortho_scale=height*1.14;camera_data.clip_end=2000;scene.camera=camera
     scene.cycles.samples=24;scene.cycles.use_denoising=True

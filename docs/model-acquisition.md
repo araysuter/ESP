@@ -6,7 +6,7 @@ The selected model is Clarence365’s [SpaceX Starship Block 3](https://sketchfa
 
 Archive SHA256: `97c21ff7836b607bac698840d647b5d04ebb185afe00cbee218725be7e610699` (66,661,373 bytes). Its Blender file SHA256 is `5a8003c070f9c0211f622d11c1fab421e04ab4c1f3787c1d5d030b87df7195f6`. Keep the accompanying textures. Source inspection found two stages, three outward grid fins, four ship flaps and separate inner engines; some outer booster engines are joined into the main mesh. Source unit scale requires normalization, and exported texture names require relinking. This is an artist’s V3 representation, not a measured hardware survey.
 
-The source archive and editable files are preserved in the project VM. This checkpoint contains inspection/adaptation code; the final game export and in-engine validation are pending. See `starship-v3-import-review.md`.
+The source archive and editable files are preserved in the project VM. The runtime export, PBR maps and manifest are included. Both stages imported and the packaged Starship ascent/orbit/reset test passed. Thin source surfaces require two-sided opaque rendering. See `starship-v3-import-review.md`.
 
 The earlier Stephen Melton CC0 printing model was inspected and rejected because it does not represent V3. Its geometry must not be included in the final catalog. User-selected Ijsz23 full-stack model was view-only; no viewer geometry was extracted.
 

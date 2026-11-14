@@ -354,6 +354,20 @@ def main():
                           export_selected_objects=True, forward_axis='NEGATIVE_Z', up_axis='Y',
                           export_materials=True, export_normals=True, export_uv=True,
                           export_object_groups=True, export_triangulated_mesh=True, path_mode='RELATIVE')
+    # Blender can still resolve packed texture paths against the input blend
+    # directory. This atlas is already beside the OBJ/MTL: normalize only its
+    # generated color/alpha map references, leaving all other material data.
+    mtl_path = args.output / 'SLS-Block1-LiveryReview.mtl'
+    atlas_name = 'SLS-Livery-Review-Atlas.png'
+    mtl_lines = []
+    for line in mtl_path.read_text().splitlines():
+        fields = line.split()
+        if (fields and fields[0] in ('map_Kd', 'map_d')
+                and fields[-1].replace('\\', '/').rsplit('/', 1)[-1].strip('"') == atlas_name):
+            fields[-1] = atlas_name
+            line = ' '.join(fields)
+        mtl_lines.append(line)
+    mtl_path.write_text('\n'.join(mtl_lines) + '\n')
     scene['livery_review_status'] = manifest['status']
     scene.render.filepath = str(args.output / 'SLS-Block1-LiveryReview.png')
     bpy.ops.wm.save_as_mainfile(filepath=str(args.output / 'SLS-Block1-LiveryReview.blend'))

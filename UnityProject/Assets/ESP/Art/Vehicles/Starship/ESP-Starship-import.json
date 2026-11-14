@@ -1,0 +1,1713 @@
+{
+  "source_url": "https://sketchfab.com/3d-models/spacex-starship-block-3-6f6c6f88a3eb4b4d822fdca66733fbb2",
+  "author": "Clarence365",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "source_sha256": "5a8003c070f9c0211f622d11c1fab421e04ab4c1f3787c1d5d030b87df7195f6",
+  "blender_version": "5.2.3 LTS",
+  "source_frame": 158,
+  "height_m": 124.18629485500955,
+  "barrel_diameter_m": 9,
+  "source_barrel_radius": 0.9113006666516384,
+  "barrel_fit_max_error_source_units": 0.005251657530441434,
+  "meters_per_source_unit": 4.9379970460618665,
+  "ship_group_base_m": 71.81756223765967,
+  "nozzle_anchors": [
+    {
+      "name": "Ship__Raptor_3_nozzle_1",
+      "stage": "Ship",
+      "source_object": "Raptor 3",
+      "unity_position_m": [
+        0.6969349980354309,
+        72.18689727783203,
+        0.026886671781539917
+      ],
+      "opening_radius_m": 0.6188932123330889,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Ship__Raptor_3_001_nozzle_1",
+      "stage": "Ship",
+      "source_object": "Raptor 3.001",
+      "unity_position_m": [
+        -0.43552470207214355,
+        72.18689727783203,
+        0.7228773832321167
+      ],
+      "opening_radius_m": 0.6188932031187521,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Ship__Raptor_3_002_nozzle_1",
+      "stage": "Ship",
+      "source_object": "Raptor 3.002",
+      "unity_position_m": [
+        -0.43552470207214355,
+        72.18689727783203,
+        -0.6253864169120789
+      ],
+      "opening_radius_m": 0.6188931410759284,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Ship__Raptor_3_Vaccum_nozzle_1",
+      "stage": "Ship",
+      "source_object": "Raptor 3 Vaccum",
+      "unity_position_m": [
+        1.6524393558502197,
+        71.83773803710938,
+        2.772684335708618
+      ],
+      "opening_radius_m": 1.192151205621265,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "Vacuum"
+    },
+    {
+      "name": "Ship__Raptor_3_Vaccum_001_nozzle_1",
+      "stage": "Ship",
+      "source_object": "Raptor 3 Vaccum.001",
+      "unity_position_m": [
+        -3.161534547805786,
+        71.83773803710938,
+        -0.012815311551094055
+      ],
+      "opening_radius_m": 1.1921512609660285,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "Vacuum"
+    },
+    {
+      "name": "Ship__Raptor_3_Vaccum_002_nozzle_1",
+      "stage": "Ship",
+      "source_object": "Raptor 3 Vaccum.002",
+      "unity_position_m": [
+        1.6524391174316406,
+        71.83773803710938,
+        -2.772615671157837
+      ],
+      "opening_radius_m": 1.192151265877856,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "Vacuum"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -4.2216715812683105,
+        0.34797403216362,
+        0.6504678726196289
+      ],
+      "opening_radius_m": 0.6188933908168358,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_2",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -3.820697784423828,
+        0.34797403216362,
+        1.9263969659805298
+      ],
+      "opening_radius_m": 0.6188932515064591,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_3",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -3.0235698223114014,
+        0.34797403216362,
+        3.018756866455078
+      ],
+      "opening_radius_m": 0.6188931580910665,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_4",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -1.9487757682800293,
+        0.34797403216362,
+        3.776700496673584
+      ],
+      "opening_radius_m": 0.618893181702515,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_5",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -0.6722642779350281,
+        0.34797403216362,
+        4.232766628265381
+      ],
+      "opening_radius_m": 0.6188931525985603,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_6",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        0.6441084146499634,
+        0.34797403216362,
+        4.232734203338623
+      ],
+      "opening_radius_m": 0.6188931965945055,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_7",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        1.924726963043213,
+        0.34797403216362,
+        3.778142213821411
+      ],
+      "opening_radius_m": 0.6188932278472916,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_8",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        2.9928205013275146,
+        0.34797403216362,
+        3.0192410945892334
+      ],
+      "opening_radius_m": 0.6188930913278512,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_9",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        3.8001153469085693,
+        0.34797403216362,
+        1.9266258478164673
+      ],
+      "opening_radius_m": 0.6188931891654184,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_10",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        4.2134881019592285,
+        0.34797403216362,
+        0.6455899477005005
+      ],
+      "opening_radius_m": 0.6188931004410388,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_11",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        4.210752487182617,
+        0.34796932339668274,
+        -0.6834694147109985
+      ],
+      "opening_radius_m": 0.6188932310206424,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_12",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        3.8010823726654053,
+        0.34796932339668274,
+        -1.973576307296753
+      ],
+      "opening_radius_m": 0.6188932818676193,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_13",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        2.992567777633667,
+        0.34796932339668274,
+        -3.030012845993042
+      ],
+      "opening_radius_m": 0.618893221845695,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_14",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        1.9208974838256836,
+        0.34797403216362,
+        -3.8746495246887207
+      ],
+      "opening_radius_m": 0.6188931631722839,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_15",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        0.6442403793334961,
+        0.34797403216362,
+        -4.235198497772217
+      ],
+      "opening_radius_m": 0.618893108538833,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_16",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -0.6720678806304932,
+        0.34797403216362,
+        -4.240227222442627
+      ],
+      "opening_radius_m": 0.6188931103641894,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_17",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -1.9501299858093262,
+        0.34796932339668274,
+        -3.8751323223114014
+      ],
+      "opening_radius_m": 0.6188934410106897,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_18",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -3.009564161300659,
+        0.34796932339668274,
+        -3.0300700664520264
+      ],
+      "opening_radius_m": 0.6188932228264603,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_19",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -3.8226306438446045,
+        0.34797403216362,
+        -1.9610352516174316
+      ],
+      "opening_radius_m": 0.6188932108173174,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4_nozzle_20",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "unity_position_m": [
+        -4.2213664054870605,
+        0.34797403216362,
+        -0.683950662612915
+      ],
+      "opening_radius_m": 0.618368513030947,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_005_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.005",
+      "unity_position_m": [
+        -2.1263182163238525,
+        0.10336341708898544,
+        -0.7727080583572388
+      ],
+      "opening_radius_m": 0.6188931840925833,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_006_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.006",
+      "unity_position_m": [
+        -2.1263785362243652,
+        0.1033681258559227,
+        0.7584564089775085
+      ],
+      "opening_radius_m": 0.618893399038274,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_008_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.008",
+      "unity_position_m": [
+        -0.006565198302268982,
+        0.10337548702955246,
+        2.3420934677124023
+      ],
+      "opening_radius_m": 0.6188933078557463,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_010_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.010",
+      "unity_position_m": [
+        2.1614785194396973,
+        0.10336282849311829,
+        0.7597189545631409
+      ],
+      "opening_radius_m": 0.6188933669475764,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_011_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.011",
+      "unity_position_m": [
+        2.1614925861358643,
+        0.10336842387914658,
+        -0.771445095539093
+      ],
+      "opening_radius_m": 0.6188931203735717,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_013_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.013",
+      "unity_position_m": [
+        0.31958460807800293,
+        0.0,
+        0.6699210405349731
+      ],
+      "opening_radius_m": 0.6188931908469404,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_014_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.014",
+      "unity_position_m": [
+        -0.812874972820282,
+        0.0,
+        -0.02607027441263199
+      ],
+      "opening_radius_m": 0.6188932387377453,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_015_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.015",
+      "unity_position_m": [
+        0.3195846676826477,
+        0.0,
+        -0.6783429384231567
+      ],
+      "opening_radius_m": 0.6188931637975175,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_003_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.003",
+      "unity_position_m": [
+        -1.2835261821746826,
+        0.10337843000888824,
+        -1.8082988262176514
+      ],
+      "opening_radius_m": 0.6188933165643309,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_012_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.012",
+      "unity_position_m": [
+        1.2906858921051025,
+        0.10337843000888824,
+        -1.808300495147705
+      ],
+      "opening_radius_m": 0.6188934954222661,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_004_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.004",
+      "unity_position_m": [
+        -0.0065649449825286865,
+        0.10337548702955246,
+        -2.345201253890991
+      ],
+      "opening_radius_m": 0.6188933053836272,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_007_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.007",
+      "unity_position_m": [
+        -1.2835252285003662,
+        0.10337784141302109,
+        1.805190920829773
+      ],
+      "opening_radius_m": 0.6188932632973839,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    },
+    {
+      "name": "Booster__Raptor_3_009_nozzle_1",
+      "stage": "Booster",
+      "source_object": "Raptor 3.009",
+      "unity_position_m": [
+        1.2906854152679443,
+        0.10337754338979721,
+        1.8051921129226685
+      ],
+      "opening_radius_m": 0.6188933664629472,
+      "unity_exhaust_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "engine_kind": "SeaLevel"
+    }
+  ],
+  "visual_engine_counts": {
+    "Ship": 6,
+    "Booster": 33
+  },
+  "texture_relinks": [
+    {
+      "image": "RBXX Logo V3.png",
+      "file": "RBXX_Logo_V3.png",
+      "loaded": true
+    },
+    {
+      "image": "roughness1.png",
+      "file": "roughness1.png",
+      "loaded": true
+    },
+    {
+      "image": "roughness1.png.008",
+      "file": "roughness1.png",
+      "loaded": true
+    },
+    {
+      "image": "roughness1.png.019",
+      "file": "roughness1.png",
+      "loaded": true
+    },
+    {
+      "image": "roughness1.png.024",
+      "file": "roughness1.png",
+      "loaded": true
+    },
+    {
+      "image": "roughness1.png.046",
+      "file": "roughness1.png",
+      "loaded": true
+    },
+    {
+      "image": "roughness1.png.054",
+      "file": "roughness1.png",
+      "loaded": true
+    },
+    {
+      "image": "roughness1.png.055",
+      "file": "roughness1.png",
+      "loaded": true
+    },
+    {
+      "image": "Starship S45.png",
+      "file": "Starship_S45.png",
+      "loaded": true
+    },
+    {
+      "image": "starshipxlogov2.png",
+      "file": "starshipxlogov2.png",
+      "loaded": true
+    },
+    {
+      "image": "tiletexture.jpg.001",
+      "file": "tiletexture.jpeg",
+      "loaded": true
+    }
+  ],
+  "materials": [
+    {
+      "name": "V3_Starship_Block_3_V4",
+      "base_color_texture": "Textures/V3_Starship_Block_3_V4_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Starship_Block_3_V4_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Starship_Block_3_V4_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Cryo Section1",
+        "Heatshield Tiles",
+        "Logo",
+        "Serial Number",
+        "Material.003",
+        "Material.055",
+        "Material.053",
+        "Material.056",
+        "Material.206",
+        "Material.244",
+        "Material.464",
+        "Material.463",
+        "Material.462",
+        "Material.204",
+        "Material.033"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Aft_Flaps_002",
+      "base_color_texture": "Textures/V3_Aft_Flaps_002_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Aft_Flaps_002_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Aft_Flaps_002_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.008",
+        "Material.023",
+        "Heatshield Tiles"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Aft_Flaps_003",
+      "base_color_texture": "Textures/V3_Aft_Flaps_003_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Aft_Flaps_003_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Aft_Flaps_003_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.008",
+        "Material.023",
+        "Heatshield Tiles"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Foward_Flap_002",
+      "base_color_texture": "Textures/V3_Foward_Flap_002_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Foward_Flap_002_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Foward_Flap_002_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.023",
+        "Material.007",
+        "Heatshield Tiles"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Foward_Flap_003",
+      "base_color_texture": "Textures/V3_Foward_Flap_003_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Foward_Flap_003_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Foward_Flap_003_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.023",
+        "Material.007",
+        "Heatshield Tiles"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3",
+      "base_color_texture": "Textures/V3_Raptor_3_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_001",
+      "base_color_texture": "Textures/V3_Raptor_3_001_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_001_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_001_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_002",
+      "base_color_texture": "Textures/V3_Raptor_3_002_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_002_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_002_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_Vaccum",
+      "base_color_texture": "Textures/V3_Raptor_3_Vaccum_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_Vaccum_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_Vaccum_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511",
+        "Material.512",
+        "Material"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_Vaccum_001",
+      "base_color_texture": "Textures/V3_Raptor_3_Vaccum_001_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_Vaccum_001_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_Vaccum_001_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511",
+        "Material.512",
+        "Material"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_Vaccum_002",
+      "base_color_texture": "Textures/V3_Raptor_3_Vaccum_002_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_Vaccum_002_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_Vaccum_002_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511",
+        "Material.512",
+        "Material"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Cargo_Door",
+      "base_color_texture": "Textures/V3_Cargo_Door_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Cargo_Door_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Cargo_Door_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.461"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Superheavy_Block_3_V4",
+      "base_color_texture": "Textures/V3_Superheavy_Block_3_V4_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Superheavy_Block_3_V4_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Superheavy_Block_3_V4_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Cryo Section3",
+        "Material.003",
+        "Material.055",
+        "Material.053",
+        "Material.056",
+        "Material.244",
+        "Material.497",
+        "Material.498",
+        "Material.202",
+        "Material.204",
+        "Material.499",
+        "Material.504",
+        "Material.506",
+        "Material.511",
+        "Booster Heatshield"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Grid_Fin_002",
+      "base_color_texture": "Textures/V3_Grid_Fin_002_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Grid_Fin_002_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Grid_Fin_002_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.005",
+        "Material.001"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Grid_Fin",
+      "base_color_texture": "Textures/V3_Grid_Fin_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Grid_Fin_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Grid_Fin_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.005",
+        "Material.001"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Grid_Fin_001",
+      "base_color_texture": "Textures/V3_Grid_Fin_001_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Grid_Fin_001_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Grid_Fin_001_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.005",
+        "Material.001"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_005",
+      "base_color_texture": "Textures/V3_Raptor_3_005_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_005_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_005_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_006",
+      "base_color_texture": "Textures/V3_Raptor_3_006_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_006_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_006_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_008",
+      "base_color_texture": "Textures/V3_Raptor_3_008_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_008_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_008_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_010",
+      "base_color_texture": "Textures/V3_Raptor_3_010_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_010_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_010_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_011",
+      "base_color_texture": "Textures/V3_Raptor_3_011_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_011_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_011_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_013",
+      "base_color_texture": "Textures/V3_Raptor_3_013_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_013_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_013_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_014",
+      "base_color_texture": "Textures/V3_Raptor_3_014_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_014_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_014_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_015",
+      "base_color_texture": "Textures/V3_Raptor_3_015_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_015_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_015_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_003",
+      "base_color_texture": "Textures/V3_Raptor_3_003_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_003_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_003_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_012",
+      "base_color_texture": "Textures/V3_Raptor_3_012_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_012_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_012_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_004",
+      "base_color_texture": "Textures/V3_Raptor_3_004_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_004_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_004_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_007",
+      "base_color_texture": "Textures/V3_Raptor_3_007_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_007_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_007_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    },
+    {
+      "name": "V3_Raptor_3_009",
+      "base_color_texture": "Textures/V3_Raptor_3_009_BaseColor.png",
+      "metallic_smoothness_texture": "Textures/V3_Raptor_3_009_MetallicSmoothness.png",
+      "normal_texture": "Textures/V3_Raptor_3_009_Normal.png",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "metallic": 1,
+      "smoothness": 1,
+      "source_materials": [
+        "Material.202",
+        "Material.204",
+        "Material.498",
+        "Material.499",
+        "Material.504",
+        "Material.053",
+        "Material.506",
+        "Material.511"
+      ],
+      "channels": "baseColor sRGB; metallicSmoothness linear R=metallic A=smoothness; normal tangent +Y"
+    }
+  ],
+  "parts": [
+    {
+      "name": "Ship__Starship_Block_3_V4",
+      "stage": "Ship",
+      "source_object": "Starship Block 3 V4",
+      "triangles": 59469,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Aft_Flaps_002",
+      "stage": "Ship",
+      "source_object": "Aft Flaps.002",
+      "triangles": 2620,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Aft_Flaps_003",
+      "stage": "Ship",
+      "source_object": "Aft Flaps.003",
+      "triangles": 2620,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Foward_Flap_002",
+      "stage": "Ship",
+      "source_object": "Foward Flap.002",
+      "triangles": 2696,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Foward_Flap_003",
+      "stage": "Ship",
+      "source_object": "Foward Flap.003",
+      "triangles": 2696,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Raptor_3",
+      "stage": "Ship",
+      "source_object": "Raptor 3",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Raptor_3_001",
+      "stage": "Ship",
+      "source_object": "Raptor 3.001",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Raptor_3_002",
+      "stage": "Ship",
+      "source_object": "Raptor 3.002",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Raptor_3_Vaccum",
+      "stage": "Ship",
+      "source_object": "Raptor 3 Vaccum",
+      "triangles": 21130,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Raptor_3_Vaccum_001",
+      "stage": "Ship",
+      "source_object": "Raptor 3 Vaccum.001",
+      "triangles": 21130,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Raptor_3_Vaccum_002",
+      "stage": "Ship",
+      "source_object": "Raptor 3 Vaccum.002",
+      "triangles": 21130,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Ship__Cargo_Door",
+      "stage": "Ship",
+      "source_object": "Cargo Door",
+      "triangles": 44,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Superheavy_Block_3_V4",
+      "stage": "Booster",
+      "source_object": "Superheavy Block 3 V4",
+      "triangles": 455770,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Grid_Fin_002",
+      "stage": "Booster",
+      "source_object": "Grid Fin.002",
+      "triangles": 572,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Grid_Fin",
+      "stage": "Booster",
+      "source_object": "Grid Fin",
+      "triangles": 572,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Grid_Fin_001",
+      "stage": "Booster",
+      "source_object": "Grid Fin.001",
+      "triangles": 536,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_005",
+      "stage": "Booster",
+      "source_object": "Raptor 3.005",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_006",
+      "stage": "Booster",
+      "source_object": "Raptor 3.006",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_008",
+      "stage": "Booster",
+      "source_object": "Raptor 3.008",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_010",
+      "stage": "Booster",
+      "source_object": "Raptor 3.010",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_011",
+      "stage": "Booster",
+      "source_object": "Raptor 3.011",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_013",
+      "stage": "Booster",
+      "source_object": "Raptor 3.013",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_014",
+      "stage": "Booster",
+      "source_object": "Raptor 3.014",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_015",
+      "stage": "Booster",
+      "source_object": "Raptor 3.015",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_003",
+      "stage": "Booster",
+      "source_object": "Raptor 3.003",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_012",
+      "stage": "Booster",
+      "source_object": "Raptor 3.012",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_004",
+      "stage": "Booster",
+      "source_object": "Raptor 3.004",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_007",
+      "stage": "Booster",
+      "source_object": "Raptor 3.007",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    },
+    {
+      "name": "Booster__Raptor_3_009",
+      "stage": "Booster",
+      "source_object": "Raptor 3.009",
+      "triangles": 20142,
+      "original_uv": "UVMap",
+      "runtime_uv": "ESP_RuntimeUV"
+    }
+  ],
+  "modifications": [
+    "Supplied image path recovery",
+    "Uniform scale from measured tank barrel to 9 m",
+    "Existing stage hierarchy mapped to Booster__/Ship__ groups",
+    "Existing material inputs baked to PBR maps on a separate runtime UV layer"
+  ],
+  "limitations": [
+    "Artist model, not a SpaceX engineering survey.",
+    "Source S45/RBXX markings retained; not matched to a named flown mission.",
+    "Static PBR bake omits unused source reentry-emission controls.",
+    "Exact fin steering angles and source dimensions beyond barrel diameter remain artistic."
+  ],
+  "triangles": 913257,
+  "model_files": [
+    "ESP-Starship-Part-000.obj",
+    "ESP-Starship-Part-001.obj",
+    "ESP-Starship-Part-002.obj",
+    "ESP-Starship-Part-003.obj",
+    "ESP-Starship-Part-004.obj",
+    "ESP-Starship-Part-005.obj",
+    "ESP-Starship-Part-006.obj",
+    "ESP-Starship-Part-007.obj",
+    "ESP-Starship-Part-008.obj",
+    "ESP-Starship-Part-009.obj"
+  ],
+  "export_axes": "Blender (x,y,z) to Unity (x,z,-y), metres, common bottom-center frame",
+  "runtime_ready": true,
+  "transport_partition": {
+    "original_model_files": [
+      "ESP-Starship-Booster.obj",
+      "ESP-Starship-BoosterDetails.obj",
+      "ESP-Starship-Ship.obj"
+    ],
+    "faces": 913257,
+    "face_attribute_sha256": "16033047360987667ec15e3fb6b3099fd1cb2fc2a6d9de13c47f23daf33635b1",
+    "geometry_uv_normal_text_unchanged": true
+  }
+}

@@ -1,6 +1,6 @@
 # Vehicle asset build handoff
 
-The checkpoint contains preparation scripts and provenance, not a qualified final vehicle import. Use the project's qualified Blender version, work in a single-owner workspace, and preserve the unmodified source archives and editable `.blend` files outside Unity's automatic importer. The source archives are retained in the project VM; do not commit large binaries until Git LFS rules are established. Never put credentials, signed download links, or private machine paths in Git.
+The repository contains source-faithful runtime exports, textures, preparation scripts and provenance. Both vehicle prefabs and a macOS ARM packaged flight were tested; Windows remains untested. Use the project's qualified Blender version, work in a single-owner workspace, and preserve the unmodified source archives and editable `.blend` files outside Unity's automatic importer. The source archives are retained in the project VM; do not commit large binaries until Git LFS rules are established. Never put credentials, signed download links, or private machine paths in Git.
 
 ## Starship V3
 
@@ -9,10 +9,11 @@ The checkpoint contains preparation scripts and provenance, not a qualified fina
 
    ```sh
    blender --disable-autoexec --background --python AssetsSource/prepare_starship_v3.py -- SOURCE.blend OUTPUT_DIR --texture-dir TEXTURE_DIR
+   python3 AssetsSource/split_vehicle_obj.py OUTPUT_DIR
    ```
 
-   The script checks the source hash, relinks supplied textures, measures and normalizes the mesh, and bakes PBR textures. It writes `ESP-Starship.obj`, its material file, `Textures/`, `ESP-Starship-import.json`, an editable `ESP-Starship.blend`, and a preview. `--no-bake` is diagnostic only and does not produce a shipping export; `--no-render` skips the preview. The baked model, materials and visual details need inspection.
-3. Place the OBJ, MTL, `Textures/`, and manifest together under `UnityProject/Assets/ESP/Art/Vehicles/Starship/`, preserving relative paths. The editor importer expects `ESP-Starship.obj` and the manifest there. Generate/retain Unity `.meta` files with their assets, inspect material maps and model orientation, and run the project editor's `ImportDetailedVehicles.BuildStarship` under the single-editor ownership rule. Generated prefab and materials need review before committing with their `.meta` files.
+   The script checks the source hash, relinks supplied textures, measures and normalizes the mesh, and bakes PBR textures. It writes the three manifest-listed `ESP-Starship-Booster`, `ESP-Starship-BoosterDetails` and `ESP-Starship-Ship` OBJ/MTL pairs, `Textures/`, `ESP-Starship-import.json`, an editable `ESP-Starship.blend`, and a preview. `--no-bake` is diagnostic only and does not produce a shipping export; `--no-render` skips the preview. The baked model, materials and visual details need inspection.
+3. Place the OBJ, MTL, `Textures/`, and manifest together under `UnityProject/Assets/ESP/Art/Vehicles/Starship/`, preserving relative paths. The transport splitter creates ten `ESP-Starship-Part-NNN.obj` files and updates `model_files`. It verifies exact face attributes; no geometry is simplified. Copy those files and the three shared MTL files, omitting the larger intermediate stage OBJs. The importer validates the manifest-listed part names. Generate/retain Unity `.meta` files with their assets, inspect material maps and model orientation, and run the project editor's `ImportDetailedVehicles.BuildStarship` under the single-editor ownership rule. Generated prefabs, materials and combined meshes are reproducible build outputs excluded from Git; source exports, textures, manifests and their `.meta` files are committed. Use ESP → Assets → Rebuild downloaded vehicle prefabs in the editor, or BuildMission.Build for the packaged mission.
 
 ## NASA SLS Block 1
 
