@@ -16,7 +16,7 @@ namespace ESP.Presentation
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
         private Label rocketMarker, mapMission;
         private MissionDirector subscribedDirector;
-        private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle;
+        private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
         private readonly Button[] rateButtons = new Button[3];
         private static readonly int[] Rates = { 1, 5, 20 };
         private Slider throttle;
@@ -48,20 +48,12 @@ namespace ESP.Presentation
             header.name = "mission-header";
             Absolute(header, 18, 16, null, null);
             header.pickingMode = PickingMode.Ignore;
-            var brand = Row();
-            brand.pickingMode = PickingMode.Ignore;
-            brand.style.alignItems = Align.Center;
-            brand.Add(Label("ESP", 17, Text, FontStyle.Bold));
-            var subtitle = Label("/  EARTH SPACE PROGRAM", 9, Muted, FontStyle.Normal);
-            subtitle.style.marginLeft = 8;
-            brand.Add(subtitle);
-            header.Add(brand);
             site = Label("", 11, Text, FontStyle.Normal); site.name = "launch-site";
-            site.style.marginTop = 8;
             header.Add(site);
             status = Label("", 10, Cyan, FontStyle.Normal); status.name = "flight-status";
             status.style.maxWidth = 380;
             Ellipsis(status);
+            status.style.display = DisplayStyle.None;
             header.Add(status);
             root.Add(header);
 
@@ -82,7 +74,7 @@ namespace ESP.Presentation
                 markers[i].style.display = DisplayStyle.None;
                 root.Add(markers[i]);
             }
-            rocketMarker = Label("▲  ROCKET", 11, Cyan, FontStyle.Bold);
+            rocketMarker = Label("▲", 11, Cyan, FontStyle.Bold);
             rocketMarker.name = "rocket-map-marker";
             rocketMarker.pickingMode = PickingMode.Ignore;
             rocketMarker.style.position = Position.Absolute;
@@ -126,14 +118,14 @@ namespace ESP.Presentation
             weatherDetails.Add(nasaStatus);
             mapControls.Add(weatherDetails);
 
-            var mapBar = Panel(); mapBar.name = "map-bottom-strip";
+            var mapBar = Row(); mapBar.name = "map-bottom-strip";
+            mapBar.pickingMode = PickingMode.Ignore;
             mapBar.style.flexDirection = FlexDirection.Row;
             mapBar.style.alignItems = Align.Center;
             mapBar.style.justifyContent = Justify.SpaceBetween;
             mapVehicleGroup = VehicleSelector(true);
             mapBar.Add(mapVehicleGroup);
             var layerGroup = Column();
-            layerGroup.Add(Label("EARTH IMAGERY", 9, Muted, FontStyle.Normal));
             var layerRow = Row();
             string[] names = { "SURFACE", "SATELLITE", "CLOUDS" };
             for (int i = 0; i < names.Length; i++)
@@ -144,8 +136,14 @@ namespace ESP.Presentation
             }
             layerGroup.Add(layerRow);
             mapBar.Add(layerGroup);
-            weatherToggle = Button("POINT WEATHER", () => { weatherOpen = !weatherOpen; if (weatherOpen) director?.RefreshPointWeather(); Refresh(); }, false, "point-weather-toggle");
-            mapBar.Add(weatherToggle);
+            weatherToggle = Button("WEATHER", () => { weatherOpen = !weatherOpen; if (weatherOpen) director?.RefreshPointWeather(); Refresh(); }, false, "point-weather-toggle");
+            var mapUtilities = Row(); mapUtilities.pickingMode = PickingMode.Ignore;
+            mapUtilities.Add(weatherToggle);
+            mapDetailsToggle = Button("i", () => { detailsOpen = !detailsOpen; Refresh(); }, false, "map-information-toggle");
+            mapDetailsToggle.tooltip = "Imagery dates, sources, model credits and simulation limitations";
+            mapDetailsToggle.style.width = 29;
+            mapUtilities.Add(mapDetailsToggle);
+            mapBar.Add(mapUtilities);
             mapControls.Add(mapBar);
             mapCredit = Label("", 9, Muted, FontStyle.Normal); mapCredit.name = "imagery-provenance";
             mapCredit.style.whiteSpace = WhiteSpace.Normal; mapCredit.style.marginTop = 5;
@@ -160,21 +158,28 @@ namespace ESP.Presentation
             Absolute(flightControls, 12, null, 12, 10);
             flightControls.pickingMode = PickingMode.Ignore;
             flightDetails = Panel(); flightDetails.name = "flight-information-panel";
-            flightDetails.style.alignSelf = Align.FlexStart;
-            flightDetails.style.maxWidth = 440; flightDetails.style.marginBottom = 40;
+            Absolute(flightDetails, 12, null, null, 174);
+            flightDetails.style.width = 400;
+            var closeDetails = Button("CLOSE", () => { detailsOpen = false; Refresh(); }, false, "close-information");
+            closeDetails.style.alignSelf = Align.FlexEnd;
+            flightDetails.Add(closeDetails);
             flightDetailText = Label("", 11, Text, FontStyle.Normal);
             flightDetailText.style.whiteSpace = WhiteSpace.Normal;
             flightDetails.Add(flightDetailText);
-            flightControls.Add(flightDetails);
+            root.Add(flightDetails);
 
-            var dock = Panel(); dock.name = "cockpit-bottom-strip";
-            dock.style.height = 104; dock.style.paddingTop = 10; dock.style.paddingBottom = 10;
+            var dock = Row(); dock.name = "cockpit-bottom-strip";
+            dock.pickingMode = PickingMode.Ignore;
+            dock.style.height = 84;
             dock.style.flexDirection = FlexDirection.Row; dock.style.alignItems = Align.Center;
-            var left = Row(); left.name = "cockpit-left-instruments";
+            var left = Row(); left.name = "cockpit-left-instruments"; left.pickingMode = PickingMode.Ignore;
             left.style.flexGrow = 1; left.style.flexBasis = 0; left.style.minWidth = 0;
             left.style.alignItems = Align.Center;
             vehicleGroup = VehicleSelector(false); left.Add(vehicleGroup);
-            var telemetry = Row(); telemetry.name = "primary-telemetry";
+            flightDetails.Add(modelCredit);
+            var telemetry = Panel(); telemetry.name = "primary-telemetry";
+            telemetry.style.flexDirection = FlexDirection.Row;
+            telemetry.style.marginLeft = 8;
             telemetry.style.flexGrow = 1; telemetry.style.justifyContent = Justify.SpaceAround;
             altitude = Metric(telemetry, "ALTITUDE", "altitude-readout");
             speed = Metric(telemetry, "SURFACE SPEED", "speed-readout");
@@ -192,11 +197,10 @@ namespace ESP.Presentation
             missionTime.style.marginTop = 4;
             navballHousing.Add(missionTime); dock.Add(navballHousing);
 
-            var right = Row(); right.name = "cockpit-flight-inputs";
+            var right = Row(); right.name = "cockpit-flight-inputs"; right.pickingMode = PickingMode.Ignore;
             right.style.flexGrow = 1; right.style.flexBasis = 0; right.style.minWidth = 0;
             right.style.justifyContent = Justify.SpaceBetween; right.style.alignItems = Align.Center;
             var guidance = Column(); guidance.style.width = 102; guidance.style.flexShrink = 0;
-            guidance.Add(Label("FLIGHT CONTROL", 9, Muted, FontStyle.Normal));
             assist = Button("ASSIST ON", () => { if (director?.FlightDriver is RocketFlightDriver f) f.ToggleAssistance(); Refresh(); }, false, "assistance-toggle");
             assist.tooltip = "Assisted ascent follows the same throttle, steering and staging limits. Manual pitch: W/S or ↑/↓.";
             guidance.Add(assist);
@@ -245,7 +249,6 @@ namespace ESP.Presentation
         {
             var group = Column(); group.name = map ? "map-vehicle-selector" : "flight-vehicle-selector";
             group.style.width = 140; group.style.flexShrink = 0;
-            group.Add(Label("VEHICLE", 9, Muted, FontStyle.Normal));
             var choice = Button("STARSHIP  ›", () => { if (director != null) director.SelectVehicle((director.VehicleIndex + 1) % 3); Refresh(); }, false, map ? "map-vehicle-choice" : "flight-vehicle-choice");
             choice.style.unityTextAlign = TextAnchor.MiddleLeft;
             choice.tooltip = "Choose vehicle before launch";
@@ -256,7 +259,6 @@ namespace ESP.Presentation
             credit.style.paddingLeft = 0; credit.style.paddingRight = 0;
             credit.style.backgroundColor = Color.clear; Border(credit, Color.clear);
             credit.style.unityTextAlign = TextAnchor.MiddleLeft; credit.style.color = Muted;
-            group.Add(note); group.Add(credit);
             if (map) { mapVehicleChoice = choice; mapModelCredit = credit; mapVehicleNote = note; }
             else { vehicleChoice = choice; modelCredit = credit; vehicleNote = note; }
             return group;
@@ -362,11 +364,12 @@ namespace ESP.Presentation
             flightControls.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
             flightDetails.style.display = detailsOpen ? DisplayStyle.Flex : DisplayStyle.None;
             weatherDetails.style.display = weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
-            viewToggle.text = isMap ? "LAUNCH VIEW  [M]" : "MAP VIEW  [M]";
+            viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
             for (int i = 0; i < layers.Length; i++) Selected(layers[i], i == selectedLayer);
             Selected(weatherToggle, weatherOpen);
             Selected(detailsToggle, detailsOpen);
+            Selected(mapDetailsToggle, detailsOpen);
             if (!available) return;
             var flight = director.FlightDriver as RocketFlightDriver;
             bool showMapMission = isMap && flight != null && flight.HasPosition;
@@ -375,23 +378,26 @@ namespace ESP.Presentation
             string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  /  {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
             weather.text = director.WeatherSummary ?? "Weather unavailable";
-            mapCredit.text = director.MapCredit;
+            string imageryDate = director.mapLayers != null ? director.mapLayers.DisplayedDate : "";
+            mapCredit.text = string.IsNullOrEmpty(imageryDate) ? "NASA · Blue Marble" : "NASA · through " + imageryDate;
             nasaStatus.text = director.NasaStatus;
             regionalImage.style.display = director.RegionalImage != null ? DisplayStyle.Flex : DisplayStyle.None;
             regionalImage.style.backgroundImage = director.RegionalImage != null ? new StyleBackground((Texture2D)director.RegionalImage) : new StyleBackground(StyleKeyword.None);
             string vehicleName = director.VehicleIndex == 1 ? "STARSHIP" : director.VehicleIndex == 2 ? "SLS" : "ESP DEMO";
             vehicleChoice.text = mapVehicleChoice.text = vehicleName + "  ›";
             vehicleChoice.SetEnabled(director.CanLaunch); mapVehicleChoice.SetEnabled(director.CanLaunch);
-            vehicleNote.text = director.VehicleIndex == 0 ? "DEMO PRESET" : "ESTIMATED SPECS";
-            mapVehicleNote.text = "ENLARGED VEHICLE MARKER";
+            vehicleNote.text = mapVehicleNote.text = director.VehicleIndex == 0 ? "DEMO PRESET" : "ESTIMATED SPECS";
             modelCredit.style.display = mapModelCredit.style.display = director.VehicleIndex == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             modelCredit.text = mapModelCredit.text = director.VehicleIndex == 1 ? "Clarence365 · CC BY 4.0 ↗" : "NASA · adapted ↗";
             modelCredit.tooltip = mapModelCredit.tooltip = director.VehicleIndex == 1 ? "Starship model by Clarence365, CC BY 4.0; adapted for ESP. Open source model." : "NASA SLS model adapted for ESP. Open source model.";
-            site.text = (director.SiteName ?? "Launch site").ToUpperInvariant();
+            site.text = (director.SiteName ?? "Launch site").Replace(" (approximate)", "").Replace(" (Approximate)", "").ToUpperInvariant();
             status.text = isMap ? "EARTH / SELECT A LAUNCH SITE" : (director.FlightStatus ?? "READY").ToUpperInvariant();
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
-            flightDetailText.text = (director.FlightStatus ?? "READY") + "\n\n" + (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
-                "\n\nPitch: W/S or ↑/↓  ·  Stage: Space  ·  Map: M\nThrottle changes switch assistance off.\nAttitude roll is not modeled.";
+            string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
+            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nVehicle map markers are enlarged for visibility; position is georeferenced.\n" + vehicleInfo;
+            flightDetailText.text = isMap ? mapInfo : (director.FlightStatus ?? "READY") + "\n\n" +
+                (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") + "\n\n" + vehicleInfo +
+                "\nPitch: W/S or ↑/↓  ·  Stage: Space  ·  Map: M\nThrottle changes switch assistance off. Roll is not modeled.";
             assist.SetEnabled(flight != null);
             assist.text = flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
             Selected(assist, flight != null && flight.AssistanceEnabled);
