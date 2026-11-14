@@ -5,7 +5,7 @@
 ```
 FlightCore/
 ├── Gravity.cs              # Main implementation
-├── Vector3d.cs             # 3D vector class
+├── Vector3d.cs             # 3D vector struct
 ├── README.md               # Usage documentation
 └── Documentation.md        # This file
 ```
@@ -22,12 +22,13 @@ The `Gravity` class is the main entry point for gravitational calculations.
 **Constants:**
 - `EarthGravitationalParameter` - Standard gravitational parameter for Earth (3.986004418 × 10¹⁴ m³/s²)
 
-### Vector3d Class
+### Vector3d Struct
 
-A simple 3D vector implementation with:
+An immutable double-precision 3D vector struct with:
 - X, Y, Z components
 - Magnitude() method
-- Proper equality and hashing support
+- Normalize(), addition, subtraction, and scalar multiplication
+- Constructor validation rejecting NaN and infinity components
 
 ## Mathematical Implementation
 
@@ -43,7 +44,7 @@ Where:
 
 ## Validation and Testing
 
-The implementation has been rigorously tested with:
+The implementation includes focused console tests for:
 
 1. **Surface Position Test**: 
    - Input: (6378137, 0, 0) meters
@@ -59,18 +60,22 @@ The implementation has been rigorously tested with:
 
 4. **Invalid Input Handling**:
    - Zero vector inputs are rejected with ArgumentException
-   - NaN and infinity values are properly handled
+   - Vector construction rejects NaN and both infinities in each component
+
+5. **Additional Known Values and Symmetry**:
+   - The 100 km example and all six signed coordinate axes are checked
+   - Numerical assertions explicitly reject nonfinite results
 
 ## Compatibility
 
 - Target Framework: .NET Standard 2.1
 - Uses only standard library types
 - No external dependencies
-- Compatible with Unity projects using URP
+- Unity integration and packaged execution require separate verification; URP is independent of the flight library
 
 ## Performance Considerations
 
 - All calculations use double precision for accuracy
 - Minimal memory allocation during computation
-- Optimized for real-time simulation scenarios
-- Vector operations are computed inline without intermediate objects
+- No performance measurements are established by these tests
+- Vector operations return value types; compiler inlining is not guaranteed
