@@ -71,11 +71,8 @@ namespace FlightCore.Tests
         {
             Console.WriteLine("Testing off-axis position...");
             
-            // Position at 100km above Earth surface in a diagonal direction
-            const double earthRadius = 6378137.0;
-            const double altitude = 100000.0; // 100 km
-            
-            var position = new Vector3d(earthRadius + altitude, earthRadius + altitude, 0.0);
+            // Position with three unequal, nonzero components to make the test more robust
+            var position = new Vector3d(6378137.0 + 100000.0, 6378137.0 + 50000.0, 6378137.0 + 200000.0);
             var acceleration = Gravity.Acceleration(position);
             
             // The acceleration should point directly toward the origin (0,0,0)
@@ -87,16 +84,39 @@ namespace FlightCore.Tests
             double dotProduct = acceleration.X * position.X + acceleration.Y * position.Y + acceleration.Z * position.Z;
             if (dotProduct > 0)
             {
-                throw new InvalidOperationException("Acceleration should point toward Earth center, but dot product is positive.");
+                throw new InvalidOperationException($"Acceleration and position vectors should point in opposite directions. Dot product: {dotProduct}");
             }
             
-            // Check that acceleration magnitude is correct (using inverse square law)
+            // Check that the magnitudes are correct (inverse square law)
             double expectedMagnitude = Gravity.EarthGravitationalParameter / (positionMagnitude * positionMagnitude);
-            double tolerance = 1e-10;
+            double tolerance = 1e-10; // Tolerance for numerical precision
             
             if (Math.Abs(accelerationMagnitude - expectedMagnitude) > tolerance)
             {
                 throw new InvalidOperationException($"Acceleration magnitude {accelerationMagnitude} does not match expected {expectedMagnitude}");
+            }
+            
+            // Strengthen test: Compare normalized vectors
+            // The normalized acceleration vector should be the negative of the normalized position vector
+            var normalizedPosition = position * (1.0 / positionMagnitude);
+            var normalizedAcceleration = acceleration * (1.0 / accelerationMagnitude);
+            
+            // Check that normalized acceleration equals -normalized position within tolerance
+            double normalizationTolerance = 1e-12; // Very strict tolerance for normalization
+            
+            if (Math.Abs(normalizedAcceleration.X + normalizedPosition.X) > normalizationTolerance)
+            {
+                throw new InvalidOperationException($"Normalized acceleration X component does not match -normalized position X: {normalizedAcceleration.X} vs {-normalizedPosition.X}");
+            }
+            
+            if (Math.Abs(normalizedAcceleration.Y + normalizedPosition.Y) > normalizationTolerance)
+            {
+                throw new InvalidOperationException($"Normalized acceleration Y component does not match -normalized position Y: {normalizedAcceleration.Y} vs {-normalizedPosition.Y}");
+            }
+            
+            if (Math.Abs(normalizedAcceleration.Z + normalizedPosition.Z) > normalizationTolerance)
+            {
+                throw new InvalidOperationException($"Normalized acceleration Z component does not match -normalized position Z: {normalizedAcceleration.Z} vs {-normalizedPosition.Z}");
             }
             
             Console.WriteLine($"  ✓ Off-axis position: acceleration = {acceleration}, magnitude = {accelerationMagnitude:F10}");
