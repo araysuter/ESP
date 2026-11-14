@@ -10,6 +10,7 @@
 ## Git and collaboration
 
 - Use the GitHub plugin for commits, pushes, and pull requests, not the GitHub CLI.
+- On implementation tasks, commit each coherent, verified set of changes to the assigned branch as you go. Review the staged diff before each commit, include only files that belong to the task, and report the commit hashes and checks run. Follow any explicit task instruction about when to commit, push, or open a pull request.
 - Inspect Git status before edits and preserve others' work. Use `asher/codex/` for new branches unless directed otherwise.
 - Give concurrent contributors separate branches/worktrees. Never open one Unity project directory in multiple editor processes.
 - Assign one owner at a time to each shared Unity editor, scene/prefab, and Blender file. Record a handoff before another contributor mutates it. Multiple MCP connections do not provide edit isolation.

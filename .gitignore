@@ -1,0 +1,23 @@
+# Build results
+[Oo]bj/
+[Bb]in/
+*.user
+*.suo
+*.tmp
+*.log
+*.cache
+
+# Visual Studio cache and generated files
+.vs/
+*.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Unity specific
+Library/
+Temp/
+Logs/
+*.pidb
+*.pdb
