@@ -26,6 +26,8 @@ namespace ESP.Presentation
         public GameObject mapRoot;
         public NasaMapLayers mapLayers;
         public LaunchWeatherProfile weather;
+        public NasaWeatherProfile nasaWeather;
+        public Transform EnvironmentRoot => environment != null ? environment.transform : null;
         public GlobePointPicker picker;
         public PointWeather pointWeather;
         public NasaRegionalPreview regional;
@@ -123,7 +125,9 @@ namespace ESP.Presentation
         }
         private void RequestWeather()
         {
-            if (weather != null) { var site = LaunchSites.All[SelectedSiteIndex]; weather.Fetch(site.Latitude, site.Longitude); }
+            var site = LaunchSites.All[SelectedSiteIndex];
+            if (weather != null) weather.Fetch(site.Latitude, site.Longitude);
+            if (nasaWeather != null) nasaWeather.Fetch(site.Latitude, site.Longitude);
         }
         public void Launch()
         {
@@ -138,6 +142,32 @@ namespace ESP.Presentation
         public void SetThrottle(float value) { FlightDriver?.SetThrottle(Mathf.Clamp01(value)); }
         public void SelectLayer(int index) { if (mapLayers != null && index >= 0 && index <= 2) mapLayers.Select(index - 1); }
         public string GetSiteName(int index) => LaunchSites.All[index].Name;
+        // Project the actual inertial state onto the scaled map; reject globe-occluded points.
+        public bool TryGetRocketScreenPosition(out Vector2 screenPosition)
+        {
+            screenPosition = default;
+            if (!IsMapView || mapCamera == null || !(FlightDriver is RocketFlightDriver driver) || driver.Simulation == null) return false;
+            var state = driver.Simulation.State;
+            if (!state.IsLaunched) return false;
+            var ecef = FlightCore.EarthFrames.InertialToEcef(state.Position, FlightCore.Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+            Vector3 point = new Vector3((float)(ecef.X / 1000000), (float)(ecef.Z / 1000000), (float)(ecef.Y / 1000000));
+            Vector3 cameraPosition = mapCamera.transform.position;
+            Vector3 delta = point - cameraPosition;
+            const double a = 6.378137, b = 6.356752314245;
+            double qa = (delta.x * delta.x + delta.z * delta.z) / (a * a) + delta.y * delta.y / (b * b);
+            double qb = 2 * ((cameraPosition.x * delta.x + cameraPosition.z * delta.z) / (a * a) + cameraPosition.y * delta.y / (b * b));
+            double qc = (cameraPosition.x * cameraPosition.x + cameraPosition.z * cameraPosition.z) / (a * a) + cameraPosition.y * cameraPosition.y / (b * b) - 1;
+            double discriminant = qb * qb - 4 * qa * qc;
+            if (qa > 0 && discriminant >= 0)
+            {
+                double t = (-qb - Math.Sqrt(discriminant)) / (2 * qa);
+                if (t >= 0 && t < .999999) return false;
+            }
+            Vector3 screen = mapCamera.WorldToScreenPoint(point);
+            if (screen.z <= 0 || screen.x < 0 || screen.x > Screen.width || screen.y < 0 || screen.y > Screen.height) return false;
+            screenPosition = screen; return true;
+        }
+
         public bool TryGetSiteScreenPosition(int index, out Vector2 screenPosition)
         {
             screenPosition = default;

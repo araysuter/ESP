@@ -1,0 +1,519 @@
+{
+  "provider": "NASA GEOS-FP native-level assimilation",
+  "validTimeUtc": "2026-11-14T09:00:00Z",
+  "latitudeDegrees": 28.608389,
+  "longitudeDegrees": -80.604333,
+  "gridLatitudeDegrees": 28.5,
+  "gridLongitudeDegrees": -80.625,
+  "levels": [
+    {
+      "geometricAltitudeMeters": 66.11380607596841,
+      "temperatureKelvin": 286.41608,
+      "pressurePascals": 100550.96,
+      "windEastMetersPerSecond": 3.2625322,
+      "windNorthMetersPerSecond": -3.5883172
+    },
+    {
+      "geometricAltitudeMeters": 194.58289276342742,
+      "temperatureKelvin": 286.02905,
+      "pressurePascals": 99025.78,
+      "windEastMetersPerSecond": 4.7946906,
+      "windNorthMetersPerSecond": -6.1532097
+    },
+    {
+      "geometricAltitudeMeters": 324.82854069713767,
+      "temperatureKelvin": 285.3449,
+      "pressurePascals": 97495.375,
+      "windEastMetersPerSecond": 4.547885,
+      "windNorthMetersPerSecond": -7.1848063
+    },
+    {
+      "geometricAltitudeMeters": 456.94213054409414,
+      "temperatureKelvin": 284.55212,
+      "pressurePascals": 95976.93,
+      "windEastMetersPerSecond": 3.8519132,
+      "windNorthMetersPerSecond": -7.5476794
+    },
+    {
+      "geometricAltitudeMeters": 590.7222669823627,
+      "temperatureKelvin": 283.49347,
+      "pressurePascals": 94439.89,
+      "windEastMetersPerSecond": 3.2209635,
+      "windNorthMetersPerSecond": -7.5250697
+    },
+    {
+      "geometricAltitudeMeters": 726.0533332246042,
+      "temperatureKelvin": 282.55115,
+      "pressurePascals": 92922.72,
+      "windEastMetersPerSecond": 2.5712342,
+      "windNorthMetersPerSecond": -7.295293
+    },
+    {
+      "geometricAltitudeMeters": 863.668025037222,
+      "temperatureKelvin": 281.84103,
+      "pressurePascals": 91388.945,
+      "windEastMetersPerSecond": 2.2619154,
+      "windNorthMetersPerSecond": -6.779703
+    },
+    {
+      "geometricAltitudeMeters": 1002.8714390882163,
+      "temperatureKelvin": 281.34708,
+      "pressurePascals": 89866.93,
+      "windEastMetersPerSecond": 2.825945,
+      "windNorthMetersPerSecond": -6.498724
+    },
+    {
+      "geometricAltitudeMeters": 1144.031095097814,
+      "temperatureKelvin": 281.4924,
+      "pressurePascals": 88331.625,
+      "windEastMetersPerSecond": 4.0737653,
+      "windNorthMetersPerSecond": -6.755499
+    },
+    {
+      "geometricAltitudeMeters": 1288.358882344212,
+      "temperatureKelvin": 281.99072,
+      "pressurePascals": 86789.59,
+      "windEastMetersPerSecond": 5.642848,
+      "windNorthMetersPerSecond": -7.219946
+    },
+    {
+      "geometricAltitudeMeters": 1435.0370623952963,
+      "temperatureKelvin": 281.85242,
+      "pressurePascals": 85279.0,
+      "windEastMetersPerSecond": 7.2657323,
+      "windNorthMetersPerSecond": -7.6588316
+    },
+    {
+      "geometricAltitudeMeters": 1584.3736123590006,
+      "temperatureKelvin": 282.0838,
+      "pressurePascals": 83735.26,
+      "windEastMetersPerSecond": 9.163367,
+      "windNorthMetersPerSecond": -7.9332924
+    },
+    {
+      "geometricAltitudeMeters": 1762.702562532763,
+      "temperatureKelvin": 282.95654,
+      "pressurePascals": 81958.63,
+      "windEastMetersPerSecond": 11.722297,
+      "windNorthMetersPerSecond": -7.9538655
+    },
+    {
+      "geometricAltitudeMeters": 1998.349012240586,
+      "temperatureKelvin": 283.24545,
+      "pressurePascals": 79654.586,
+      "windEastMetersPerSecond": 14.833974,
+      "windNorthMetersPerSecond": -7.166958
+    },
+    {
+      "geometricAltitudeMeters": 2267.4827255806763,
+      "temperatureKelvin": 282.69833,
+      "pressurePascals": 77119.44,
+      "windEastMetersPerSecond": 17.007792,
+      "windNorthMetersPerSecond": -5.3922696
+    },
+    {
+      "geometricAltitudeMeters": 2544.887746234945,
+      "temperatureKelvin": 281.59894,
+      "pressurePascals": 74579.02,
+      "windEastMetersPerSecond": 18.13148,
+      "windNorthMetersPerSecond": -3.527474
+    },
+    {
+      "geometricAltitudeMeters": 2830.875706229235,
+      "temperatureKelvin": 280.533,
+      "pressurePascals": 72032.86,
+      "windEastMetersPerSecond": 18.36159,
+      "windNorthMetersPerSecond": -3.450994
+    },
+    {
+      "geometricAltitudeMeters": 3126.5552980462476,
+      "temperatureKelvin": 279.9437,
+      "pressurePascals": 69485.766,
+      "windEastMetersPerSecond": 19.202772,
+      "windNorthMetersPerSecond": -4.8415427
+    },
+    {
+      "geometricAltitudeMeters": 3511.5616329338286,
+      "temperatureKelvin": 278.2243,
+      "pressurePascals": 66304.71,
+      "windEastMetersPerSecond": 21.211905,
+      "windNorthMetersPerSecond": -5.636726
+    },
+    {
+      "geometricAltitudeMeters": 3992.5394533240938,
+      "temperatureKelvin": 275.14798,
+      "pressurePascals": 62480.008,
+      "windEastMetersPerSecond": 22.864407,
+      "windNorthMetersPerSecond": -3.9736807
+    },
+    {
+      "geometricAltitudeMeters": 4497.258754325082,
+      "temperatureKelvin": 271.74023,
+      "pressurePascals": 58677.15,
+      "windEastMetersPerSecond": 23.326752,
+      "windNorthMetersPerSecond": -0.119136095
+    },
+    {
+      "geometricAltitudeMeters": 5031.634706117265,
+      "temperatureKelvin": 268.59485,
+      "pressurePascals": 54858.54,
+      "windEastMetersPerSecond": 23.944908,
+      "windNorthMetersPerSecond": 2.3345559
+    },
+    {
+      "geometricAltitudeMeters": 5595.486059656797,
+      "temperatureKelvin": 264.49985,
+      "pressurePascals": 51041.945,
+      "windEastMetersPerSecond": 25.33683,
+      "windNorthMetersPerSecond": 3.1529655
+    },
+    {
+      "geometricAltitudeMeters": 6192.645438775103,
+      "temperatureKelvin": 259.96832,
+      "pressurePascals": 47227.64,
+      "windEastMetersPerSecond": 26.561417,
+      "windNorthMetersPerSecond": 3.261502
+    },
+    {
+      "geometricAltitudeMeters": 6830.856561276968,
+      "temperatureKelvin": 256.54156,
+      "pressurePascals": 43414.934,
+      "windEastMetersPerSecond": 28.055342,
+      "windNorthMetersPerSecond": 3.8596275
+    },
+    {
+      "geometricAltitudeMeters": 7517.735921138551,
+      "temperatureKelvin": 252.35982,
+      "pressurePascals": 39608.66,
+      "windEastMetersPerSecond": 30.348873,
+      "windNorthMetersPerSecond": 5.6309032
+    },
+    {
+      "geometricAltitudeMeters": 8260.09546877415,
+      "temperatureKelvin": 247.18933,
+      "pressurePascals": 35802.098,
+      "windEastMetersPerSecond": 31.23819,
+      "windNorthMetersPerSecond": 4.1947513
+    },
+    {
+      "geometricAltitudeMeters": 9213.339512003975,
+      "temperatureKelvin": 241.87857,
+      "pressurePascals": 31395.324,
+      "windEastMetersPerSecond": 31.854237,
+      "windNorthMetersPerSecond": 7.466652
+    },
+    {
+      "geometricAltitudeMeters": 10347.158600158069,
+      "temperatureKelvin": 235.29152,
+      "pressurePascals": 26707.924,
+      "windEastMetersPerSecond": 32.54328,
+      "windNorthMetersPerSecond": 5.983009
+    },
+    {
+      "geometricAltitudeMeters": 11457.897413106899,
+      "temperatureKelvin": 226.78688,
+      "pressurePascals": 22673.898,
+      "windEastMetersPerSecond": 35.433796,
+      "windNorthMetersPerSecond": 4.7166386
+    },
+    {
+      "geometricAltitudeMeters": 12530.63216283166,
+      "temperatureKelvin": 220.47397,
+      "pressurePascals": 19258.688,
+      "windEastMetersPerSecond": 35.185616,
+      "windNorthMetersPerSecond": 9.919413
+    },
+    {
+      "geometricAltitudeMeters": 13570.909037537846,
+      "temperatureKelvin": 214.6321,
+      "pressurePascals": 16366.153,
+      "windEastMetersPerSecond": 37.961212,
+      "windNorthMetersPerSecond": 14.759008
+    },
+    {
+      "geometricAltitudeMeters": 14574.903827935292,
+      "temperatureKelvin": 205.63339,
+      "pressurePascals": 13911.503,
+      "windEastMetersPerSecond": 38.646782,
+      "windNorthMetersPerSecond": 12.959883
+    },
+    {
+      "geometricAltitudeMeters": 15544.097505903685,
+      "temperatureKelvin": 199.84041,
+      "pressurePascals": 11825.003,
+      "windEastMetersPerSecond": 37.66443,
+      "windNorthMetersPerSecond": 5.275181
+    },
+    {
+      "geometricAltitudeMeters": 16491.94174137417,
+      "temperatureKelvin": 196.58887,
+      "pressurePascals": 10051.4375,
+      "windEastMetersPerSecond": 33.11791,
+      "windNorthMetersPerSecond": -1.2571796
+    },
+    {
+      "geometricAltitudeMeters": 17434.170214468297,
+      "temperatureKelvin": 197.65836,
+      "pressurePascals": 8543.902,
+      "windEastMetersPerSecond": 25.768473,
+      "windNorthMetersPerSecond": -0.4157641
+    },
+    {
+      "geometricAltitudeMeters": 18390.422693806857,
+      "temperatureKelvin": 199.742,
+      "pressurePascals": 7255.7866,
+      "windEastMetersPerSecond": 21.171135,
+      "windNorthMetersPerSecond": 1.7445592
+    },
+    {
+      "geometricAltitudeMeters": 19375.03433721435,
+      "temperatureKelvin": 204.34229,
+      "pressurePascals": 6149.5664,
+      "windEastMetersPerSecond": 16.092493,
+      "windNorthMetersPerSecond": 5.1414914
+    },
+    {
+      "geometricAltitudeMeters": 20390.51203842671,
+      "temperatureKelvin": 207.18353,
+      "pressurePascals": 5201.5913,
+      "windEastMetersPerSecond": 14.6378355,
+      "windNorthMetersPerSecond": 3.3992724
+    },
+    {
+      "geometricAltitudeMeters": 21430.35436320358,
+      "temperatureKelvin": 209.19868,
+      "pressurePascals": 4390.9663,
+      "windEastMetersPerSecond": 12.639452,
+      "windNorthMetersPerSecond": 3.8712704
+    },
+    {
+      "geometricAltitudeMeters": 22494.05824029878,
+      "temperatureKelvin": 211.94417,
+      "pressurePascals": 3699.271,
+      "windEastMetersPerSecond": 12.628162,
+      "windNorthMetersPerSecond": 5.068805
+    },
+    {
+      "geometricAltitudeMeters": 23591.34473236641,
+      "temperatureKelvin": 215.80518,
+      "pressurePascals": 3108.8906,
+      "windEastMetersPerSecond": 12.201357,
+      "windNorthMetersPerSecond": 9.523495
+    },
+    {
+      "geometricAltitudeMeters": 24727.306273516544,
+      "temperatureKelvin": 219.27487,
+      "pressurePascals": 2604.9106,
+      "windEastMetersPerSecond": 17.236362,
+      "windNorthMetersPerSecond": 9.459329
+    },
+    {
+      "geometricAltitudeMeters": 25902.072606391925,
+      "temperatureKelvin": 223.15775,
+      "pressurePascals": 2176.1006,
+      "windEastMetersPerSecond": 20.542639,
+      "windNorthMetersPerSecond": 5.631785
+    },
+    {
+      "geometricAltitudeMeters": 27113.838651777376,
+      "temperatureKelvin": 225.40305,
+      "pressurePascals": 1812.4354,
+      "windEastMetersPerSecond": 17.409243,
+      "windNorthMetersPerSecond": 4.104596
+    },
+    {
+      "geometricAltitudeMeters": 28351.567252212633,
+      "temperatureKelvin": 225.35025,
+      "pressurePascals": 1505.0253,
+      "windEastMetersPerSecond": 13.979115,
+      "windNorthMetersPerSecond": 4.53968
+    },
+    {
+      "geometricAltitudeMeters": 29607.040139117777,
+      "temperatureKelvin": 224.40776,
+      "pressurePascals": 1246.0153,
+      "windEastMetersPerSecond": 14.160755,
+      "windNorthMetersPerSecond": 5.2249393
+    },
+    {
+      "geometricAltitudeMeters": 30886.587650879486,
+      "temperatureKelvin": 226.5318,
+      "pressurePascals": 1028.4922,
+      "windEastMetersPerSecond": 17.442276,
+      "windNorthMetersPerSecond": 4.8076353
+    },
+    {
+      "geometricAltitudeMeters": 32209.288484471785,
+      "temperatureKelvin": 230.24663,
+      "pressurePascals": 845.6392,
+      "windEastMetersPerSecond": 18.07052,
+      "windNorthMetersPerSecond": 5.0922785
+    },
+    {
+      "geometricAltitudeMeters": 33594.591710682704,
+      "temperatureKelvin": 235.70758,
+      "pressurePascals": 691.83215,
+      "windEastMetersPerSecond": 18.573227,
+      "windNorthMetersPerSecond": 4.621391
+    },
+    {
+      "geometricAltitudeMeters": 35038.04782072018,
+      "temperatureKelvin": 237.7754,
+      "pressurePascals": 563.1801,
+      "windEastMetersPerSecond": 21.143917,
+      "windNorthMetersPerSecond": 4.5462823
+    },
+    {
+      "geometricAltitudeMeters": 36519.26937178842,
+      "temperatureKelvin": 236.78595,
+      "pressurePascals": 456.1686,
+      "windEastMetersPerSecond": 23.598064,
+      "windNorthMetersPerSecond": 3.3371012
+    },
+    {
+      "geometricAltitudeMeters": 38036.87434163004,
+      "temperatureKelvin": 237.414,
+      "pressurePascals": 367.6501,
+      "windEastMetersPerSecond": 29.77069,
+      "windNorthMetersPerSecond": 1.7928505
+    },
+    {
+      "geometricAltitudeMeters": 39607.2390149021,
+      "temperatureKelvin": 242.20175,
+      "pressurePascals": 294.83206,
+      "windEastMetersPerSecond": 38.598415,
+      "windNorthMetersPerSecond": -1.3483063
+    },
+    {
+      "geometricAltitudeMeters": 41259.60440971977,
+      "temperatureKelvin": 251.18788,
+      "pressurePascals": 235.25905,
+      "windEastMetersPerSecond": 46.025486,
+      "windNorthMetersPerSecond": -4.1486983
+    },
+    {
+      "geometricAltitudeMeters": 42988.63175042665,
+      "temperatureKelvin": 253.48663,
+      "pressurePascals": 186.78804,
+      "windEastMetersPerSecond": 52.325607,
+      "windNorthMetersPerSecond": -5.7411933
+    },
+    {
+      "geometricAltitudeMeters": 44769.827949217724,
+      "temperatureKelvin": 255.06558,
+      "pressurePascals": 147.56503,
+      "windEastMetersPerSecond": 56.284573,
+      "windNorthMetersPerSecond": -2.485287
+    },
+    {
+      "geometricAltitudeMeters": 46594.5701522967,
+      "temperatureKelvin": 255.12259,
+      "pressurePascals": 115.99753,
+      "windEastMetersPerSecond": 62.413307,
+      "windNorthMetersPerSecond": -2.7403011
+    },
+    {
+      "geometricAltitudeMeters": 48450.680580080545,
+      "temperatureKelvin": 252.43338,
+      "pressurePascals": 90.728714,
+      "windEastMetersPerSecond": 67.98296,
+      "windNorthMetersPerSecond": -9.3319025
+    },
+    {
+      "geometricAltitudeMeters": 50320.288907110975,
+      "temperatureKelvin": 248.50949,
+      "pressurePascals": 70.59566,
+      "windEastMetersPerSecond": 72.18439,
+      "windNorthMetersPerSecond": -13.208428
+    },
+    {
+      "geometricAltitudeMeters": 52211.148951176794,
+      "temperatureKelvin": 246.5711,
+      "pressurePascals": 54.629257,
+      "windEastMetersPerSecond": 79.19702,
+      "windNorthMetersPerSecond": -18.407587
+    },
+    {
+      "geometricAltitudeMeters": 54133.118075434664,
+      "temperatureKelvin": 245.97229,
+      "pressurePascals": 42.04236,
+      "windEastMetersPerSecond": 85.71242,
+      "windNorthMetersPerSecond": -20.720026
+    },
+    {
+      "geometricAltitudeMeters": 56074.89787466588,
+      "temperatureKelvin": 241.16241,
+      "pressurePascals": 32.178356,
+      "windEastMetersPerSecond": 86.8831,
+      "windNorthMetersPerSecond": -24.948574
+    },
+    {
+      "geometricAltitudeMeters": 58009.830595755746,
+      "temperatureKelvin": 234.16968,
+      "pressurePascals": 24.493753,
+      "windEastMetersPerSecond": 85.09114,
+      "windNorthMetersPerSecond": -30.497784
+    },
+    {
+      "geometricAltitudeMeters": 59930.40673757443,
+      "temperatureKelvin": 228.12369,
+      "pressurePascals": 18.542202,
+      "windEastMetersPerSecond": 79.92359,
+      "windNorthMetersPerSecond": -28.75814
+    },
+    {
+      "geometricAltitudeMeters": 61863.865305752246,
+      "temperatureKelvin": 227.87044,
+      "pressurePascals": 13.959902,
+      "windEastMetersPerSecond": 75.41661,
+      "windNorthMetersPerSecond": -17.892496
+    },
+    {
+      "geometricAltitudeMeters": 63821.16433841236,
+      "temperatureKelvin": 224.77762,
+      "pressurePascals": 10.452401,
+      "windEastMetersPerSecond": 74.69633,
+      "windNorthMetersPerSecond": 0.66897064
+    },
+    {
+      "geometricAltitudeMeters": 65802.96488661971,
+      "temperatureKelvin": 220.97379,
+      "pressurePascals": 7.7672515,
+      "windEastMetersPerSecond": 63.725956,
+      "windNorthMetersPerSecond": 25.992329
+    },
+    {
+      "geometricAltitudeMeters": 67879.96419906658,
+      "temperatureKelvin": 220.31049,
+      "pressurePascals": 5.679251,
+      "windEastMetersPerSecond": 50.529064,
+      "windNorthMetersPerSecond": 20.069004
+    },
+    {
+      "geometricAltitudeMeters": 70158.87987913353,
+      "temperatureKelvin": 214.14458,
+      "pressurePascals": 4.0142508,
+      "windEastMetersPerSecond": 41.111473,
+      "windNorthMetersPerSecond": -19.997646
+    },
+    {
+      "geometricAltitudeMeters": 72847.36575372693,
+      "temperatureKelvin": 201.98434,
+      "pressurePascals": 2.6350002,
+      "windEastMetersPerSecond": 40.68835,
+      "windNorthMetersPerSecond": -34.427746
+    },
+    {
+      "geometricAltitudeMeters": 76117.4863051427,
+      "temperatureKelvin": 171.7012,
+      "pressurePascals": 1.5000001,
+      "windEastMetersPerSecond": 23.299765,
+      "windNorthMetersPerSecond": -19.402874
+    }
+  ],
+  "sourceUrl": "https://opendap.nccs.nasa.gov/dods/GEOS-5/fp/0.25_deg/assim/inst3_3d_asm_Nv",
+  "fixturePurpose": "Historical provider qualification sample, not automatically current weather",
+  "nativeLevels": 72,
+  "retainedLevels": 72,
+  "droppedLevels": 0
+}

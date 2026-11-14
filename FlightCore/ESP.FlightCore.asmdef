@@ -1,0 +1,7 @@
+{
+  "name": "ESP.FlightCore",
+  "rootNamespace": "FlightCore",
+  "references": [],
+  "autoReferenced": true,
+  "noEngineReferences": true
+}
