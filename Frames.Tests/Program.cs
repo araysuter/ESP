@@ -38,6 +38,18 @@ static class Program
         Near(elliptical.MinimumWgs84AltitudeBoundMeters, radius - EarthFrames.SemiMajorAxisMeters, 1e-6, "clearance bound");
         var escape = OrbitDiagnostics.Compute(new Vector3d(radius, 0, 0), new Vector3d(0, Math.Sqrt(2 * mu / radius) * 1.01, 0));
         if (escape.IsBound || !double.IsPositiveInfinity(escape.ApogeeRadiusMeters)) throw new Exception("escape classified bound");
+
+        // At 90 degrees true anomaly, r = p. Radial and transverse speeds of
+        // 2s and s give eccentricity 2 and perigee p / (1 + 2).
+        const double semilatusRectum = 12_000_000;
+        double speedScale = Math.Sqrt(mu / semilatusRectum);
+        var hyperbolic = OrbitDiagnostics.Compute(
+            new Vector3d(semilatusRectum, 0, 0), new Vector3d(2 * speedScale, speedScale, 0));
+        if (hyperbolic.IsBound) throw new Exception("hyperbolic trajectory classified bound");
+        Near(hyperbolic.Eccentricity, 2, 1e-10, "hyperbolic eccentricity");
+        Near(hyperbolic.PerigeeRadiusMeters, 4_000_000, 1e-3, "hyperbolic perigee");
+        if (!double.IsPositiveInfinity(hyperbolic.ApogeeRadiusMeters)) throw new Exception("hyperbolic trajectory has a finite apogee");
+
         var radial = OrbitDiagnostics.Compute(new Vector3d(radius, 0, 0), Vector3d.Zero);
         if (radial.IsBound || radial.PerigeeRadiusMeters != 0) throw new Exception("radial classified safe");
         Console.WriteLine("Earth frame and orbit diagnostic checks passed.");
