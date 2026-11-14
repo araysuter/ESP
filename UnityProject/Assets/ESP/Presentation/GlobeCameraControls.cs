@@ -11,6 +11,7 @@ namespace ESP.Presentation
     public sealed class GlobeCameraControls : MonoBehaviour
     {
         public Transform target;
+        public bool useMissionUI;
         [SerializeField] private float degreesPerPixel = 0.2f;
         [SerializeField] private float zoomSensitivity = 0.001f;
         private float yaw;
@@ -35,7 +36,7 @@ namespace ESP.Presentation
             Mouse mouse = Mouse.current;
             if (mouse == null) { dragging = false; return; }
             Vector2 pointer = mouse.position.ReadValue();
-            bool overPanel = (pointer.x>Screen.width-355 && pointer.y>Screen.height-350) || pointer.y < 180f || (pointer.x < 365f && pointer.y > Screen.height - 535f);
+            bool overPanel = useMissionUI ? MissionUI.IsPointerOverUI(pointer) : (pointer.x>Screen.width-355 && pointer.y>Screen.height-350) || pointer.y < 180f || (pointer.x < 365f && pointer.y > Screen.height - 535f);
             if (mouse.leftButton.wasPressedThisFrame) dragging = !overPanel;
             if (mouse.leftButton.wasReleasedThisFrame) dragging = false;
             if (dragging && mouse.leftButton.isPressed)

@@ -8,6 +8,7 @@ namespace ESP.Presentation
 {
     public sealed class NasaMapLayers : MonoBehaviour
     {
+        public bool showLegacyUI = true;
         public Renderer earth;
         public Texture offlineTexture;
         public Texture cloudLegend;
@@ -76,6 +77,7 @@ namespace ESP.Presentation
         }
         void OnGUI()
         {
+            if (!showLegacyUI) return;
             float y=Screen.height-170;GUI.Box(new Rect(16,y,Screen.width-32,154),GUIContent.none);
             GUI.Label(new Rect(30,y+8,Screen.width-60,22),shown);
             if(GUI.Button(new Rect(30,y+35,130,28),"Offline globe"))Select(-1);
