@@ -54,3 +54,7 @@ blender --disable-autoexec --background --python AssetsSource/inspect_starship_v
 ```
 
 Use `--no-render` for inventory alone. Camera fitting infers the longest source axis; confirm this against the inventory if a source floor, prototypes or exploded parts are present. Python syntax was checked locally; Blender execution remains the coordinator's next verification step.
+
+## Measured adaptation checkpoint
+
+The pinned Blender source passed texture relinking and actual nozzle-lip extraction: 33 Super Heavy and six Starship engines. Uniform scaling to the measured 9 m tank barrel yields a 124.1863 m stack; the model is not stretched to a nominal published height. Three outward grid fins and the existing hot-stage geometry are preserved. Runtime PBR baking and Unity validation remain pending.

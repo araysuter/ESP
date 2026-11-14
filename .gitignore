@@ -13,3 +13,5 @@
 .env.*
 *-token.txt
 **/private/
+**/__pycache__/
+*.pyc
