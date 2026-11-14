@@ -42,7 +42,7 @@ The supported lower limit is -500 m. Above the last layer (about 86 km geometric
 
 Within the supplied levels, temperature and wind interpolate linearly; pressure interpolates logarithmically. Outside them, boundary pressure/temperature ratios and wind taper into standard atmosphere over 500 m below and 2 km above. This is an explicitly approximate extension, useful where grid elevation differs slightly from the provisional pad elevation. It is not weather observed outside the profile. Density always follows p/(R T), maintaining internal consistency. Invalid numeric inputs fail rather than becoming zero-valued weather.
 
-NASA GIBS provides imagery, not the numerical wind profile used here. Existing current numerical weather is Open-Meteo modeled data. A NASA GEOS-FP adapter is being qualified separately; provider identity must remain visible whichever data source is used.
+NASA GIBS provides imagery, not the numerical wind profile used here. Existing current numerical weather is Open-Meteo modeled data. An experimental NASA GEOS-FP adapter and a real-data force probe are included; see nasa-weather-provider.md for cadence, freshness policy and the height-datum approximation. Provider identity must remain visible whichever data source is used.
 
 ## Verification
 

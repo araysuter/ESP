@@ -21,3 +21,9 @@ jobs:
         run: dotnet run --project FlightCore.Tests -c Release
       - name: Atmosphere, weather and drag tests
         run: dotnet run --project Atmosphere.Tests -c Release
+      - name: NASA provider parser and freshness tests
+        run: python3 -m unittest discover -s tests -p 'test_nasa_weather.py'
+      - name: Historical NASA data to drag probe
+        run: |
+          dotnet run --project Atmosphere.Probe -c Release -- data/weather/geos-fp-lc39a-20261114T0900Z.json --at 2026-11-14T12:00:00Z > /tmp/esp-force-probe.json
+          python3 scripts/check_profile_probe.py /tmp/esp-force-probe.json
