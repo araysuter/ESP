@@ -1,0 +1,41 @@
+{
+  "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+  "time": "2000-12-01",
+  "temporal_description": "Annual composite; not an image acquired on the request date. Represents 2000 epoch, predates Starbase construction.",
+  "source_resolution_m": 30,
+  "output": "1024x1024 JPEG, EPSG:4326 north-up; roughly 22 km north-south by 20 km east-west, resampled",
+  "sites": {
+    "starbase": {
+      "center_lat_lon": [
+        25.997,
+        -97.156
+      ],
+      "bbox_wms_lat_lon_order": [
+        25.897,
+        -97.256,
+        26.097,
+        -97.056
+      ],
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&STYLES=&CRS=EPSG%3A4326&BBOX=25.897%2C-97.256%2C26.097%2C-97.056&WIDTH=1024&HEIGHT=1024&FORMAT=image%2Fjpeg&TIME=2000-12-01"
+    },
+    "cape": {
+      "center_lat_lon": [
+        28.608389,
+        -80.604333
+      ],
+      "bbox_wms_lat_lon_order": [
+        28.508389,
+        -80.704333,
+        28.708389,
+        -80.504333
+      ],
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&STYLES=&CRS=EPSG%3A4326&BBOX=28.508389%2C-80.704333%2C28.708389%2C-80.504333&WIDTH=1024&HEIGHT=1024&FORMAT=image%2Fjpeg&TIME=2000-12-01"
+    }
+  },
+  "source": "https://data.nasa.gov/dataset/nasa-global-web-enabled-landsat-data-annual-global-30-m-v031-37b9c",
+  "capabilities": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0",
+  "attribution": "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
+  "attribution_source": "https://nasa-gibs.github.io/gibs-api-docs/",
+  "limitations": "Visual imagery only, not terrain elevation or collision. Current facilities and coastal changes are not represented; JPEG/compositing artifacts and scaling apply. Earth curvature and latitude-dependent east-west scaling require proper projection or local approximation.",
+  "license": "NASA data are generally openly available; consult NASA media usage guidelines and product attribution; no specific license asserted."
+}

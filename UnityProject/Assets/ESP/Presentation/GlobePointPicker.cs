@@ -7,6 +7,7 @@ namespace ESP.Presentation
     /// <summary>Right-click selection on the origin-centered WGS84 display ellipsoid.</summary>
     public sealed class GlobePointPicker : MonoBehaviour
     {
+        public bool useMissionUI;
         public event Action<double, double> PointSelected;
         public double Latitude { get; private set; }
         public double Longitude { get; private set; }
@@ -29,7 +30,7 @@ namespace ESP.Presentation
             Mouse mouse = Mouse.current;
             if (mouse == null || !mouse.rightButton.wasPressedThisFrame) return;
             Vector2 pointer = mouse.position.ReadValue();
-            if (pointer.y < 180 || (pointer.x < 365 && pointer.y > Screen.height - 535) || (pointer.x>Screen.width-355 && pointer.y>Screen.height-350)) return;
+            if (useMissionUI ? MissionUI.IsPointerOverUI(pointer) : (pointer.y < 180 || (pointer.x < 365 && pointer.y > Screen.height - 535) || (pointer.x>Screen.width-355 && pointer.y>Screen.height-350))) return;
             Camera camera = GetComponent<Camera>();
             if (camera == null) camera = Camera.main;
             if (camera != null && TryIntersect(camera.ScreenPointToRay(pointer), out Vector2 latLon))
