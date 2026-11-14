@@ -1,0 +1,34 @@
+name: Flight core
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check for flight core tests
+        id: tests
+        shell: bash
+        run: |
+          if [ -f FlightCore.Tests/FlightCore.Tests.csproj ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "FlightCore.Tests is not present yet; no flight tests ran."
+          fi
+      - name: Set up .NET
+        if: steps.tests.outputs.present == 'true'
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+      - name: Run flight core tests
+        if: steps.tests.outputs.present == 'true'
+        run: dotnet run --project FlightCore.Tests -c Release
