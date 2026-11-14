@@ -65,20 +65,22 @@ namespace FlightCore
             // Velocity Verlet integration
             // First half-step for velocity (using current position)
             Vector3d acceleration = Gravity.Acceleration(_position);
-            _velocity = _velocity + 0.5 * _timeStep * acceleration;
-
+            Vector3d halfStepVelocity = _velocity + 0.5 * _timeStep * acceleration;
+            
             // Full step for position
-            Vector3d newPosition = _position + _timeStep * _velocity;
-
+            Vector3d newPosition = _position + _timeStep * halfStepVelocity;
+            
             // Second half-step for velocity (using new position)
             Vector3d newAcceleration = Gravity.Acceleration(newPosition);
-            _velocity = _velocity + 0.5 * _timeStep * newAcceleration;
-
-            // Advance time
-            _missionTime += _timeStep;
+            Vector3d finalVelocity = halfStepVelocity + 0.5 * _timeStep * newAcceleration;
             
-            // Update position only after the entire step succeeds
+            // Advance time
+            double newMissionTime = _missionTime + _timeStep;
+            
+            // Update state only after all calculations succeed
             _position = newPosition;
+            _velocity = finalVelocity;
+            _missionTime = newMissionTime;
         }
 
         /// <summary>
