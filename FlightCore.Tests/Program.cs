@@ -25,7 +25,7 @@ namespace FlightCore.Tests
             TestOffAxisPosition();
             TestDistanceDoubling();
             TestInvalidInputs();
-            
+
             Console.WriteLine("All test cases passed successfully.");
         }
 
