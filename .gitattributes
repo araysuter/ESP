@@ -7,3 +7,5 @@
 *.unity text
 *.prefab text
 *.mat text
+# Small offline NASA fallback (under 300 KB), bundled directly for clean clones.
+UnityProject/Assets/ESP/Art/Earth/BlueMarble.jpg -filter -diff -merge -text
