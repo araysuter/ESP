@@ -1,6 +1,12 @@
-# ESP implementation plan — discussion draft
+# ESP implementation plan
 
-Status: active hackathon, November 14, 2026. User confirms kickoff has happened; draft due at midnight ending November 14; final due November 15 at noon, interpreted in America/Detroit (EST). No game implementation or engine installation has begun. All remaining schedules must be compressed against the actual deadline.
+Status: active hackathon, November 14, 2026. User confirms kickoff has happened; draft due at midnight ending November 14; final due November 15 at noon, interpreted in America/Detroit (EST). Unity and Blender are installed; the Unity rendered build and authenticated remote MCP are qualified. Game implementation has not begun. All remaining schedules must be compressed against the actual deadline.
+
+## Current team starting point
+
+Use Unity 6000.6.9f1 + URP, Unity CLI/Pipeline 1.0.0, and Blender 5.2.3 LTS. Read `shared-editor.md` before editor access. The later qualification sections supersede historical setup observations below. Partner client setup, Blender MCP/import, and game-project creation remain pending.
+
+Start independent branches for flight core/tests, Unity gameplay integration, and assets/data. Build one two-stage launch-to-orbit mission first. Never edit the shared editor concurrently.
 
 ## Direction
 
@@ -147,3 +153,31 @@ Sources: [Unity MCP server documentation](https://github.com/CoplayDev/unity-mcp
 - Packaged app launched with Metal on Apple Paravirtual device, advanced to frame 90 in 3.05 seconds, and saved a screenshot showing the lit cube. This is basic viability evidence, not a game performance benchmark or offline acceptance test.
 - Optional Gaussian/Bokeh depth-of-field and Panini post-processing shaders were unavailable/stripped. Avoid those effects until specifically qualified.
 - Official Unity Pipeline 1.0.0 added to qualification project; live editor control is being checked. Cloudflare sharing remains unconfigured.
+
+## Live editor and MCP qualification
+
+- Editor 6000.6.9f1 reports ready; official Pipeline 1.0.0 successfully returned editor status and scene hierarchy.
+- Official `unity mcp` initialization and tool discovery passed: server `unity-mcp` 1.0.0, 199 tools.
+- A loopback HTTP bridge is running inside the guest. Missing/wrong bearer tokens return 401. Valid-token discovery returns 199 tools; `editor_status` call succeeds through HTTP.
+- Bridge dependencies pinned to FastMCP 2.14.5 and MCP SDK 1.30.0. SDK 2.x expects response fields absent from Unity's current server; do not upgrade this pair without repeating protocol tests.
+- Token verification uses private hash records with expiry; the raw coordinator token remains in a mode-0600 private file outside the repository. No credentials are in source. A dedicated user LaunchAgent owns the bridge.
+- Proposed external endpoint: a dedicated project Unity hostname on the authorized domain. No Cloudflare tunnel or DNS route has been created yet. Repeat authentication and tool-call tests from outside the VM before giving teammates access.
+- Multiple MCP sessions still share one Unity editor. They are not independent editing workspaces; keep an explicit active owner.
+
+## Cloudflare qualification — current checkpoint
+
+This checkpoint supersedes earlier statements that the tunnel is unconfigured.
+
+- With user approval, created a dedicated project tunnel and Unity DNS route.
+  The guest connector is cloudflared 2026.11.0, installed from Cloudflare's official
+  release, running as a dedicated user LaunchAgent with a private token file.
+- Cloudflare reports a healthy connector. The route targets only the loopback
+  authenticated HTTP bridge; the raw Unity Pipeline port is not published.
+- Public HTTPS checks: missing and wrong bearer keys return 401; valid-key MCP
+  discovery returns 199 tools and `editor_status` succeeds.
+- Coordinator and per-partner keys expire at the submission deadline. Credentials
+  and account-specific endpoint details remain outside Git. See
+  `docs/shared-editor.md` for handoff and shutdown instructions.
+- Remaining gates: teammates' actual Codex/Cursor configurations, Blender MCP,
+  Blender export/import qualification, and game-project creation. The current
+  endpoint controls the qualification project only.
