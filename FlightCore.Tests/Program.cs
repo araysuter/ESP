@@ -402,19 +402,35 @@ namespace FlightCore.Tests
             var simulator = new OrbitSimulator(dt);
             simulator.Initialize(initialPosition, initialVelocity);
             
-            // Run one step
-            simulator.Step();
+            // Capture the snapshot before Step()
+            var snapshot = simulator.State;
             
-            var finalState = simulator.State;
-            
-            // The test should verify that position, velocity, and mission time are preserved
-            // In this special case, since we're hitting the origin on the second evaluation,
-            // we expect certain behavior to be maintained
-            
-            // Check that mission time has advanced by exactly dt
-            if (Math.Abs(finalState.MissionTime - dt) > 1e-12)
+            try
             {
-                throw new InvalidOperationException($"Mission time not advanced correctly. Expected {dt}, got {finalState.MissionTime}");
+                // Run one step - this should throw an exception due to hitting origin
+                simulator.Step();
+                
+                // If we get here without exception, the test failed
+                throw new InvalidOperationException("Step() should have thrown an exception when second gravity evaluation hits origin");
+            }
+            catch (ArgumentException)
+            {
+                // Expected behavior - the step should fail with ArgumentException
+                // Now verify that position, velocity, and mission time exactly match the original snapshot
+                if ((simulator.State.Position - snapshot.Position).Magnitude() > 1e-12)
+                {
+                    throw new InvalidOperationException("Position was not preserved after failed step");
+                }
+                
+                if ((simulator.State.Velocity - snapshot.Velocity).Magnitude() > 1e-12)
+                {
+                    throw new InvalidOperationException("Velocity was not preserved after failed step");
+                }
+                
+                if (Math.Abs(simulator.State.MissionTime - snapshot.MissionTime) > 1e-12)
+                {
+                    throw new InvalidOperationException("Mission time was not preserved after failed step");
+                }
             }
             
             Console.WriteLine("  ✓ Regression test passed: second gravity evaluation hitting origin handled correctly.");
