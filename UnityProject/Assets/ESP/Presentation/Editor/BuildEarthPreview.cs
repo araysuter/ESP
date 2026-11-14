@@ -31,6 +31,7 @@ public static class BuildEarthPreview
         var camera=new GameObject("Globe Camera").AddComponent<Camera>();camera.tag="MainCamera";camera.transform.position=new Vector3(3,8,-18);camera.transform.LookAt(Vector3.zero);camera.nearClipPlane=.01f;camera.farClipPlane=100;camera.fieldOfView=45;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.002f,.005f,.014f);camera.gameObject.AddComponent<EarthPreviewLabel>();
         camera.gameObject.AddComponent<GlobeCameraControls>();
         var layers=camera.gameObject.AddComponent<NasaMapLayers>();layers.earth=globe.GetComponent<Renderer>();layers.offlineTexture=tex;layers.cloudLegend=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Earth/CloudFractionLegend.png");
+        layers.cloudShader=AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/CloudShell.shader");
         camera.gameObject.AddComponent<NasaEventFeed>();
         camera.gameObject.AddComponent<NasaSpaceWeather>();
         camera.gameObject.AddComponent<NasaEventPanel>();

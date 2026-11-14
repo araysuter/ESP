@@ -37,6 +37,8 @@ public static class BuildMission
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat; RenderSettings.ambientLight = new Color(.25f, .29f, .32f);
         var manager = new GameObject("Mission");
         var layers = manager.AddComponent<NasaMapLayers>(); layers.earth = globe.GetComponent<Renderer>(); layers.offlineTexture = texture; layers.showLegacyUI = false;
+        layers.cloudShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/CloudShell.shader");
+        if (!layers.cloudShader) throw new Exception("Missing observed cloud shader");
         var weather = manager.AddComponent<LaunchWeatherProfile>();
         var nasaWeather = manager.AddComponent<NasaWeatherProfile>();
         var pointWeather = manager.AddComponent<PointWeather>();
@@ -58,6 +60,9 @@ public static class BuildMission
         var ground = AssetDatabase.LoadAssetAtPath<Material>(groundPath);
         if (!ground) { ground = new Material(Shader.Find("Universal Render Pipeline/Unlit")); AssetDatabase.CreateAsset(ground, groundPath); }
         director.siteGroundTemplate = ground;
+        // This serialized material reference keeps the unlit shader in the player.
+        // The orbit renderer clones it and supplies its own color, without terrain textures.
+        director.orbitMaterial = ground;
         director.siteGroundTextures = new Texture[] { AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Sites/starbase.jpg"), AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Sites/cape.jpg") };
         var panelPath = "Assets/ESP/Art/MissionPanelSettings.asset";
         var settings = AssetDatabase.LoadAssetAtPath<PanelSettings>(panelPath);
@@ -75,6 +80,7 @@ public static class BuildMission
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scenePath, true) };
         AssetDatabase.SaveAssets(); PlayerSettings.productName = "ESP";
         PlayerSettings.runInBackground = true;
+        PlayerSettings.resizableWindow = true;
         PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720; PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scenePath }, locationPathName = buildPath, target = BuildTarget.StandaloneOSX, options = BuildOptions.Development });
         if (report.summary.result != BuildResult.Succeeded) throw new Exception("Mission build failed");

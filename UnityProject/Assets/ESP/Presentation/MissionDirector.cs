@@ -45,7 +45,8 @@ namespace ESP.Presentation
             FlightDriver?.ResetMission();
             if (environment) Destroy(environment);
             environment = null; RocketVisual = null;
-            GoToLaunch(SelectedSiteIndex);
+            if (!IsMapView) GoToLaunch(SelectedSiteIndex);
+            if (mapVehicle != null) mapVehicle.SetVehicle(rocketPrefab);
         }
         public Texture[] siteGroundTextures;
         public Material siteGroundTemplate;
@@ -55,11 +56,30 @@ namespace ESP.Presentation
         public int SelectedSiteIndex { get; private set; }
         public string SiteName => LaunchSites.All[SelectedSiteIndex].Name;
         public string FlightStatus => FlightDriver == null ? "Flight simulation unavailable" : FlightDriver.Status;
-        public string WeatherSummary => picker != null && picker.HasSelection && pointWeather != null
-            ? string.Format("{0:F2}°, {1:F2}°\n{2}\n{3}\n{4}\n{5}", picker.Latitude, picker.Longitude, pointWeather.Status, pointWeather.validtime, pointWeather.Details, regional != null ? regional.Status : "")
-            : (weather != null ? weather.Status : "Weather unavailable");
+        public string WeatherSummary
+        {
+            get
+            {
+                if (pointWeather == null) return "Modeled weather unavailable.";
+                bool picked = picker != null && picker.HasSelection;
+                var site = LaunchSites.All[SelectedSiteIndex];
+                double latitude = picked ? picker.Latitude : site.Latitude;
+                double longitude = picked ? picker.Longitude : site.Longitude;
+                string location = picked ? "SELECTED POINT" : site.Name;
+                return string.Format("{0}  ·  {1:F2}°, {2:F2}°\n{3}\n{4}\n{5}",
+                    location, latitude, longitude, pointWeather.Status, pointWeather.validtime, pointWeather.Details);
+            }
+        }
+        public void RefreshPointWeather(bool forceRefresh = false)
+        {
+            if (pointWeather == null) return;
+            var site = LaunchSites.All[SelectedSiteIndex];
+            bool picked = picker != null && picker.HasSelection;
+            pointWeather.Fetch(picked ? picker.Latitude : site.Latitude,
+                picked ? picker.Longitude : site.Longitude, forceRefresh);
+        }
         public Texture RegionalImage => regional != null ? regional.Image : null;
-        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedLayerId + " • " + (string.IsNullOrEmpty(mapLayers.DisplayedDate) ? "static composite" : mapLayers.DisplayedDate) + " • " + mapLayers.Status : "NASA Blue Marble";
+        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedDescription + " • " + mapLayers.Status : "NASA Blue Marble";
         public string NasaStatus => "NASA EONET: " + (events != null ? events.Status : "unavailable") + "\nNASA DONKI: " + (spaceWeather != null ? spaceWeather.Status : "unavailable");
         public double AltitudeMeters => FlightDriver?.AltitudeMeters ?? 0;
         public double SpeedMetersPerSecond => FlightDriver?.SpeedMetersPerSecond ?? 0;
@@ -68,9 +88,24 @@ namespace ESP.Presentation
         public bool CanLaunch => FlightDriver != null && FlightDriver.CanLaunch;
         private GameObject environment;
         private Material groundMaterial;
+        private MapVehicleVisual mapVehicle;
+        public Material orbitMaterial;
+        public MapOrbitVisual OrbitVisual { get; private set; }
 
         private void Start()
         {
+            // Driver registers in Awake; choose the real model before any preflight view is built.
+            if (vehiclePrefabs != null && vehiclePrefabs.Length > 1 && vehiclePrefabs[1] != null && CanLaunch)
+                SelectVehicle(1);
+            if (mapRoot != null)
+            {
+                mapVehicle = mapRoot.AddComponent<MapVehicleVisual>();
+                mapVehicle.Initialize(this);
+                mapVehicle.SetVehicle(rocketPrefab);
+                OrbitVisual = mapRoot.AddComponent<MapOrbitVisual>();
+                OrbitVisual.orbitMaterial = orbitMaterial;
+                OrbitVisual.Initialize(this);
+            }
             if (picker != null) picker.PointSelected += OnPointSelected;
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
             ShowMap();
@@ -92,7 +127,7 @@ namespace ESP.Presentation
             if (siteIndex < 0 || siteIndex >= LaunchSites.All.Length) throw new ArgumentOutOfRangeException(nameof(siteIndex));
             bool siteChanged = SelectedSiteIndex != siteIndex;
             SelectedSiteIndex = siteIndex;
-            if (siteChanged) { FlightDriver?.ResetMission(); RequestWeather(); }
+            if (siteChanged) { FlightDriver?.ResetMission(); RequestWeather(); if (picker == null || !picker.HasSelection) RefreshPointWeather(); }
             if (environment && !siteChanged)
             {
                 environment.SetActive(true);

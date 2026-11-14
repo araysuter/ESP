@@ -40,7 +40,8 @@ namespace ESP.Presentation
                 Application.Quit(); yield break;
             }
             float end = Time.realtimeSinceStartup + 110;
-            while (director.nasaWeather != null && director.nasaWeather.Snapshot == null && Time.realtimeSinceStartup < end)
+            bool skipWeatherWait = Array.IndexOf(arguments, "-espSkipWeatherWait") >= 0;
+            while (!skipWeatherWait && director.nasaWeather != null && director.nasaWeather.Snapshot == null && Time.realtimeSinceStartup < end)
                 yield return new WaitForSecondsRealtime(1);
             Debug.Log("ESP_FLIGHT_WEATHER " + (director.nasaWeather != null ? director.nasaWeather.Status : "missing"));
             director.Launch();
@@ -63,8 +64,16 @@ namespace ESP.Presentation
             yield return new WaitForSecondsRealtime(1);
             director.ShowMap();
             yield return new WaitForSecondsRealtime(1);
+            var orbit = director.OrbitVisual != null ? director.OrbitVisual.Projection : null;
+            if (orbit == null || !orbit.IsValid || !orbit.IsClosed || orbit.HasImpact)
+            { Debug.LogError("ESP_ORBIT_MAP_FAIL " + (orbit == null ? "missing" : orbit.Status)); Application.Quit(1); yield break; }
+            Debug.Log("ESP_ORBIT_MAP_OK points=" + orbit.EcefPoints.Count + " closed=" + orbit.IsClosed);
+            director.mapCamera.GetComponent<GlobeCameraControls>()?.Focus(driver.LatitudeDegrees, driver.LongitudeDegrees);
+            yield return new WaitForSecondsRealtime(1);
             Capture("flight-map.png");
             yield return new WaitForSecondsRealtime(1);
+            if (Array.IndexOf(arguments, "-espKeepOpen") >= 0)
+            { Debug.Log("ESP_FLIGHT_REVIEW_READY verified simulated orbit; map controls available"); yield break; }
             director.GoToLaunch(0);
             if (!driver.CanLaunch || driver.MissionTimeSeconds != 0) { Debug.LogError("ESP_FLIGHT_RESET_FAIL"); Application.Quit(1); yield break; }
             Debug.Log("ESP_FLIGHT_SMOKE_OK orbit, map, site-change reset");

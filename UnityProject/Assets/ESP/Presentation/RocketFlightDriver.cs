@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlightCore;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 
 namespace ESP.Presentation
 {
@@ -18,6 +19,7 @@ namespace ESP.Presentation
         public bool OrbitVerified { get; private set; }
         private bool started;
         private AssistedAscent guidance;
+        private UIDocument missionDocument;
         private float pendingThrottle = 1f;
         public bool AssistanceEnabled { get; private set; } = true;
         public int TimeRate { get; private set; } = 1;
@@ -36,7 +38,7 @@ namespace ESP.Presentation
         public double MissionTimeSeconds => simulation != null ? simulation.State.MissionTime : 0;
         public float Throttle => simulation != null ? (float)simulation.Throttle : pendingThrottle;
         public string WeatherSourceLabel => weatherSource;
-        public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • W/S or ↑/↓ for manual pitch • " + TimeRate + "× selected" :
+        public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • WASD or arrows to steer • " + TimeRate + "× selected" :
             string.Format("{0} • pitch {1:F0}° • Stage {2} • Fuel {3:N0} kg • {4}× • {5}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, simulation.State.StageIndex + 1, simulation.State.PropellantKg, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (accumulator >= StepSeconds ? " • simulation catching up" : "");
         public RocketSimulation Simulation => simulation;
         public bool HasPosition => simulation != null;
@@ -49,7 +51,11 @@ namespace ESP.Presentation
         public double LatitudeDegrees { get; private set; }
         public double LongitudeDegrees { get; private set; }
 
-        private void Awake() { if (director != null) director.FlightDriver = this; }
+        private void Awake()
+        {
+            if (director != null) director.FlightDriver = this;
+            missionDocument = FindFirstObjectByType<UIDocument>();
+        }
         public void Launch(LaunchSite site, WeatherSnapshot weather)
         {
             if (started || site == null) return;
@@ -110,11 +116,21 @@ namespace ESP.Presentation
         {
             if (simulation == null) return;
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && director != null && !director.IsMapView)
+            var focused = missionDocument?.rootVisualElement?.panel?.focusController?.focusedElement as VisualElement;
+            bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
+            bool controlFocused = focused is Button || focused is Slider ||
+                focused?.GetFirstAncestorOfType<Button>() != null || focused?.GetFirstAncestorOfType<Slider>() != null;
+            if (keyboard != null && Application.isFocused && !editingText && !simulation.State.IsLanded)
             {
-                float pitchInput = (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed ? 1 : 0);
-                if (pitchInput != 0) { AssistanceEnabled = false; simulation.PitchDegrees = Math.Max(0, Math.Min(90, simulation.PitchDegrees + pitchInput * 20 * Time.unscaledDeltaTime)); }
-                if (keyboard.spaceKey.wasPressedThisFrame) Stage();
+                float pitchInput = (keyboard.wKey.isPressed || (!controlFocused && keyboard.upArrowKey.isPressed) ? 1 : 0) - (keyboard.sKey.isPressed || (!controlFocused && keyboard.downArrowKey.isPressed) ? 1 : 0);
+                float headingInput = (keyboard.dKey.isPressed || (!controlFocused && keyboard.rightArrowKey.isPressed) ? 1 : 0) - (keyboard.aKey.isPressed || (!controlFocused && keyboard.leftArrowKey.isPressed) ? 1 : 0);
+                if (pitchInput != 0 || headingInput != 0)
+                {
+                    AssistanceEnabled = false;
+                    simulation.PitchDegrees = Math.Max(0, Math.Min(90, simulation.PitchDegrees + pitchInput * 20 * Time.unscaledDeltaTime));
+                    simulation.HeadingDegrees = (simulation.HeadingDegrees + headingInput * 20 * Time.unscaledDeltaTime + 360) % 360;
+                }
+                if (!controlFocused && director != null && !director.IsMapView && keyboard.spaceKey.wasPressedThisFrame) Stage();
             }
             // Keep all elapsed simulation time; limit work per frame and retain any backlog.
             accumulator += Time.unscaledDeltaTime * TimeRate;

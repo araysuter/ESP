@@ -29,7 +29,7 @@ namespace ESP.Presentation
         private int generation;
         private float nextRequestTime;
 
-        public void Fetch(double latitude, double longitude)
+        public void Fetch(double latitude, double longitude, bool forceRefresh = false)
         {
             int requestGeneration = ++generation;
             Details = validtime = "";
@@ -42,7 +42,7 @@ namespace ESP.Presentation
             string lat = latitude.ToString("F2", CultureInfo.InvariantCulture);
             string lon = longitude.ToString("F2", CultureInfo.InvariantCulture);
             string key = lat + "," + lon;
-            if (cache.TryGetValue(key, out Entry entry) && DateTime.UtcNow - entry.fetched < TimeSpan.FromMinutes(10))
+            if (!forceRefresh && cache.TryGetValue(key, out Entry entry) && DateTime.UtcNow - entry.fetched < TimeSpan.FromMinutes(10))
             {
                 Details = entry.details; validtime = entry.time;
                 Status = "Modeled weather — Open-Meteo (cached).";
