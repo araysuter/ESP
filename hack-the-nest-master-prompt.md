@@ -1,5 +1,13 @@
 # Hack The Nest | Earth-scale spaceflight simulator
 
+> **Current decisions — November 14, 2026:** Use **Unity + URP**, Blender assets,
+> and a pure C# flight core. The Unreal-specific tooling and implementation
+> instructions below are historical and superseded by `AGENTS.md` and
+> `docs/implementation-plan.md`. Kickoff has already happened. Draft: midnight
+> ending November 14; final: November 15 at noon, America/Detroit (EST).
+> Preserve the gameplay, numerical validation, offline fallback and honest demo
+> requirements below. Ship one working rocket before adding historical variants.
+
 Paste this file into Codex in your project repository. If you have the exact MSGC imagery link or file, give it to Codex with this prompt.
 
 ---
