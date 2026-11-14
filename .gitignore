@@ -13,3 +13,13 @@
 .env.*
 *-token.txt
 **/private/
+**/__pycache__/
+*.pyc
+
+# Rebuilt by ImportDetailedVehicles from checked-in model exports and manifests.
+/UnityProject/Assets/ESP/Art/Vehicles/*.asset
+/UnityProject/Assets/ESP/Art/Vehicles/*.asset.meta
+/UnityProject/Assets/ESP/Art/Vehicles/*.mat
+/UnityProject/Assets/ESP/Art/Vehicles/*.mat.meta
+/UnityProject/Assets/ESP/Art/Vehicles/*.prefab
+/UnityProject/Assets/ESP/Art/Vehicles/*.prefab.meta

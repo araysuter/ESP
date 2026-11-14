@@ -13,6 +13,7 @@ public static class BuildMission
         string buildPath = Environment.GetEnvironmentVariable("ESP_BUILD_PATH");
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
         EditorSettings.serializationMode = SerializationMode.ForceText;
+        ImportDetailedVehicles.Build();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/ESP/Art/Earth/EarthMesh.asset");
         var earthMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/ESP/Art/Earth/Earth.mat");
@@ -44,6 +45,8 @@ public static class BuildMission
         var spaceWeather = manager.AddComponent<NasaSpaceWeather>();
         var picker = map.gameObject.AddComponent<GlobePointPicker>(); picker.useMissionUI = true;
         var director = manager.AddComponent<MissionDirector>(); director.mapCamera = map; director.launchCamera = launch; director.mapRoot = globe;
+        director.vehiclePrefabs = new[] { rocket, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-Starship.prefab"), AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-SLS.prefab") };
+        foreach (var vehicle in director.vehiclePrefabs) if (!vehicle) throw new Exception("Missing vehicle prefab");
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
         manager.AddComponent<MissionFlightSmoke>();
         var flight = manager.AddComponent<RocketFlightDriver>(); flight.director = director; flight.nasaWeather = nasaWeather;

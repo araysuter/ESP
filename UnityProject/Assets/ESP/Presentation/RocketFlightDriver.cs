@@ -12,6 +12,7 @@ namespace ESP.Presentation
         public MissionDirector director;
         public NasaWeatherProfile nasaWeather;
         private RocketSimulation simulation;
+        private WeatherAtmosphere launchAtmosphere;
         private LaunchSite launchSite;
         private double accumulator, orbitSeconds;
         public bool OrbitVerified { get; private set; }
@@ -36,7 +37,7 @@ namespace ESP.Presentation
         public float Throttle => simulation != null ? (float)simulation.Throttle : pendingThrottle;
         public string WeatherSourceLabel => weatherSource;
         public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • W/S or ↑/↓ for manual pitch • " + TimeRate + "× selected" :
-            string.Format("{0} • pitch {1:F0}° • Stage {2} • Fuel {3:N0} kg • {4}× • {5}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, simulation.State.StageIndex + 1, simulation.State.PropellantKg, TimeRate, weatherSource) + (accumulator >= StepSeconds ? " • simulation catching up" : "");
+            string.Format("{0} • pitch {1:F0}° • Stage {2} • Fuel {3:N0} kg • {4}× • {5}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, simulation.State.StageIndex + 1, simulation.State.PropellantKg, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (accumulator >= StepSeconds ? " • simulation catching up" : "");
         public RocketSimulation Simulation => simulation;
         public bool HasPosition => simulation != null;
         public void SetPitchTarget(double pitchDegrees)
@@ -74,11 +75,12 @@ namespace ESP.Presentation
                 catch (ArgumentException e) { Debug.LogWarning("Weather profile rejected: " + e.Message); }
             }
             var atmosphere = new WeatherAtmosphere(profile, now, maxAge);
+            launchAtmosphere = atmosphere;
             weatherSource = atmosphere.SourceDescription;
             launchSite = site;
-            simulation = new RocketSimulation(StepSeconds, StageDefinition.DemoStages(), atmosphere,
-                site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters);
-            guidance = new AssistedAscent();
+            simulation = new RocketSimulation(StepSeconds, (director.VehicleIndex == 1 ? RealVehiclePresets.BuildStarshipStages() : director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsStages() : StageDefinition.DemoStages()), atmosphere,
+                site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsBoosterParameters() : null);
+            guidance = new AssistedAscent(director.VehicleIndex == 1 ? 220000 : director.VehicleIndex == 2 ? 120000 : 160000, director.VehicleIndex == 2 ? 3 : 2);
             simulation.Throttle = pendingThrottle;
             simulation.Launch();
             accumulator = 0;
@@ -87,7 +89,7 @@ namespace ESP.Presentation
         private static bool Fresh(DateTime time, DateTime now, TimeSpan age) => time.Kind == DateTimeKind.Utc && time <= now && now - time <= age;
         public void ResetMission()
         {
-            simulation = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
+            simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
             pendingThrottle = 1; AssistanceEnabled = true; TimeRate = 1;
             weatherSource = "Standard atmosphere (no launch yet)";
             if (director != null && director.EnvironmentRoot != null) director.EnvironmentRoot.position = Vector3.zero;
@@ -96,10 +98,12 @@ namespace ESP.Presentation
                 director.RocketVisual.localPosition = Vector3.up * LaunchEnvironment.RocketBaseHeightMeters;
                 director.RocketVisual.localRotation = Quaternion.identity;
                 var view = director.RocketVisual.GetComponent<RocketPresentation>();
+                foreach (var plume in director.RocketVisual.GetComponentsInChildren<RocketPlume>(true)) plume.SetFlow(0, 101325);
+                foreach (string name in new[] { "LeftSRB", "RightSRB" }) { var solid = director.RocketVisual.Find(name); if (solid != null) solid.gameObject.SetActive(true); }
                 if (view != null) { view.SetThrottle(0); if (view.booster != null) view.booster.gameObject.SetActive(true); }
             }
         }
-        public void Stage() { if (simulation != null) simulation.Stage(); }
+        public void Stage() { if (simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
         public void SetThrottle(float value) { AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
 
         private void Update()
@@ -125,7 +129,7 @@ namespace ESP.Presentation
         private void UpdateOrbitVerification()
         {
             var state = simulation.State;
-            bool unpowered = simulation.Throttle <= 0 || state.PropellantKg <= 0;
+            bool unpowered = !simulation.BoosterBurning && (simulation.Throttle <= 0 || state.PropellantKg <= 0);
             const double mu = 3.986004418e14;
             const double minimumPerigeeRadius = 6378137.0 + 180000.0;
             var p = state.Position; var v = state.Velocity;
@@ -154,6 +158,10 @@ namespace ESP.Presentation
             if (director.RocketVisual != null)
             {
                 director.RocketVisual.position = Vector3.up * LaunchEnvironment.RocketBaseHeightMeters;
+                float pressure = launchAtmosphere == null ? 101325 : (float)launchAtmosphere.Sample(Math.Max(-500, state.AltitudeMeters)).PressurePascals;
+                foreach (var plume in director.RocketVisual.GetComponentsInChildren<RocketPlume>(true))
+                    plume.SetFlow(!state.IsLanded && (plume.solidBooster ? simulation.BoosterBurning : plume.stageIndex == state.StageIndex && state.IsLaunched && state.PropellantKg > 0) ? (plume.solidBooster ? 1 : (float)simulation.Throttle) : 0, pressure);
+                foreach (string name in new[] { "LeftSRB", "RightSRB" }) { var solid = director.RocketVisual.Find(name); if (solid != null) solid.gameObject.SetActive(simulation.BoosterAttached); }
                 var view = director.RocketVisual.GetComponent<RocketPresentation>();
                 if (view != null)
                 {
@@ -180,21 +188,21 @@ namespace ESP.Presentation
             if (!director.IsMapView && director.launchCamera != null)
             {
                 Vector3 target = director.RocketVisual != null ? director.RocketVisual.position : Vector3.zero;
+                Bounds bounds = default; bool found = false;
                 if (director.RocketVisual != null)
                 {
-                    Bounds bounds = default;
-                    bool found = false;
                     var rocketView = director.RocketVisual.GetComponent<RocketPresentation>();
                     foreach (Renderer renderer in director.RocketVisual.GetComponentsInChildren<Renderer>())
                     {
-                        if (!renderer.enabled || !renderer.gameObject.activeInHierarchy ||
+                        if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || RocketPlume.IsExhaustRenderer(renderer) ||
                             (rocketView != null && rocketView.exhaust != null && renderer.transform.IsChildOf(rocketView.exhaust))) continue;
                         if (!found) { bounds = renderer.bounds; found = true; }
                         else bounds.Encapsulate(renderer.bounds);
                     }
                     if (found) target = bounds.center;
                 }
-                director.launchCamera.transform.position = target + new Vector3(75, 20, -90);
+                float frameScale = found ? Mathf.Max(1, bounds.size.magnitude / 60f) : 1;
+                director.launchCamera.transform.position = target + new Vector3(75, 20, -90) * frameScale;
                 director.launchCamera.transform.LookAt(target);
             }
         }

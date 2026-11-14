@@ -10,11 +10,35 @@ namespace ESP.Presentation
     {
         private IEnumerator Start()
         {
-            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-espFlightSmoke") < 0) yield break;
+            bool preview = Array.IndexOf(Environment.GetCommandLineArgs(), "-espVehiclePreview") >= 0;
+            if (!preview && Array.IndexOf(Environment.GetCommandLineArgs(), "-espFlightSmoke") < 0) yield break;
             var director = GetComponent<MissionDirector>();
             var driver = GetComponent<RocketFlightDriver>();
             yield return null;
             director.GoToLaunch(1);
+            string[] arguments = Environment.GetCommandLineArgs();
+            int vehicleFlag = Array.IndexOf(arguments, "-espVehicle");
+            if (vehicleFlag >= 0 && vehicleFlag + 1 < arguments.Length && int.TryParse(arguments[vehicleFlag + 1], out int selectedVehicle))
+                director.SelectVehicle(selectedVehicle);
+            Debug.Log("ESP_FLIGHT_VEHICLE " + director.VehicleLabel);
+            if (preview)
+            {
+                yield return new WaitForSecondsRealtime(2);
+                Capture("vehicle-review-front.png");
+                yield return new WaitForSecondsRealtime(1);
+                Quaternion originalRotation = director.RocketVisual.localRotation;
+                director.RocketVisual.Rotate(0, 180, 0, Space.Self);
+                yield return new WaitForSecondsRealtime(1);
+                Capture("vehicle-review-rear.png");
+                yield return new WaitForSecondsRealtime(1);
+                director.RocketVisual.localRotation = originalRotation;
+                director.Launch();
+                yield return new WaitForSecondsRealtime(10);
+                Capture("vehicle-review-powered.png");
+                yield return new WaitForSecondsRealtime(1);
+                Debug.Log("ESP_VEHICLE_REVIEW_OK pad views and 10 seconds simulated flight");
+                Application.Quit(); yield break;
+            }
             float end = Time.realtimeSinceStartup + 110;
             while (director.nasaWeather != null && director.nasaWeather.Snapshot == null && Time.realtimeSinceStartup < end)
                 yield return new WaitForSecondsRealtime(1);
@@ -22,7 +46,7 @@ namespace ESP.Presentation
             director.Launch();
             driver.SetTimeRate(20);
             bool launchShot = false, stageShot = false;
-            end = Time.realtimeSinceStartup + 150;
+            end = Time.realtimeSinceStartup + 240;
             while (Time.realtimeSinceStartup < end && !driver.OrbitVerified)
             {
                 if (!launchShot && driver.MissionTimeSeconds > 8) { launchShot = true; Capture("flight-launch.png"); }

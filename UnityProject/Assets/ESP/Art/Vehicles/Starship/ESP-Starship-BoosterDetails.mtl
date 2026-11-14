@@ -1,0 +1,178 @@
+# Blender 5.2.3 LTS MTL File: 'Starship Block 3 V4.blend'
+# www.blender.org
+
+newmtl V3_Grid_Fin
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Grid_Fin_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Grid_Fin_Normal.png
+
+newmtl V3_Grid_Fin_001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Grid_Fin_001_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Grid_Fin_001_Normal.png
+
+newmtl V3_Grid_Fin_002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Grid_Fin_002_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Grid_Fin_002_Normal.png
+
+newmtl V3_Raptor_3_003
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_003_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_003_Normal.png
+
+newmtl V3_Raptor_3_004
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_004_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_004_Normal.png
+
+newmtl V3_Raptor_3_005
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_005_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_005_Normal.png
+
+newmtl V3_Raptor_3_006
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_006_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_006_Normal.png
+
+newmtl V3_Raptor_3_007
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_007_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_007_Normal.png
+
+newmtl V3_Raptor_3_008
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_008_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_008_Normal.png
+
+newmtl V3_Raptor_3_009
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_009_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_009_Normal.png
+
+newmtl V3_Raptor_3_010
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_010_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_010_Normal.png
+
+newmtl V3_Raptor_3_011
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_011_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_011_Normal.png
+
+newmtl V3_Raptor_3_012
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_012_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_012_Normal.png
+
+newmtl V3_Raptor_3_013
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_013_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_013_Normal.png
+
+newmtl V3_Raptor_3_014
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_014_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_014_Normal.png
+
+newmtl V3_Raptor_3_015
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Textures/V3_Raptor_3_015_BaseColor.png
+map_Bump -bm 1.000000 Textures/V3_Raptor_3_015_Normal.png
