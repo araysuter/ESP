@@ -27,3 +27,5 @@ jobs:
         run: dotnet run --configuration Release --project Booster.Tests/Booster.Tests.csproj
       - name: Representative vehicle missions
         run: dotnet run --configuration Release --project Vehicle.Tests/Vehicle.Tests.csproj
+      - name: Navball surface frame checks
+        run: dotnet run --configuration Release --project Navball.Tests/Navball.Tests.csproj

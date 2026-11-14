@@ -17,6 +17,7 @@ namespace ESP.Presentation
         public double minimumAltitudeMeters = 120000;
         private Camera background;
         private GameObject globe;
+        private CloudShell cloudShell;
         private UniversalAdditionalCameraData launchData, backgroundData;
         private int originalMask;
         private CameraRenderType originalRenderType;
@@ -47,6 +48,9 @@ namespace ESP.Presentation
             background.transform.rotation = mission.launchCamera.transform.rotation;
             background.fieldOfView = mission.launchCamera.fieldOfView;
             background.aspect = mission.launchCamera.aspect;
+            if (mission.mapLayers != null && mission.mapLayers.CloudsVisible)
+                cloudShell.Show(mission.mapLayers.CloudDensityTexture, mission.mapLayers.CloudShader);
+            else cloudShell.Hide();
         }
 
         private bool Configure(Camera launch)
@@ -72,6 +76,7 @@ namespace ESP.Presentation
             globe.layer = backdropLayer;
             globe.AddComponent<MeshFilter>().sharedMesh = globeMesh;
             globe.AddComponent<MeshRenderer>().sharedMaterial = globeMaterial;
+            cloudShell = globe.AddComponent<CloudShell>();
             configured = true;
             return true;
         }
@@ -88,7 +93,7 @@ namespace ESP.Presentation
             }
             if (background != null) Destroy(background.gameObject);
             if (globe != null) Destroy(globe);
-            background = null; globe = null; configured = false;
+            background = null; globe = null; cloudShell = null; configured = false;
         }
 
         private void OnDisable() { Restore(); }

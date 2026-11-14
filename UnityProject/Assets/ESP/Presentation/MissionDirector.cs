@@ -45,7 +45,8 @@ namespace ESP.Presentation
             FlightDriver?.ResetMission();
             if (environment) Destroy(environment);
             environment = null; RocketVisual = null;
-            GoToLaunch(SelectedSiteIndex);
+            if (!IsMapView) GoToLaunch(SelectedSiteIndex);
+            if (mapVehicle != null) mapVehicle.SetVehicle(rocketPrefab);
         }
         public Texture[] siteGroundTextures;
         public Material siteGroundTemplate;
@@ -87,9 +88,19 @@ namespace ESP.Presentation
         public bool CanLaunch => FlightDriver != null && FlightDriver.CanLaunch;
         private GameObject environment;
         private Material groundMaterial;
+        private MapVehicleVisual mapVehicle;
 
         private void Start()
         {
+            // Driver registers in Awake; choose the real model before any preflight view is built.
+            if (vehiclePrefabs != null && vehiclePrefabs.Length > 1 && vehiclePrefabs[1] != null && CanLaunch)
+                SelectVehicle(1);
+            if (mapRoot != null)
+            {
+                mapVehicle = mapRoot.AddComponent<MapVehicleVisual>();
+                mapVehicle.Initialize(this);
+                mapVehicle.SetVehicle(rocketPrefab);
+            }
             if (picker != null) picker.PointSelected += OnPointSelected;
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
             ShowMap();

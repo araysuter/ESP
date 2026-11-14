@@ -37,6 +37,8 @@ public static class BuildMission
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat; RenderSettings.ambientLight = new Color(.25f, .29f, .32f);
         var manager = new GameObject("Mission");
         var layers = manager.AddComponent<NasaMapLayers>(); layers.earth = globe.GetComponent<Renderer>(); layers.offlineTexture = texture; layers.showLegacyUI = false;
+        layers.cloudShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/CloudShell.shader");
+        if (!layers.cloudShader) throw new Exception("Missing observed cloud shader");
         var weather = manager.AddComponent<LaunchWeatherProfile>();
         var nasaWeather = manager.AddComponent<NasaWeatherProfile>();
         var pointWeather = manager.AddComponent<PointWeather>();
