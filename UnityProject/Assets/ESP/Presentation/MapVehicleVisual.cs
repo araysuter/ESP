@@ -2,6 +2,7 @@ using System;
 using FlightCore;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 namespace ESP.Presentation
 {
@@ -11,6 +12,7 @@ namespace ESP.Presentation
         private MissionDirector director;
         private Transform icon, model;
         private float modelHeight;
+        private UIDocument missionDocument;
 
         public void Initialize(MissionDirector owner) { director = owner; }
 
@@ -89,9 +91,16 @@ namespace ESP.Presentation
             }
             float distance = Vector3.Distance(camera.transform.position, point);
             float height = camera.orthographic ? 2 * camera.orthographicSize : 2 * distance * Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
-            // Fraction of viewport height keeps the icon legible on Retina displays;
-            // physical pixel sizing otherwise disappears under a launch-site label.
-            float iconHeight = height * .12f;
+            // UI Toolkit layout is measured in logical pixels, including on Retina.
+            // Bound the model to 24 logical pixels and at most 2.5% of the viewport.
+            if (missionDocument == null)
+            {
+                var ui = FindObjectOfType<MissionUI>();
+                if (ui != null) missionDocument = ui.GetComponent<UIDocument>();
+            }
+            float logicalHeight = missionDocument != null ? missionDocument.rootVisualElement.resolvedStyle.height : 0;
+            if (float.IsNaN(logicalHeight) || logicalHeight <= 0) logicalHeight = 800;
+            float iconHeight = height * Mathf.Min(24f / logicalHeight, .025f);
             icon.position = point + point.normalized * .01f;
             // This is an enlarged model marker, not a scale or attitude rendering.
             // Face it toward the map camera so a vertical pad rocket is not end-on.

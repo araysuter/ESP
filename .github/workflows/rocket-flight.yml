@@ -29,3 +29,5 @@ jobs:
         run: dotnet run --configuration Release --project Vehicle.Tests/Vehicle.Tests.csproj
       - name: Navball surface frame checks
         run: dotnet run --configuration Release --project Navball.Tests/Navball.Tests.csproj
+      - name: Orbit map projection checks
+        run: dotnet run --configuration Release --project OrbitProjection.Tests/OrbitProjection.Tests.csproj

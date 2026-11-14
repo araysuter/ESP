@@ -15,6 +15,7 @@ namespace ESP.Presentation
         private Label throttleValue, vehicleNote, mapVehicleNote;
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
         private Label rocketMarker, mapMission;
+        private readonly Label[] orbitMarkers = new Label[3];
         private MissionDirector subscribedDirector;
         private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
         private readonly Button[] rateButtons = new Button[3];
@@ -81,6 +82,18 @@ namespace ESP.Presentation
             rocketMarker.style.display = DisplayStyle.None;
             root.Add(rocketMarker);
 
+            for (int i = 0; i < orbitMarkers.Length; i++)
+            {
+                orbitMarkers[i] = Label("", 10, i == 2 ? Amber : Cyan, FontStyle.Bold);
+                orbitMarkers[i].name = "orbit-marker-" + i;
+                orbitMarkers[i].style.position = Position.Absolute;
+                orbitMarkers[i].style.display = DisplayStyle.None;
+                orbitMarkers[i].style.backgroundColor = new Color(.02f, .04f, .06f, .78f);
+                orbitMarkers[i].style.paddingLeft = orbitMarkers[i].style.paddingRight = 4;
+                orbitMarkers[i].pickingMode = PickingMode.Position;
+                root.Add(orbitMarkers[i]);
+            }
+
             BuildMapControls();
             BuildFlightControls();
             Resize();
@@ -97,7 +110,7 @@ namespace ESP.Presentation
             weatherDetails.style.width = 370;
             weatherDetails.style.maxHeight = 330;
             weatherDetails.style.marginBottom = 8;
-            weatherDetails.style.alignSelf = Align.FlexEnd;
+            Absolute(weatherDetails, null, null, 12, 80);
             var weatherHeading = Row(); weatherHeading.style.justifyContent = Justify.SpaceBetween;
             weatherHeading.style.alignItems = Align.Center;
             weatherHeading.Add(Label("POINT WEATHER", 10, Cyan, FontStyle.Bold));
@@ -116,7 +129,7 @@ namespace ESP.Presentation
             nasaStatus = Label("", 9, Muted, FontStyle.Normal);
             nasaStatus.style.whiteSpace = WhiteSpace.Normal;
             weatherDetails.Add(nasaStatus);
-            mapControls.Add(weatherDetails);
+            root.Add(weatherDetails);
 
             var mapBar = Row(); mapBar.name = "map-bottom-strip";
             mapBar.pickingMode = PickingMode.Ignore;
@@ -202,7 +215,7 @@ namespace ESP.Presentation
             right.style.justifyContent = Justify.SpaceBetween; right.style.alignItems = Align.Center;
             var guidance = Column(); guidance.style.width = 102; guidance.style.flexShrink = 0;
             assist = Button("ASSIST ON", () => { if (director?.FlightDriver is RocketFlightDriver f) f.ToggleAssistance(); Refresh(); }, false, "assistance-toggle");
-            assist.tooltip = "Assisted ascent follows the same throttle, steering and staging limits. Manual pitch: W/S or ↑/↓.";
+            assist.tooltip = "Assisted ascent follows the same throttle, steering and staging limits. Manual pitch: W/S or ↑/↓. Heading: A/D. Steering follows the model’s finite rate.";
             guidance.Add(assist);
             var rates = Row(); rates.name = "time-rate-controls";
             for (int i = 0; i < Rates.Length; i++)
@@ -298,7 +311,7 @@ namespace ESP.Presentation
             {
                 nextMarkerRefresh = Time.unscaledTime + 1f / 30f;
                 RefreshMarkers();
-                if (director != null && !director.IsMapView)
+                if (director != null)
                     navball?.SetFlight(director.FlightDriver as RocketFlightDriver, LaunchSites.All[director.SelectedSiteIndex]);
             }
             if (Time.unscaledTime >= nextRefresh)
@@ -335,6 +348,21 @@ namespace ESP.Presentation
         private void RefreshMarkers()
         {
             if (root == null || root.panel == null) return;
+            for (int i = 0; i < orbitMarkers.Length; i++)
+            {
+                Vector2 orbitScreen = default;
+                double apsisHeight = 0;
+                bool showOrbit = director != null && director.IsMapView && director.OrbitVisual != null &&
+                    director.OrbitVisual.TryGetMarkerScreenPosition((FlightCore.OrbitMarkerKind)i, out orbitScreen, out apsisHeight);
+                var marker = orbitMarkers[i];
+                marker.style.display = showOrbit ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!showOrbit) continue;
+                Vector2 orbitPoint = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(orbitScreen.x, Screen.height - orbitScreen.y));
+                marker.style.left = orbitPoint.x + 5; marker.style.top = orbitPoint.y - 16;
+                marker.text = i == 0 ? "Ap" : i == 1 ? "Pe" : "Impact";
+                marker.tooltip = (i == 2 ? "Predicted WGS84 surface intersection" : (i == 0 ? "Apoapsis " : "Periapsis ") + Distance(apsisHeight) + " above WGS84 at this point") +
+                    ". Coast prediction — engines cut now; ignores drag.";
+            }
             Vector2 rocketScreen = default;
             bool rocketVisible = director != null && director.TryGetRocketScreenPosition(out rocketScreen);
             rocketMarker.style.display = rocketVisible ? DisplayStyle.Flex : DisplayStyle.None;
@@ -360,10 +388,21 @@ namespace ESP.Presentation
             if (mapControls == null) return;
             bool available = director != null;
             bool isMap = !available || director.IsMapView;
+            var flight = available ? director.FlightDriver as RocketFlightDriver : null;
+            bool mapFlying = isMap && flight != null && flight.HasPosition;
             mapControls.style.display = isMap ? DisplayStyle.Flex : DisplayStyle.None;
-            flightControls.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
+            flightControls.style.display = !isMap || mapFlying ? DisplayStyle.Flex : DisplayStyle.None;
+            // Keep map selectors in a separate corner once the shared flight dock is visible.
+            // Its navball reaches 155 px above the bottom, so popovers clear it by 19 px.
+            mapControls.style.top = mapFlying ? new StyleLength(48) : new StyleLength(StyleKeyword.Auto);
+            mapControls.style.bottom = mapFlying ? new StyleLength(StyleKeyword.Auto) : new StyleLength(10);
+            mapControls.style.right = mapFlying ? new StyleLength(StyleKeyword.Auto) : new StyleLength(12);
+            mapControls.style.width = mapFlying ? new StyleLength(350) : new StyleLength(StyleKeyword.Auto);
+            mapVehicleGroup.style.display = mapFlying ? DisplayStyle.None : DisplayStyle.Flex;
+            mapDetailsToggle.style.display = mapFlying ? DisplayStyle.None : DisplayStyle.Flex;
             flightDetails.style.display = detailsOpen ? DisplayStyle.Flex : DisplayStyle.None;
-            weatherDetails.style.display = weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
+            weatherDetails.style.display = isMap && weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
+            weatherDetails.style.bottom = mapFlying ? 174 : 80;
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
             if (director != null && director.mapLayers != null) selectedLayer = director.mapLayers.SelectedIndex + 1;
@@ -372,9 +411,8 @@ namespace ESP.Presentation
             Selected(detailsToggle, detailsOpen);
             Selected(mapDetailsToggle, detailsOpen);
             if (!available) return;
-            var flight = director.FlightDriver as RocketFlightDriver;
-            bool showMapMission = isMap && flight != null && flight.HasPosition;
-            mapMission.style.display = showMapMission ? DisplayStyle.Flex : DisplayStyle.None;
+            // The shared dock carries mission time/rate in both views; avoid duplicate clocks.
+            mapMission.style.display = DisplayStyle.None;
             double seconds = Math.Max(0, director.MissionTimeSeconds);
             string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  /  {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
@@ -395,10 +433,13 @@ namespace ESP.Presentation
             status.text = isMap ? "EARTH / SELECT A LAUNCH SITE" : (director.FlightStatus ?? "READY").ToUpperInvariant();
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
-            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nVehicle map markers are enlarged and camera-facing; position is georeferenced. Flight attitude is shown on the navball.\n" + vehicleInfo;
-            flightDetailText.text = isMap ? mapInfo : (director.FlightStatus ?? "READY") + "\n\n" +
-                (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") + "\n\n" + vehicleInfo +
-                "\nPitch: W/S or ↑/↓  ·  Stage: Space  ·  Map: M\nThrottle changes switch assistance off. Roll is not modeled.";
+            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nVehicle map markers are enlarged and camera-facing; position is georeferenced. Flight attitude is shown on the navball.\n" + vehicleInfo +
+                "\nOrbit line: coast prediction — engines cut now; ignores drag. Ap/Pe mark radial apsides with local WGS84 heights. Impact clips the path at the surface.";
+            string steeringInfo = "Pitch: W/S or ↑/↓  ·  Heading: A/D  ·  Stage: Space  ·  Map: M\n" +
+                "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
+            string flightInfo = (director.FlightStatus ?? "READY") + "\n\n" +
+                (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") + "\n\n" + steeringInfo;
+            flightDetailText.text = isMap ? mapInfo + (mapFlying ? "\n\n" + flightInfo : "") : flightInfo + "\n\n" + vehicleInfo;
             assist.SetEnabled(flight != null);
             assist.text = flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
             Selected(assist, flight != null && flight.AssistanceEnabled);

@@ -60,6 +60,9 @@ public static class BuildMission
         var ground = AssetDatabase.LoadAssetAtPath<Material>(groundPath);
         if (!ground) { ground = new Material(Shader.Find("Universal Render Pipeline/Unlit")); AssetDatabase.CreateAsset(ground, groundPath); }
         director.siteGroundTemplate = ground;
+        // This serialized material reference keeps the unlit shader in the player.
+        // The orbit renderer clones it and supplies its own color, without terrain textures.
+        director.orbitMaterial = ground;
         director.siteGroundTextures = new Texture[] { AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Sites/starbase.jpg"), AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Sites/cape.jpg") };
         var panelPath = "Assets/ESP/Art/MissionPanelSettings.asset";
         var settings = AssetDatabase.LoadAssetAtPath<PanelSettings>(panelPath);

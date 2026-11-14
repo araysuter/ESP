@@ -89,6 +89,8 @@ namespace ESP.Presentation
         private GameObject environment;
         private Material groundMaterial;
         private MapVehicleVisual mapVehicle;
+        public Material orbitMaterial;
+        public MapOrbitVisual OrbitVisual { get; private set; }
 
         private void Start()
         {
@@ -100,6 +102,9 @@ namespace ESP.Presentation
                 mapVehicle = mapRoot.AddComponent<MapVehicleVisual>();
                 mapVehicle.Initialize(this);
                 mapVehicle.SetVehicle(rocketPrefab);
+                OrbitVisual = mapRoot.AddComponent<MapOrbitVisual>();
+                OrbitVisual.orbitMaterial = orbitMaterial;
+                OrbitVisual.Initialize(this);
             }
             if (picker != null) picker.PointSelected += OnPointSelected;
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
