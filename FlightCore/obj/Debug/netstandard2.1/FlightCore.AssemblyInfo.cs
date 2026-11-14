@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FlightCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6d8e14ff742b65d59f26d672a827a1debb68ef36")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a8fb502c66b72562e980074cd657810431d0fde8")]
 [assembly: System.Reflection.AssemblyProductAttribute("FlightCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FlightCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
