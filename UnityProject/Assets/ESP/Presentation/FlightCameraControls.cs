@@ -193,7 +193,7 @@ namespace ESP.Presentation
         }
 
         private static bool IsHullRenderer(Renderer renderer, RocketPresentation view) =>
-            renderer.enabled && renderer.gameObject.activeInHierarchy && !RocketPlume.IsExhaustRenderer(renderer) &&
+            renderer.enabled && renderer.gameObject.activeInHierarchy && renderer.GetComponentInParent<ReentryPlasma>() == null && !RocketPlume.IsExhaustRenderer(renderer) &&
             (view == null || view.exhaust == null || !renderer.transform.IsChildOf(view.exhaust));
 
         private void OnApplicationFocus(bool hasFocus) { if (!hasFocus) dragging = false; }

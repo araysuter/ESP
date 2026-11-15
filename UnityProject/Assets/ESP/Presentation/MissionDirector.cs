@@ -114,7 +114,6 @@ namespace ESP.Presentation
         private void Start()
         {
             CaptureLaunchCameraHome();
-            if (mapRoot != null) PolarAurora.Create(mapRoot.transform);
             // Driver registers in Awake; choose the real model before any preflight view is built.
             if (vehiclePrefabs != null && vehiclePrefabs.Length > 1 && vehiclePrefabs[1] != null && CanLaunch)
                 SelectVehicle(1);
@@ -176,6 +175,26 @@ namespace ESP.Presentation
             }
             ResetLaunchFraming();
             SetLaunchView();
+        }
+        // Retarget only the scenery and render frame; preserve the live flight,
+        // propellant, weather column, mission clock and upper-stage object.
+        public void PrepareReturnEnvironment()
+        {
+            if (SelectedSiteIndex == 0 && environment) return;
+            var retainedRocket = RocketVisual;
+            if (retainedRocket) retainedRocket.SetParent(null, true);
+            ReleaseEnvironment();
+            SelectedSiteIndex = 0;
+            groundMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            groundMaterial.color = Color.white;
+            groundMaterial.SetFloat("_Smoothness", 0);
+            if (siteGroundTextures != null && siteGroundTextures.Length > 0)
+                groundMaterial.mainTexture = siteGroundTextures[0];
+            var structure = siteStructurePrefabs != null && siteStructurePrefabs.Length > 0 ? siteStructurePrefabs[0] : null;
+            environment = LaunchEnvironment.Build(LaunchSites.All[0], groundMaterial, structure);
+            RocketVisual = retainedRocket;
+            if (RocketVisual) RocketVisual.SetParent(environment.transform, true);
+            RefreshFlightBackdrop();
         }
         private void SetLaunchView()
         {

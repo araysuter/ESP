@@ -1,0 +1,38 @@
+name: Starship return
+
+on:
+  push:
+    branches: [main]
+    paths: ['FlightCore/**', 'Return.Tests/**', '.github/workflows/starship-return.yml']
+  pull_request:
+    branches: [main]
+    paths: ['FlightCore/**', 'Return.Tests/**', '.github/workflows/starship-return.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  return:
+    name: ${{ matrix.case.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - { name: Nominal catch, args: '--require-catch' }
+          - { name: Half-step catch, args: '--require-catch --half-step' }
+          - { name: Crosswind east and north, args: '--require-catch --east-wind=10 --north-wind=5' }
+          - { name: Crosswind east and south, args: '--require-catch --east-wind=15 --north-wind=-5' }
+          - { name: Earlier return request, args: '--require-catch --coast=45' }
+          - { name: Later return request, args: '--require-catch --coast=90' }
+          - { name: Propellant-loss failure, args: '--force-depletion' }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run physical return case
+        env:
+          RETURN_TEST_ARGS: ${{ matrix.case.args }}
+        run: dotnet run --project Return.Tests -c Release -- $RETURN_TEST_ARGS
