@@ -2,6 +2,17 @@
 
 ESP is an original Earth-scale rocket sandbox built for Hack The Nest with Unity and a pure C# flight core. Explore a WGS84 globe, choose a representative launch site at Starbase or Kennedy LC-39A, then fly an assisted or manual mission. The three vehicle options are the fictional ESP Demo Rocket, a Starship/Super Heavy preset, and an SLS Block 1 preset with parallel solid boosters. The representative vehicles use estimated game parameters.
 
+## Download ESP
+
+The [downloadable builds workflow](.github/workflows/download-builds.yml) publishes an unverified **prerelease** for each successful `main` build to the repository's [GitHub Releases](https://github.com/araysuter/ESP/releases) page. Each release is tagged with its commit SHA, marked as a prerelease, and retains the earlier packages for rollback. Choose the package that matches your operating system:
+
+- **ESP-macOS.dmg** — Apple silicon macOS players. Open the mounted disk image and copy `ESP.app` to `/Applications`.
+- **ESP-Windows-Setup.exe** — Windows 64-bit players. Run the Inno Setup installer, which places the executable and its required data files.
+
+Packages are unsigned: Apple notarization and Windows code signing are not configured, so your operating system may warn before launching. Per the [mission acceptance checklist](docs/mission-acceptance.md), Windows and Intel macOS launches remain unverified. See [downloadable builds setup](docs/download-builds.md) for runner prerequisites.
+
+> **Status:** No release has been published yet, so these links do not resolve. A download becomes available only after the first successful `main` build produces a prerelease that contains **both** `ESP-macOS.dmg` and `ESP-Windows-Setup.exe`. Until then, use the build-from-source instructions below.
+
 ## Run the mission
 
 Use **Unity 6000.6.9f1** with **URP 17.6.0**. Open the repository's `UnityProject/` in Unity Hub. Keep `FlightCore/` and `UnityProject/` as siblings. The package manifest loads the pure C# core through `file:../../FlightCore`; opening a standalone copy of the Unity folder leaves that dependency unresolved.
