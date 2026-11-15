@@ -45,15 +45,21 @@ Shader "ESP/Local Surface Imagery"
             half4 Frag(Varyings input) : SV_Target
             {
                 half4 imagery = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
-                // Empty satellite cells must reveal the bundled globe, not black squares.
-                clip(max(imagery.r, max(imagery.g, imagery.b)) - .0003);
+                // Black no-data pixels are common in the Landsat composite. Feather
+                // their boundary instead of turning filtered pixels into hard holes.
+                float coverage = smoothstep(.002, .025, max(imagery.r, max(imagery.g, imagery.b)));
                 float2 patchUv = (input.uv + _PatchUv.xy) * _PatchUv.z;
                 float edge = min(min(patchUv.x, patchUv.y), min(1 - patchUv.x, 1 - patchUv.y));
-                half alpha = imagery.a * _Opacity * smoothstep(0, .08, edge);
-                clip(alpha - .002);
                 float3 normal = normalize(input.normalWS);
                 float sun = dot(normal, normalize(_SunDirection.xyz));
                 half daylight = smoothstep(-.08, .15, sun);
+                // This daytime imagery has no night lights. Reveal the continuous
+                // backdrop at night and blend through twilight, avoiding dark tile
+                // rectangles over the globe's city lights and atmospheric limb.
+                float orbitalBlend = smoothstep(20000, 60000, _CameraAltitude);
+                half alpha = imagery.a * _Opacity * smoothstep(0, .08, edge) *
+                    lerp(step(.0003, max(imagery.r, max(imagery.g, imagery.b))), coverage * daylight, orbitalBlend);
+                clip(alpha - .002);
                 half3 color = imagery.rgb * (.015 + _SunColor.rgb * max(0, sun));
                 // Presentation-only aerial perspective, not sampled visibility/weather.
                 // The overlay runs after Base-camera atmosphere, so its distant
