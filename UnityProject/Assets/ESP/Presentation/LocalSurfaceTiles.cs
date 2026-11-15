@@ -88,11 +88,20 @@ namespace ESP.Presentation
                 : EarthFrames.GeodeticToEcef(frameLat, frameLon, site.ElevationMeters);
             var geo = EarthFrames.EcefToGeodetic(origin);
             double latitude = geo.LatitudeRadians * 180 / Math.PI, longitude = geo.LongitudeRadians * 180 / Math.PI;
-            bool visible = !director.IsMapView && director.EnvironmentRoot != null &&
+            var camera = director.FlightRenderCamera;
+            bool visible = camera != null && camera.gameObject.activeInHierarchy && director.EnvironmentRoot != null &&
                 geo.AltitudeMeters < MaximumAltitude && Math.Abs(latitude) < MercatorLimit;
             if (!visible)
             {
                 if (wanted.Count > 0) { wanted.Clear(); ordered.Clear(); AbortUnwanted(); }
+                foreach (var tile in tiles.Values) tile.Object.SetActive(false);
+                if (oldGround != null) oldGround.enabled = true;
+                return;
+            }
+            if (!camera.isActiveAndEnabled)
+            {
+                // A skipped inset frame must not cancel in-flight tile requests,
+                // clear selection, or render local terrain into another domain.
                 foreach (var tile in tiles.Values) tile.Object.SetActive(false);
                 if (oldGround != null) oldGround.enabled = true;
                 return;
