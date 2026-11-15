@@ -57,19 +57,21 @@ Shader "ESP/Star Field"
                     // remains visible when exposure is reduced. Not radiometry.
                     color += float3(1.0, .975, .92) * disc * (16 + 16 * limb);
                     float2 separation = float2(dot(ray - _SunSky.xyz, _RightSky.xyz), dot(ray - _SunSky.xyz, _UpSky.xyz));
-                    float halo = exp(-angular / max(radius * 3, .001));
+                    float halo = exp(-angular / max(radius * 6, .002));
                     float coreBloom = exp(-angular * angular / max(radius * radius * 5, .000001));
                     float streak = exp(-abs(separation.y) / max(radius * .10, .0001)) *
-                        exp(-abs(separation.x) / max(radius * 10, .004));
+                        exp(-abs(separation.x) / max(radius * 5, .002));
                     // Earth-source visibility gates all optical artifacts: a sun
                     // behind the planet cannot paint a halo around its far limb.
                     // Diffraction spikes and a wider HDR shoulder are camera
                     // effects; the photosphere itself retains its true angular radius.
                     float theta = atan2(separation.y, separation.x);
-                    float spikes = pow(abs(cos(theta * 4)), 40) * exp(-angular / max(radius * 22, .008));
-                    float shoulder = exp(-angular / max(radius * 9, .003));
+                    // Keep the eight rays inside the soft glare, with no long tails.
+                    float spikeEnvelope = 1 - smoothstep(radius * 16, radius * 30, angular);
+                    float spikes = pow(abs(cos(theta * 4)), 40) * exp(-angular / max(radius * 7, .003)) * spikeEnvelope;
+                    float shoulder = exp(-angular / max(radius * 16, .005));
                     color += float3(1, .93, .80) * _SolarOptics.x *
-                        (halo * 2.2 + coreBloom * 4.0 + shoulder * .26 + streak * .32 + spikes * 1.8);
+                        (halo * 2.2 + coreBloom * 4.0 + shoulder * .40 + streak * .32 + spikes * 1.8);
                 }
                 // Lens ghosts lie on the line through the optical center and
                 // the light source. Keep them in this background layer so opaque
