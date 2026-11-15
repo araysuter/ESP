@@ -72,7 +72,8 @@ namespace FlightCore
         }
         public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";ReturnMode=false;IsCaught=false;ReturnBankRadians=0;ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ReturnCommand=Vector3d.Zero;}
         public void Launch(){if(!landed)commanded=true;}
-        public bool Stage(){if(landed||stage>=stages.Length-1)return false;stage++;fuel=stages[stage].PropellantKg;return true;}
+        // The parallel solids are mounted to the core; discard them before separating it.
+        public bool Stage(){if(landed||boosterAttached||stage>=stages.Length-1)return false;stage++;fuel=stages[stage].PropellantKg;return true;}
         /// <summary>Discard spent booster dry mass without a separation impulse. Burning boosters cannot be jettisoned.</summary>
         public bool JettisonBoosters(){if(!boosterAttached||boosterFuel>0||landed)return false;boosterAttached=false;return true;}
         public RocketSnapshot State {get {

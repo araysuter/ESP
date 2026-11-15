@@ -56,8 +56,8 @@ namespace ESP.Presentation
             renderer.receiveShadows = false;
             sunMaterial = new Material(owner.orbitMaterial);
             sunMaterial.mainTexture = null;
-            if (sunMaterial.HasProperty("_BaseColor")) sunMaterial.SetColor("_BaseColor", new Color(1, .93f, .76f));
-            if (sunMaterial.HasProperty("_Color")) sunMaterial.SetColor("_Color", new Color(1, .93f, .76f));
+            if (sunMaterial.HasProperty("_BaseColor")) sunMaterial.SetColor("_BaseColor", new Color(6, 5.85f, 5.52f));
+            if (sunMaterial.HasProperty("_Color")) sunMaterial.SetColor("_Color", new Color(6, 5.85f, 5.52f));
             renderer.sharedMaterial = sunMaterial;
             sunObject = sphere.transform;
             var moon = GameObject.CreatePrimitive(PrimitiveType.Sphere);

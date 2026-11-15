@@ -138,7 +138,7 @@ namespace ESP.Presentation
             directory = Path.Combine(Application.persistentDataPath, "ReentryReview");
             Directory.CreateDirectory(directory);
             if (!director || !flight || !MissionSession.Instance) { Fail("missing mission components"); yield break; }
-            MissionSession.Instance.NewMission(); director.SelectVehicle(1); director.GoToLaunch(0);
+            MissionSession.Instance.NewMission(false); director.SelectVehicle(1); director.GoToLaunch(0);
             if (flight.CanBeginReentry) { Fail("button allowed on pad"); yield break; }
             var towerRoot = director.EnvironmentRoot.Find(LaunchEnvironment.StarbaseTowerName);
             var tower = towerRoot ? towerRoot.GetComponent<TowerCatchAnimator>() : null;

@@ -16,7 +16,7 @@ Shader "ESP/Star Field"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             TEXTURE2D(_Sky); SAMPLER(sampler_Sky);
             CBUFFER_START(UnityPerMaterial)
-                float4 _ForwardSky, _RightSky, _UpSky, _ViewParams, _SunSky, _SkyAdjust;
+                float4 _ForwardSky, _RightSky, _UpSky, _ViewParams, _SunSky, _SkyAdjust, _SolarOptics, _SkyDaylight;
             CBUFFER_END
             struct Attributes { float4 positionOS : POSITION; };
             struct Varyings { float4 positionCS : SV_POSITION; float2 screen : TEXCOORD0; };
@@ -39,18 +39,32 @@ Shader "ESP/Star Field"
                 float3 color = SAMPLE_TEXTURE2D_GRAD(_Sky, sampler_Sky, uv, dx, dy).rgb;
                 float luminance = dot(color, float3(.2126, .7152, .0722));
                 color = max(0, lerp(luminance.xxx, color, _SkyAdjust.y)) * _SkyAdjust.x;
-                // Original procedural solar disc and optical flare, behind Earth.
-                // The disc follows the same solar vector as the directional light.
+                // Suppress faint stars under illuminated lower air BEFORE adding
+                // solar radiance. This artistic exposure term must never become
+                // atmosphere opacity: otherwise it would erase the Sun as well.
+                float stellarAirMass = lerp(4, 1, saturate(dot(ray, _SkyDaylight.xyz)));
+                color *= exp(-_SkyDaylight.w * stellarAirMass);
+                // True solar angular size, with display glare outside the disc.
+                // Glare represents camera optics, not extra solar geometry.
                 if (_SunSky.w > 0 && dot(ray, _SunSky.xyz) > 0)
                 {
                     float radius = max(_SunSky.w, .00001);
                     float angular = length(cross(ray, _SunSky.xyz));
-                    float disc = 1 - smoothstep(radius * .88, radius * 1.12, angular);
-                    float halo = exp(-angular / max(radius * 2.5, .002));
+                    float pixel = max(fwidth(angular), .000001);
+                    float disc = 1 - smoothstep(radius - pixel, radius + pixel, angular);
+                    float limb = sqrt(saturate(1 - angular * angular / (radius * radius)));
+                    // Nearly white overexposed photosphere; mild limb darkening
+                    // remains visible when exposure is reduced. Not radiometry.
+                    color += float3(1.0, .975, .92) * disc * (6 + 6 * limb);
                     float2 separation = float2(dot(ray - _SunSky.xyz, _RightSky.xyz), dot(ray - _SunSky.xyz, _UpSky.xyz));
-                    float streak = exp(-abs(separation.x) / max(radius * .15, .0002) - abs(separation.y) / max(radius * 8, .012)) +
-                        exp(-abs(separation.y) / max(radius * .15, .0002) - abs(separation.x) / max(radius * 8, .012));
-                    color += float3(1.0, .86, .60) * (disc * 2.0 + halo * .24 + streak * .08);
+                    float halo = exp(-angular / max(radius * 3, .001));
+                    float coreBloom = exp(-angular * angular / max(radius * radius * 5, .000001));
+                    float streak = exp(-abs(separation.y) / max(radius * .10, .0001)) *
+                        exp(-abs(separation.x) / max(radius * 10, .004));
+                    // Earth-source visibility gates all optical artifacts: a sun
+                    // behind the planet cannot paint a halo around its far limb.
+                    color += float3(1, .93, .80) * _SolarOptics.x *
+                        (halo * .36 + coreBloom * .8 + streak * .065);
                 }
                 return half4(color, 1);
             }

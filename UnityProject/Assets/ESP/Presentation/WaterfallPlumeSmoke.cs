@@ -34,7 +34,7 @@ namespace ESP.Presentation
             director = FindFirstObjectByType<MissionDirector>();
             driver = FindFirstObjectByType<RocketFlightDriver>();
             if (!Check(director != null && driver != null && MissionSession.Instance != null, "missing mission components")) yield break;
-            MissionSession.Instance.NewMission();
+            MissionSession.Instance.NewMission(false);
             director.GoToLaunch(0);
             director.SelectVehicle(1);
             sunlight = director.GetComponent<MissionSunlight>();

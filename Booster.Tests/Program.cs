@@ -13,7 +13,7 @@ internal static class Program
     static RocketSimulation Create(double step, double fuel = 100, double burnSeconds = .35) => new RocketSimulation(step, Stages(fuel), Offline, .5, -1, 0, Booster(burnSeconds));
     static int Main()
     {
-        try { Validation(); IndependentBurnAndReset(); ParallelConsumption(); BurnoutAndSeparation(); BothBurnoutsWithinOneStep(); PadHoldDown(); Console.WriteLine("Solid booster tests passed."); return 0; }
+        try { Validation(); IndependentBurnAndReset(); ParallelConsumption(); BurnoutAndSeparation(); BothBurnoutsWithinOneStep(); PadHoldDown(); SlsGuidanceAscent(); Console.WriteLine("Solid booster tests passed."); return 0; }
         catch (Exception e) { Console.Error.WriteLine(e); return 1; }
     }
     static void Validation()
@@ -49,12 +49,12 @@ internal static class Program
         Near(r.BoosterPropellantKg, Booster().PropellantKg - solidUsed, 1e-10, "parallel booster fuel");
         Near(r.State.MassKg, initial.MassKg - coreUsed - solidUsed, 1e-10, "parallel mass accounting");
         var before = r.State; double solid = r.BoosterPropellantKg;
-        if (!r.Stage()) throw new Exception("Core stage separation rejected");
+        if (r.Stage()) throw new Exception("Core stage must remain attached while boosters burn");
         var after = r.State;
-        Vector(before.Position, after.Position, 0, "core staging position"); Vector(before.Velocity, after.Velocity, 0, "core staging velocity");
-        Near(after.MassKg, before.MassKg - 1000 - before.PropellantKg, 1e-9, "core staging discards only core stage");
-        Near(r.BoosterPropellantKg, solid, 0, "core staging preserves booster fuel");
-        if (!r.BoosterBurning) throw new Exception("Core staging interrupted solid burn");
+        if (after.StageIndex != 0 || !r.BoosterBurning) throw new Exception("Rejected staging changed the stack");
+        Near(after.MassKg, before.MassKg, 0, "rejected staging mass");
+        Near(r.BoosterPropellantKg, solid, 0, "rejected staging booster fuel");
+        Vector(before.Position, after.Position, 0, "rejected staging position"); Vector(before.Velocity, after.Velocity, 0, "rejected staging velocity");
     }
     static void BurnoutAndSeparation()
     {
@@ -62,6 +62,7 @@ internal static class Program
         Near(r.BoosterPropellantKg, 0, 0, "solid cutoff");
         if (r.BoosterBurning || !r.BoosterAttached) throw new Exception("Spent dry mass must remain attached");
         var before = r.State;
+        if (r.Stage() || r.State.StageIndex != 0) throw new Exception("Core stage must remain attached until spent boosters are jettisoned");
         Near(before.MassKg, 1000 + 100 + 200 + 50 + 100, 1e-10, "retained booster dry mass");
         if (!r.JettisonBoosters()) throw new Exception("Spent booster separation rejected");
         var after = r.State;
@@ -71,6 +72,12 @@ internal static class Program
         if (r.JettisonBoosters() || r.BoosterAttached) throw new Exception("Booster separated more than once");
         Run(r, 2); Near(r.BoosterPropellantKg, 0, 0, "fuel remains zero");
         if (r.State.SpeedRelativeGround >= before.SpeedRelativeGround) throw new Exception("Spent boosters continued to accelerate the vehicle");
+        before = r.State;
+        if (!r.Stage()) throw new Exception("Core separation after booster jettison rejected");
+        after = r.State;
+        if (after.StageIndex != 1) throw new Exception("Core separation did not advance stage");
+        Near(after.MassKg, before.MassKg - 1000 - before.PropellantKg, 1e-9, "core separation mass");
+        Vector(before.Position, after.Position, 0, "core separation position"); Vector(before.Velocity, after.Velocity, 0, "core separation velocity");
     }
     static void BothBurnoutsWithinOneStep()
     {
@@ -92,6 +99,60 @@ internal static class Program
         r.Launch(); r.Step();
         if (r.State.IsLaunched || !r.BoosterBurning) throw new Exception("Weak solid should burn while held down");
         Near(r.BoosterPropellantKg, 1 - .02 / (100 * G0), 1e-12, "pad solid fuel");
+    }
+    static void SlsGuidanceAscent()
+    {
+        foreach (var site in new[] { (28.627306, -80.620869), (25.997, -97.156) })
+        foreach (double step in new[] { .02, .01 })
+        {
+            var r = new RocketSimulation(step, RealVehiclePresets.BuildSlsStages(), Offline,
+                site.Item1 * Math.PI / 180, site.Item2 * Math.PI / 180, booster: RealVehiclePresets.BuildSlsBoosterParameters());
+            var guidance = RealVehiclePresets.BuildSlsGuidance(); r.Launch();
+            double peak = 0, maxDrop = 0, minimumOrbit = double.PositiveInfinity, minAfter80 = double.PositiveInfinity, maxQ = 0;
+            bool passed80 = false;
+            bool loggedUpper = false;
+            bool sawBoostersOff = false, sawUpper = false;
+            while (r.State.MissionTime < 2500)
+            {
+                guidance.Update(r); var state = r.State;
+                if (!double.IsFinite(state.AltitudeMeters) || state.IsLanded)
+                    throw new Exception($"SLS ascent landed or invalid at {state.MissionTime:F1}s alt={state.AltitudeMeters:F0}m");
+                maxQ = Math.Max(maxQ, state.DynamicPressurePascals);
+                passed80 |= state.AltitudeMeters >= 80000;
+                if (passed80 && !guidance.HasCutOff) minAfter80 = Math.Min(minAfter80, state.AltitudeMeters);
+                if (state.StageIndex == 1 && !loggedUpper)
+                {
+                    loggedUpper = true;
+                    var orbitAtStage = OrbitDiagnostics.Compute(state.Position, state.Velocity);
+                    var p = state.Position; var v = state.Velocity;
+                    double radial = (p.X*v.X + p.Y*v.Y + p.Z*v.Z) / p.Magnitude();
+                    Console.WriteLine($"SLS upper stage t={state.MissionTime:F1}s alt={state.AltitudeMeters:F0}m radial={radial:F1}m/s apoRadius={orbitAtStage.ApogeeRadiusMeters:F0}m periRadius={orbitAtStage.PerigeeRadiusMeters:F0}m");
+                }
+                sawBoostersOff |= !r.BoosterAttached;
+                sawUpper |= state.StageIndex == 1;
+                if (state.IsLaunched && !guidance.HasCutOff)
+                {
+                    peak = Math.Max(peak, state.AltitudeMeters);
+                    maxDrop = Math.Max(maxDrop, peak - state.AltitudeMeters);
+                }
+                if (guidance.HasCutOff)
+                {
+                    var orbit = OrbitDiagnostics.Compute(state.Position, state.Velocity);
+                    if (!orbit.IsBound || !double.IsFinite(orbit.MinimumWgs84AltitudeBoundMeters))
+                        throw new Exception("SLS cutoff orbit invalid");
+                    minimumOrbit = Math.Min(minimumOrbit, orbit.MinimumWgs84AltitudeBoundMeters);
+                    if (state.MissionTime >= guidance.CutoffMissionTimeSeconds + 60)
+                    {
+                        if (!sawBoostersOff || !sawUpper || minimumOrbit < 180000 || maxDrop > 1000 || orbit.ApogeeRadiusMeters - EarthFrames.SemiMajorAxisMeters > 1000000)
+                            throw new Exception($"SLS ascent/coast failed: drop={maxDrop:F0}m orbit={minimumOrbit:F0}m apogee={orbit.ApogeeRadiusMeters - EarthFrames.SemiMajorAxisMeters:F0}m stages={sawBoostersOff}/{sawUpper}");
+                        Console.WriteLine($"SLS ascent site={site.Item1} step={step}: cutoff={guidance.CutoffMissionTimeSeconds:F1}s maxDrop={maxDrop:F0}m coastBound={minimumOrbit:F0}m apogeeRadius={orbit.ApogeeRadiusMeters:F0}m minAfter80km={minAfter80:F0}m maxQ={maxQ:F0}Pa");
+                        break;
+                    }
+                }
+                r.Step();
+            }
+            if (r.State.MissionTime >= 2500) throw new Exception($"SLS no 60s orbital coast; maxDrop={maxDrop:F0}m altitude={r.State.AltitudeMeters:F0}m fuel={r.State.PropellantKg:F0}kg");
+        }
     }
     static void Run(RocketSimulation r, int n) { for (int i = 0; i < n; i++) r.Step(); }
     static void Throws(Action action) { try { action(); } catch (ArgumentException) { return; } throw new Exception("Expected invalid booster parameter rejection"); }
