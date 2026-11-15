@@ -64,14 +64,18 @@ the diffuse envelope emission by at most approximately ±16%; hot cores, nozzle
 anchors, pressure expansion, bounds, throttle and flight physics are unchanged.
 Missing images log one warning and leave the original procedural fallback.
 
-## Verification handoff
+## Packaged verification
 
-No conversion, code build, shader compilation, rendering or QA was run on the
-contributor's host. VM conversion is reported above; shader/player verification
-remains pending. On the qualified VM, refresh imports and inspect
-the two textures as 256 × 256 Texture2D assets with sRGB disabled. Check
-`RocketPlume.UsesWaterfallTextures == true` in both editor and packaged player;
-the fallback warning must be absent. Compare actual Starship lower/upper-stage
-burns at equal camera/exposure, sea-level and vacuum, including throttle zero,
-fuel cutoff, staging and reset. The visible change should be subtle turbulent
-breakup, retaining the existing expanding translucent vacuum fan and hot cores.
+The macOS VM player passed `-espWaterfallSmoke -espDaylightReview`: both 256×256
+linear RGBA textures bound to the actual supported plume materials, real Starship
+booster ascent, staging, upper-stage burn above 100 km, zero-flow cutoff, and
+mission reset. The source flight used normal assisted controls at 20× time rate;
+no flight state or checkpoint was injected. At the vacuum check the simulation
+reported 100,282.95 m altitude and 0.01699 Pa pressure. Screenshots showed the
+expanding translucent plume, visible nozzle cores and retained stars; displayed
+HUD telemetry may lag the screenshot request when returning from 20×.
+
+The texture effect is intentionally subtle and cosmetic. It does not replace
+thrust, nozzle flow or combustion physics. The daylight override is explicitly
+labeled and affects only the review lighting clock. Windows and performance
+benchmarking remain unverified.
