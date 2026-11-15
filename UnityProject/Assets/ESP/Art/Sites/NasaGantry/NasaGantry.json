@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "name": "NASA historical LC-39 gantry",
+  "sourceUrl": "https://science.nasa.gov/3d-resources/gantry/",
+  "downloadUrl": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Gantry/Gantry.glb",
+  "sourceRevision": "11ebb4ee043715aefbba6aeec8a61746fad67fa7",
+  "sourceSha256": "ad89678f80ca08102fa8c730fde6b93a0b700c60a15d69d5de422f839c66eb82",
+  "attribution": "Historical LC-39 gantry: NASA / Michael D. Carbajal; ESP scale and material-group adaptation.",
+  "usageGuidelines": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+  "sourceRightsStatement": "NASA 3D Resources describes its assets as free and without copyright.",
+  "heightMeters": 105.7,
+  "heightReference": "https://asd.gsfc.nasa.gov/archive/sm3b/launch-info/kennedy-part1.html",
+  "scaleQualification": "Entire artistic model bounds normalized to documented FSS mast height; not a surveyed pad reconstruction.",
+  "sourceCounts": {
+    "objects": 724,
+    "vertices": 176490,
+    "polygons": 172602,
+    "materials": 3
+  },
+  "sourceBoundsBlender": {
+    "minimum": [
+      -10.273938179016113,
+      -7.0858025550842285,
+      -1.3893669843673706
+    ],
+    "maximum": [
+      10.060320854187012,
+      6.92487096786499,
+      16.771150588989258
+    ]
+  },
+  "metersPerImportedUnit": 5.820318698134073,
+  "sourceCenterXYAndFloorZ": [
+    -0.10680866241455078,
+    -0.08046579360961914,
+    -1.3893669843673706
+  ],
+  "normalizationMatrixBlender": [
+    [
+      5.820318698883057,
+      0.0,
+      0.0,
+      0.6216604709625244
+    ],
+    [
+      0.0,
+      5.820318698883057,
+      0.0,
+      0.4683365523815155
+    ],
+    [
+      0.0,
+      0.0,
+      5.820318698883057,
+      8.08655834197998
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "upAxis": "Y",
+  "forwardAxis": "-Z",
+  "baseY": 0.0,
+  "units": "meters",
+  "coordinateConversion": "Blender (x,y,z) to OBJ (x,z,-y); center XY, floor Z=0 before conversion",
+  "pivot": "horizontal bounding-box center at lowest geometry; not a rocket mount or surveyed launch anchor",
+  "bounds": {
+    "minimum": [
+      -59.175934,
+      0.0,
+      -40.773293
+    ],
+    "maximum": [
+      59.175934,
+      105.699997,
+      40.773293
+    ]
+  },
+  "materialNames": [
+    "NASA_Gantry_Material_00",
+    "NASA_Gantry_Material_01",
+    "NASA_Gantry_Material_02"
+  ],
+  "materials": [
+    {
+      "name": "NASA_Gantry_Material_00",
+      "sourceName": "blinn1SG",
+      "baseColor": [
+        0.6000000238418579,
+        0.6000000238418579,
+        0.6000000238418579,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 1.0
+    },
+    {
+      "name": "NASA_Gantry_Material_01",
+      "sourceName": "lambert3SG",
+      "baseColor": [
+        0.6000000238418579,
+        0.6000000238418579,
+        0.6000000238418579,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 1.0
+    },
+    {
+      "name": "NASA_Gantry_Material_02",
+      "sourceName": "lambert4SG",
+      "baseColor": [
+        0.6000000238418579,
+        0.6000000238418579,
+        0.6000000238418579,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 1.0
+    }
+  ],
+  "meshObjects": 3,
+  "triangles": 172602,
+  "objVertexCount": 176490,
+  "objFile": "NasaGantry.obj",
+  "objBytes": 14062266,
+  "objSha256": "ba7a87fc059cd3fabbf07dfc4810a371d7bae1c36d95102b51cefcd03c8da113",
+  "compressedFile": "NasaGantry.obj.gz",
+  "compressedBytes": 1971440,
+  "compressedSha256": "f6bd1ce256df7d8f91304bd25eb45bc60e1bc411b2e6bfe4b1a41f5330eaaa59",
+  "materialFile": "NasaGantry.mtl",
+  "blenderVersion": "5.2.3 LTS",
+  "changes": [
+    "Uniform scale and translation of imported geometry",
+    "Preserve original import in hidden editable archive collection",
+    "Merge runtime geometry into three original material groups",
+    "Triangulate OBJ export; no decimation, no replacement geometry, no new textures"
+  ],
+  "validation": {
+    "sourceHash": true,
+    "sourceCounts": true,
+    "faceCountPreserved": true,
+    "objTriangles": true,
+    "objNames": true,
+    "objHeightAndFloor": true,
+    "unityImportTested": false,
+    "previewRendered": true
+  }
+}

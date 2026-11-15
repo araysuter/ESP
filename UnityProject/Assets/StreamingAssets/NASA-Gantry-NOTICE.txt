@@ -1,0 +1,17 @@
+Historical LC-39 Gantry
+Source: NASA / Michael D. Carbajal
+https://science.nasa.gov/3d-resources/gantry/
+NASA-3D-Resources revision 11ebb4ee043715aefbba6aeec8a61746fad67fa7
+Source SHA-256 ad89678f80ca08102fa8c730fde6b93a0b700c60a15d69d5de422f839c66eb82
+
+NASA's repository describes these resources as free and without copyright.
+NASA imagery/model usage and insignia restrictions remain applicable:
+https://www.nasa.gov/nasa-brand-center/images-and-media/
+https://github.com/nasa/NASA-3D-Resources/blob/11ebb4ee043715aefbba6aeec8a61746fad67fa7/README.md
+
+ESP adaptations: uniform normalization to approximately 105.7 m total height,
+centered horizontal bounds, ground-base pivot, three original material groups,
+triangulated Y-up OBJ, compression and Unity URP materials. No decimation or
+replacement geometry. Historical shuttle-era scenery placed illustratively
+beside the mission pad; not a surveyed or current LC-39A reconstruction.
+NASA and the model author do not endorse ESP.

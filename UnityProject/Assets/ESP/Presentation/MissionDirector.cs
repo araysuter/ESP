@@ -47,6 +47,7 @@ namespace ESP.Presentation
             if (!IsMapView) GoToLaunch(SelectedSiteIndex);
         }
         public Texture[] siteGroundTextures;
+        public GameObject[] siteStructurePrefabs;
         public Material siteGroundTemplate;
         public IMissionFlightDriver FlightDriver { get; set; }
         public Transform RocketVisual { get; private set; }
@@ -142,7 +143,8 @@ namespace ESP.Presentation
             groundMaterial.SetFloat("_Smoothness", 0);
             if (siteGroundTextures != null && siteIndex < siteGroundTextures.Length && siteGroundTextures[siteIndex]) { groundMaterial.mainTexture = siteGroundTextures[siteIndex]; }
             else groundMaterial.color = new Color(.22f, .29f, .24f);
-            environment = LaunchEnvironment.Build(LaunchSites.All[siteIndex], groundMaterial);
+            var structure = siteStructurePrefabs != null && siteIndex < siteStructurePrefabs.Length ? siteStructurePrefabs[siteIndex] : null;
+            environment = LaunchEnvironment.Build(LaunchSites.All[siteIndex], groundMaterial, structure);
             if (rocketPrefab)
             {
                 GameObject rocket = Instantiate(rocketPrefab, environment.transform);

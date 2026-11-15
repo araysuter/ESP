@@ -23,3 +23,7 @@
 /UnityProject/Assets/ESP/Art/Vehicles/*.mat.meta
 /UnityProject/Assets/ESP/Art/Vehicles/*.prefab
 /UnityProject/Assets/ESP/Art/Vehicles/*.prefab.meta
+
+# Rebuilt by ImportLaunchStructures from pinned, compressed NASA geometry.
+/UnityProject/Assets/ESP/Art/Sites/NasaGantry/Generated/
+/UnityProject/Assets/ESP/Art/Sites/NasaGantry/Generated.meta

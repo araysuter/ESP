@@ -15,8 +15,10 @@ public static class BuildMission
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
         WeatherHeightChecks.Validate();
+        ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
+        var nasaGantry = ImportLaunchStructures.Build();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/ESP/Art/Earth/EarthMesh.asset");
         // Regenerate the display ellipsoid at the qualified orbital-view tessellation.
@@ -80,6 +82,7 @@ public static class BuildMission
         var spaceWeather = manager.AddComponent<NasaSpaceWeather>();
         var picker = map.gameObject.AddComponent<GlobePointPicker>(); picker.useMissionUI = true;
         var director = manager.AddComponent<MissionDirector>(); director.mapCamera = map; director.launchCamera = launch; director.mapRoot = globe;
+        director.siteStructurePrefabs = new GameObject[] { null, nasaGantry };
         director.vehiclePrefabs = new[] { rocket, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-Starship.prefab"), AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-SLS.prefab") };
         foreach (var vehicle in director.vehiclePrefabs) if (!vehicle) throw new Exception("Missing vehicle prefab");
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
@@ -90,12 +93,17 @@ public static class BuildMission
         explosion.effectShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketExplosion.shader");
         if (!explosion.effectShader) throw new Exception("Missing impact effect shader");
         manager.AddComponent<RocketExplosionSmoke>();
+        var smoke = manager.AddComponent<RocketSmokeTrail>();
+        smoke.driver = flight; smoke.director = director;
+        smoke.smokeShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketSmokeTrail.shader");
+        if (!smoke.smokeShader) throw new Exception("Missing SRB smoke shader");
         var backdrop = manager.AddComponent<FlightEarthBackdrop>();
         backdrop.driver = flight; backdrop.director = director; backdrop.globeMesh = mesh; backdrop.globeMaterial = earthMaterial;
         backdrop.atmosphereShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/ContinuousAtmosphere.shader");
         backdrop.starShader = starShader; backdrop.celestialSky = sky; backdrop.earthSun = sun;
         var sunlight = manager.AddComponent<MissionSunlight>();
         sunlight.director = director; sunlight.driver = flight; sunlight.sun = sun;
+        smoke.sunlight = sunlight;
         backdrop.sunlight = sunlight;
         var surface = manager.AddComponent<LocalSurfaceTiles>();
         surface.driver = flight; surface.director = director; surface.surfaceSun = sun;

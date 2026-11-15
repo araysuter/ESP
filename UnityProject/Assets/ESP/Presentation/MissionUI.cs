@@ -456,6 +456,8 @@ namespace ESP.Presentation
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
             var localSurface = director.GetComponent<LocalSurfaceTiles>();
             string surfaceInfo = localSurface != null ? "\n\n" + LocalSurfaceTiles.Attribution + "\n" + localSurface.Status : "";
+            if (director.SelectedSiteIndex == 1 && director.siteStructurePrefabs != null && director.siteStructurePrefabs.Length > 1 && director.siteStructurePrefabs[1] != null)
+                surfaceInfo += "\nHistorical LC-39 gantry: NASA / Michael D. Carbajal. Approximate scale and placement; not the current facility layout.";
             string flightInfo = (director.FlightStatus ?? "READY") + "\n\n" +
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
                 "\n" + (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n\n" + steeringInfo;
