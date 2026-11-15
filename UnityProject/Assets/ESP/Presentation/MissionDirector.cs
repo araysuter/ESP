@@ -43,8 +43,7 @@ namespace ESP.Presentation
             if (vehiclePrefabs == null || index < 0 || index >= vehiclePrefabs.Length || vehiclePrefabs[index] == null || !CanLaunch) return;
             VehicleIndex = index; rocketPrefab = vehiclePrefabs[index];
             FlightDriver?.ResetMission();
-            if (environment) Destroy(environment);
-            environment = null; RocketVisual = null;
+            ReleaseEnvironment();
             if (!IsMapView) GoToLaunch(SelectedSiteIndex);
         }
         public Texture[] siteGroundTextures;
@@ -89,9 +88,14 @@ namespace ESP.Presentation
         private Material groundMaterial;
         public Material orbitMaterial;
         public MapOrbitVisual OrbitVisual { get; private set; }
+        private Vector3 launchCameraHomePosition;
+        private Quaternion launchCameraHomeRotation;
+        private float launchCameraHomeFieldOfView;
+        private bool hasLaunchCameraHome;
 
         private void Start()
         {
+            CaptureLaunchCameraHome();
             // Driver registers in Awake; choose the real model before any preflight view is built.
             if (vehiclePrefabs != null && vehiclePrefabs.Length > 1 && vehiclePrefabs[1] != null && CanLaunch)
                 SelectVehicle(1);
@@ -115,6 +119,7 @@ namespace ESP.Presentation
             if (mapCamera) mapCamera.gameObject.SetActive(true);
             if (launchCamera) launchCamera.gameObject.SetActive(false);
             if (environment) environment.SetActive(false);
+            RefreshFlightBackdrop();
         }
 
         public void GoToLaunch(int siteIndex)
@@ -129,8 +134,7 @@ namespace ESP.Presentation
                 SetLaunchView();
                 return;
             }
-            if (environment) Destroy(environment);
-            if (groundMaterial) Destroy(groundMaterial);
+            ReleaseEnvironment();
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             // Use fresh Lit defaults: the unlit orbit template carries incompatible shader properties.
             groundMaterial = new Material(shader);
@@ -145,6 +149,7 @@ namespace ESP.Presentation
                 rocket.transform.localPosition = Vector3.up * LaunchEnvironment.RocketBaseHeightMeters;
                 RocketVisual = rocket.transform;
             }
+            ResetLaunchFraming();
             SetLaunchView();
         }
         private void SetLaunchView()
@@ -159,6 +164,36 @@ namespace ESP.Presentation
                 if (!controls) controls = launchCamera.gameObject.AddComponent<FlightCameraControls>();
                 controls.director = this;
             }
+            RefreshFlightBackdrop();
+        }
+        private void CaptureLaunchCameraHome()
+        {
+            if (hasLaunchCameraHome || launchCamera == null) return;
+            launchCameraHomePosition = launchCamera.transform.position;
+            launchCameraHomeRotation = launchCamera.transform.rotation;
+            launchCameraHomeFieldOfView = launchCamera.fieldOfView;
+            hasLaunchCameraHome = true;
+        }
+        public void ResetLaunchFraming()
+        {
+            CaptureLaunchCameraHome();
+            if (launchCamera == null) return;
+            launchCamera.transform.SetPositionAndRotation(launchCameraHomePosition, launchCameraHomeRotation);
+            launchCamera.fieldOfView = launchCameraHomeFieldOfView;
+            launchCamera.GetComponent<FlightCameraControls>()?.ResetFraming();
+        }
+        public void RefreshFlightBackdrop()
+        {
+            GetComponent<FlightEarthBackdrop>()?.Apply(FlightDriver as RocketFlightDriver, this);
+        }
+        private void ReleaseEnvironment()
+        {
+            // Destroy is deferred: hide the previous site immediately so it cannot render
+            // over the replacement or keep obsolete bounds alive for the camera.
+            if (environment) { environment.SetActive(false); Destroy(environment); }
+            environment = null; RocketVisual = null;
+            if (groundMaterial) Destroy(groundMaterial);
+            groundMaterial = null;
         }
         private void OnPointSelected(double lat, double lon)
         {
