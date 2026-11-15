@@ -26,6 +26,7 @@ namespace ESP.Presentation
         private readonly System.Collections.Generic.Dictionary<CelestialPrimary, LineRenderer> planetOrbits = new System.Collections.Generic.Dictionary<CelestialPrimary, LineRenderer>();
         private readonly System.Collections.Generic.List<Material> planetMaterials = new System.Collections.Generic.List<Material>();
         private float nextPlanetOrbit;
+        public int AvailablePlanetCount { get; private set; }
         public bool TryPlanetPosition(CelestialPrimary body, out Vector3 position) { if(planets.TryGetValue(body,out var planet) && planet.gameObject.activeInHierarchy) { position=planet.position; return true; } position=default; return false; }
         private Material material, sunMaterial;
 
@@ -60,9 +61,9 @@ namespace ESP.Presentation
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             sunMaterial = new Material(owner.orbitMaterial);
-            sunMaterial.mainTexture = null;
-            if (sunMaterial.HasProperty("_BaseColor")) sunMaterial.SetColor("_BaseColor", new Color(1, .93f, .76f));
-            if (sunMaterial.HasProperty("_Color")) sunMaterial.SetColor("_Color", new Color(1, .93f, .76f));
+            sunMaterial.mainTexture = Resources.Load<Texture2D>("SolarSystem/Sun");
+            if (sunMaterial.HasProperty("_BaseColor")) sunMaterial.SetColor("_BaseColor", new Color(6, 5.85f, 5.52f));
+            if (sunMaterial.HasProperty("_Color")) sunMaterial.SetColor("_Color", new Color(6, 5.85f, 5.52f));
             renderer.sharedMaterial = sunMaterial;
             sunObject = sphere.transform;
             var moon = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -81,8 +82,9 @@ namespace ESP.Presentation
                 var planet=GameObject.CreatePrimitive(PrimitiveType.Sphere); planet.name=body.ToString(); planet.layer=MissionInsetView.MapLayer;
                 planet.transform.SetParent(owner.mapRoot.transform,false); planet.transform.localScale=Vector3.one*(float)(2*LunarEphemeris.Radius(body)/1000000);
                 var pc=planet.GetComponent<Collider>(); if(pc!=null) Destroy(pc);
-                var pm=lit!=null ? new Material(lit) : new Material(owner.orbitMaterial); pm.mainTexture=Resources.Load<Texture2D>("SolarSystem/"+body);
+                var pm=lit!=null ? new Material(lit) : new Material(owner.orbitMaterial); pm.mainTexture=CelestialAssets.Surface(body);
                 planet.GetComponent<Renderer>().sharedMaterial=pm; planetMaterials.Add(pm); planets.Add(body,planet.transform);
+                if (body == CelestialPrimary.Saturn) SaturnRingVisual.Attach(planet.transform);
                 var o=new GameObject(body+" orbit"); o.layer=MissionInsetView.MapLayer; o.transform.SetParent(owner.mapRoot.transform,false);
                 var line=o.AddComponent<LineRenderer>(); line.useWorldSpace=true; line.positionCount=129; line.alignment=LineAlignment.View; line.sharedMaterial=material; line.shadowCastingMode=ShadowCastingMode.Off; line.receiveShadows=false; planetOrbits.Add(body,line);
             }
@@ -131,11 +133,14 @@ namespace ESP.Presentation
             double missionTime = simulation != null ? simulation.State.MissionTime : 0;
             double angle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * missionTime;
             Vector3 sunPosition = ephemeris != null ? ToMap(EarthFrames.InertialToEcef(ephemeris.SunPosition(missionTime), angle)) : towardSun * AstronomicalUnit;
+            AvailablePlanetCount = 0;
             foreach(var pair in planets)
             {
-                bool available=ephemeris!=null && ephemeris.TryPlanet(pair.Key,missionTime,out _,out _,out _);
+                Vector3d planetPosition = default;
+                bool available=ephemeris!=null && ephemeris.TryPlanet(pair.Key,missionTime,out planetPosition,out _,out _);
                 pair.Value.gameObject.SetActive(available);
-                if(available) pair.Value.position=ToMap(EarthFrames.InertialToEcef(ephemeris.Position(pair.Key,missionTime),angle));
+                if (available) AvailablePlanetCount++;
+                if(available) pair.Value.position=ToMap(EarthFrames.InertialToEcef(planetPosition,angle));
                 var pl=planetOrbits[pair.Key]; pl.enabled=available && director.IsMapView && controls!=null && controls.Distance>=1000;
                 if(pl.enabled && Time.unscaledTime>=nextPlanetOrbit)
                 {

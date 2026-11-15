@@ -22,8 +22,10 @@ namespace ESP.Presentation
         public bool InEarthShadow { get; private set; }
         public double SolarElevationDegrees { get; private set; }
         internal DateTime? ReviewUtc;
+        public float LightingOffsetHours { get; private set; }
+        public void SetLightingOffset(float hours) { LightingOffsetHours = Mathf.Clamp(hours, -12f, 12f); Apply(); }
         public string Status => CurrentUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'") +
-            (ReviewUtc.HasValue ? " · LIGHTING REVIEW OVERRIDE" : driver != null && driver.HasPosition ? " · SIMULATED" : " · LIVE") +
+            (ReviewUtc.HasValue ? " · LIGHTING REVIEW OVERRIDE" : LightingOffsetHours != 0 ? " · VISUAL TIME OFFSET" : driver != null && driver.HasPosition ? " · SIMULATED" : " · LIVE") +
             (InEarthShadow ? " · NIGHT / EARTH SHADOW" : " · SUNLIT");
 
         private Color flightAmbient;
@@ -60,7 +62,7 @@ namespace ESP.Presentation
         {
             if (director == null || sun == null) return;
             CurrentUtc = ReviewUtc ?? (driver != null && driver.HasPosition
-                ? driver.LaunchUtc.AddSeconds(driver.MissionTimeSeconds) : DateTime.UtcNow);
+                ? driver.LaunchUtc.AddSeconds(driver.MissionTimeSeconds) : DateTime.UtcNow).AddHours(LightingOffsetHours);
             SunEcef = SolarLighting.DirectionEcef(CurrentUtc);
             Shader.SetGlobalVector("_EspSunDirectionEcef", new Vector4((float)SunEcef.X, (float)SunEcef.Z, (float)SunEcef.Y, 0));
             Shader.SetGlobalTexture("_EspNightLights", nightLights != null ? nightLights : Texture2D.blackTexture);
@@ -75,7 +77,7 @@ namespace ESP.Presentation
                 double earthAngle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime;
                 position = EarthFrames.InertialToEcef(state.Position, earthAngle);
                 var ephemeris=driver.Simulation.Celestial;
-                if(ephemeris != null)
+                if(ephemeris != null && !ReviewUtc.HasValue && LightingOffsetHours == 0)
                 {
                     var relative=ephemeris.SunPosition(state.MissionTime)-state.Position;
                     if(relative.Magnitude()>1) vesselSun=EarthFrames.InertialToEcef(relative,earthAngle).Normalize();

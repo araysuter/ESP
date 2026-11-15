@@ -38,7 +38,7 @@ namespace ESP.Presentation
         private bool roadsterOpen;
         private float countdownRemaining;
         private Button viewToggle, action, reentry, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
-        private Button cameraToggle;
+        private Button cameraToggle, cinematicToggle;
         private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
             ? director.launchCamera.GetComponent<FlightCameraControls>() : null;
         private readonly Button[] rateButtons = new Button[2];
@@ -100,6 +100,13 @@ namespace ESP.Presentation
             }, false, "flight-camera-toggle");
             Absolute(cameraToggle, null, 51, 18, null);
             root.Add(cameraToggle);
+            cinematicToggle = Button("CINEMATIC", () => {
+                if (!MissionSession.BlocksInput) MainFlightCamera?.ToggleCinematicView();
+                Refresh();
+            }, false, "cinematic-camera-toggle");
+            Absolute(cinematicToggle, null, 86, 18, null);
+            cinematicToggle.tooltip = "Cycle through cinematic views of the vehicle";
+            root.Add(cinematicToggle);
             mapMission = Label("", 10, Text, FontStyle.Bold);
             mapMission.name = "map-mission-clock";
             mapMission.pickingMode = PickingMode.Ignore;
@@ -139,7 +146,8 @@ namespace ESP.Presentation
 
             foreach(var body in FlightCore.LunarEphemeris.InnerPlanets)
             {
-                var label=Label("●  "+body.ToString().ToUpperInvariant(),10,Text,FontStyle.Bold);
+                var label=Label("●  "+body.ToString().ToUpperInvariant() +
+                    (body == FlightCore.CelestialPrimary.Ceres || body == FlightCore.CelestialPrimary.Eris || body == FlightCore.CelestialPrimary.Haumea || body == FlightCore.CelestialPrimary.Makemake ? " (ILLUSTRATIVE)" : ""),10,Text,FontStyle.Bold);
                 label.style.position=Position.Absolute; label.style.display=DisplayStyle.None; label.pickingMode=PickingMode.Ignore;
                 root.Add(label); planetLabels.Add(body,label);
             }
@@ -276,8 +284,8 @@ namespace ESP.Presentation
             var scaleRow = Row();
             var shipView = Button("SHIP", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowShip(), false, "map-focus-ship");
             shipView.tooltip = "Focus the map on the vehicle";
-            var systemView = Button("SUN / EARTH", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowSystem(), false, "map-sun-earth-view");
-            systemView.tooltip = "Show the approximate Sun–Earth system and Earth's orbit";
+            var systemView = Button("SOLAR SYSTEM", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowSystem(), false, "map-sun-earth-view");
+            systemView.tooltip = "Show the solar system; scroll out to see outer planets";
             scaleRow.Add(shipView); scaleRow.Add(systemView); layerGroup.Add(scaleRow);
             mapBar.Add(layerGroup);
             weatherToggle = Button("WEATHER", () => { weatherOpen = !weatherOpen; if (weatherOpen) director?.RefreshPointWeather(); Refresh(); }, false, "point-weather-toggle");
@@ -505,7 +513,7 @@ namespace ESP.Presentation
             float navSize = narrow ? 92 : 120;
             navball.style.width = navSize; navball.style.height = navSize;
             navballHousing.style.height = navSize + 25;
-            float previewWidth = narrow ? 160 : compact ? 220 : 280;
+            float previewWidth = narrow ? 130 : compact ? 180 : 220;
             previewHousing.style.width = previewMinimized ? 130 : previewWidth;
             previewHousing.style.height = previewMinimized ? 21 : previewWidth * 9f / 16f + 21;
             inputStrip.style.top = 0;
@@ -603,7 +611,7 @@ namespace ESP.Presentation
             foreach(var pair in planetLabels)
             {
                 Vector3 planetPosition=Vector3.zero;
-                bool visible=director != null && director.IsMapView && solarMap != null && solarMap.TryPlanetPosition(pair.Key,out planetPosition);
+                bool visible=systemView && solarMap != null && solarMap.TryPlanetPosition(pair.Key,out planetPosition);
                 PlaceSystemLabel(pair.Value,camera,planetPosition,visible);
             }
             for (int i = 0; i < orbitMarkers.Length; i++)
@@ -706,9 +714,13 @@ namespace ESP.Presentation
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
             cameraToggle.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
+            cinematicToggle.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
             var camera = isMap ? null : MainFlightCamera;
             bool onboard = camera != null && camera.IsOnboardView;
             cameraToggle.SetEnabled(camera != null && director.RocketVisual != null);
+            cinematicToggle.SetEnabled(camera != null && director.RocketVisual != null);
+            cinematicToggle.text = camera != null && camera.IsCinematicView ? "EXIT CINEMATIC" : "CINEMATIC";
+            Selected(cinematicToggle, camera != null && camera.IsCinematicView);
             cameraToggle.text = onboard ? "CHASE CAM" : "ONBOARD CAM";
             cameraToggle.tooltip = onboard ? "Return to the external chase camera" : "Look along the rocket from its hull";
             Selected(cameraToggle, onboard);
@@ -735,6 +747,9 @@ namespace ESP.Presentation
                 (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60);
             string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  / requested {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
+            var planets = director != null ? director.GetComponent<SolarSystemMap>() : null;
+            if (planets != null && planets.AvailablePlanetCount < FlightCore.LunarEphemeris.InnerPlanets.Length)
+                mapMission.text += " · PLANET DATA UNAVAILABLE (2020–2037 coverage)";
             if (flight != null)
             {
                 string actual = flight.IsPlanningReturn ? " · planning return — simulation time paused" :

@@ -88,7 +88,7 @@ namespace ESP.Presentation
             {
                 var celestial = flight != null && flight.Simulation != null ? flight.Simulation.Celestial : null;
                 double missionTime = flight != null && flight.Simulation != null ? flight.Simulation.State.MissionTime : 0;
-                if (celestial == null) celestial = new LunarEphemeris(DateTime.UtcNow);
+                if (celestial == null) celestial = new LunarEphemeris(sunlight != null && sunlight.CurrentUtc != default ? sunlight.CurrentUtc : DateTime.UtcNow);
                 var moonEcef = EarthFrames.InertialToEcef(celestial.MoonPosition(missionTime),
                     Aerodynamics.EarthAngularVelocityRadiansPerSecond * missionTime);
                 moon.transform.position = CameraRelativeCoordinates.FromEcef(moonEcef.X, moonEcef.Y, moonEcef.Z,
@@ -101,7 +101,13 @@ namespace ESP.Presentation
                     if(available)
                     {
                         var fixedPosition=EarthFrames.InertialToEcef(planetPosition,Aerodynamics.EarthAngularVelocityRadiansPerSecond*missionTime);
-                        pair.Value.transform.position=CameraRelativeCoordinates.FromEcef(fixedPosition.X,fixedPosition.Y,fixedPosition.Z,origin.X,origin.Y,origin.Z,lat,lon)/1000000f;
+                        // Rotate/subtract in doubles before casting, in million-meter units.
+                        Vector3 relative = CameraRelativeCoordinates.FromEcef(fixedPosition.X/1000000, fixedPosition.Y/1000000, fixedPosition.Z/1000000,
+                            origin.X/1000000, origin.Y/1000000, origin.Z/1000000, lat, lon);
+                        CompressPlanetBackdrop(relative, launch.transform.position/1000000f,
+                            (float)(LunarEphemeris.Radius(pair.Key)/1000000), out var position, out var diameter);
+                        pair.Value.transform.position = position;
+                        pair.Value.transform.localScale = Vector3.one * diameter;
                     }
                 }
             }
@@ -130,6 +136,19 @@ namespace ESP.Presentation
                 cloudShell.Show(mission.mapLayers.CloudDensityTexture, mission.mapLayers.CloudShader, .35f);
             else cloudShell.Hide();
             Resume();
+        }
+
+        // Distant planets occupy a bounded camera-relative shell. Scaling their
+        // radius by the same factor preserves angular size and the existing depth
+        // range. Nearby bodies remain at their true presentation distance.
+        internal static void CompressPlanetBackdrop(Vector3 position, Vector3 camera, float radius,
+            out Vector3 renderedPosition, out float renderedDiameter)
+        {
+            Vector3 offset = position - camera;
+            float distance = offset.magnitude;
+            float scale = distance > 500 ? 500 / distance : 1;
+            renderedPosition = camera + offset * scale;
+            renderedDiameter = 2 * radius * scale;
         }
 
         private bool Create(Camera camera)
@@ -186,8 +205,9 @@ namespace ESP.Presentation
                 planet.transform.SetParent(backdropRoot.transform,false); planet.transform.localScale=Vector3.one*(float)(2*LunarEphemeris.Radius(body)/1000000);
                 var collider=planet.GetComponent<Collider>(); if(collider!=null) Destroy(collider);
                 var pm=moonShader!=null ? new Material(moonShader) : new Material(globeMaterial);
-                pm.mainTexture=Resources.Load<Texture2D>("SolarSystem/"+body); planet.GetComponent<Renderer>().sharedMaterial=pm;
+                pm.mainTexture=CelestialAssets.Surface(body); planet.GetComponent<Renderer>().sharedMaterial=pm;
                 planetMaterials.Add(pm); planetBackdrops.Add(body,planet);
+                if (body == CelestialPrimary.Saturn) SaturnRingVisual.Attach(planet.transform);
             }
             var sunObject = new GameObject("Earth backdrop sunlight");
             sunObject.transform.SetParent(backdropRoot.transform, false);

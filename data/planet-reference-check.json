@@ -1,0 +1,194 @@
+[
+  {
+    "body": "Mercury",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 17384.447421635505,
+    "velocityErrorMetersPerSecond": 0.0076073350912267065,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27199%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      -105152027084.1516,
+      -69466059017.12271,
+      -24603652740.81067,
+      -31518.18699556983,
+      -31192.66864973107,
+      -9231.922167911014
+    ]
+  },
+  {
+    "body": "Venus",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 126.08256675532371,
+    "velocityErrorMetersPerSecond": 5.908416705690008e-06,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27299%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      -46016192859.26339,
+      -17057120386.185139,
+      -8645704670.329391,
+      -7948.526129978546,
+      -4429.2343753184705,
+      313.42754885305976
+    ]
+  },
+  {
+    "body": "Mars",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 49.74233436663954,
+    "velocityErrorMetersPerSecond": 3.005720089343832e-05,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27499%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      -160981767092.80978,
+      100144515642.8927,
+      50584640018.57826,
+      1988.842275313999,
+      -21314.66456472835,
+      -8762.32996815304
+    ]
+  },
+  {
+    "body": "Jupiter",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 6176.740692916913,
+    "velocityErrorMetersPerSecond": 0.05836716278902924,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27599%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      -649936224749.2427,
+      406540215020.27826,
+      187371090151.4246,
+      14770.34048890498,
+      -24415.561020842208,
+      -10314.17259234385
+    ]
+  },
+  {
+    "body": "Saturn",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 213.39857008318077,
+    "velocityErrorMetersPerSecond": 0.0012167109474638216,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27699%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      1285874029390.2979,
+      192299270394.95642,
+      17984646893.92618,
+      21605.80838428328,
+      -7774.071634336126,
+      -3433.413559310982
+    ]
+  },
+  {
+    "body": "Uranus",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 300.31343832665783,
+    "velocityErrorMetersPerSecond": 0.0020826397331293114,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27799%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      1222398340088.651,
+      2275028422021.935,
+      978314581744.2228,
+      18071.82726415002,
+      -13942.37174309909,
+      -5945.018998686862
+    ]
+  },
+  {
+    "body": "Neptune",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 338.2644174272412,
+    "velocityErrorMetersPerSecond": 0.0011331126159026103,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27899%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      4372873144783.373,
+      143789511368.323,
+      -54851553043.199486,
+      23886.12931268453,
+      -11384.333115512129,
+      -5047.678424450529
+    ]
+  },
+  {
+    "body": "Pluto",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 5161.097148450952,
+    "velocityErrorMetersPerSecond": 0.011729301456403485,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27999%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      2915278879335.499,
+      -3973592765206.9067,
+      -2158391632333.46,
+      28838.31961247064,
+      -14118.591284709852,
+      -7775.121493642755
+    ]
+  },
+  {
+    "body": "Ceres",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 50.471259062371594,
+    "velocityErrorMetersPerSecond": 7.358929555233559e-06,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%271%3B%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      -119304082000.05371,
+      245658976021.38422,
+      126061117300.37979,
+      5957.188785995072,
+      -20267.37809205817,
+      -5215.642290755263
+    ]
+  },
+  {
+    "body": "Eris",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 50.78297569807147,
+    "velocityErrorMetersPerSecond": 4.327753273621012e-06,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27136199%3B%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      12635316981731.45,
+      6369294899351.16,
+      -43205144843.26206,
+      23367.19652099613,
+      -15726.89017993356,
+      -5043.681563964789
+    ]
+  },
+  {
+    "body": "Haumea",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 50.78146602878103,
+    "velocityErrorMetersPerSecond": 5.965898460038446e-06,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27136108%3B%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      -5561554835642.284,
+      -4823303358999.173,
+      1741334373561.424,
+      26652.30985109824,
+      -19085.41879334711,
+      -8560.322346079332
+    ]
+  },
+  {
+    "body": "Makemake",
+    "samples": 6211,
+    "utc": "2026-11-15T12:00:00+00:00",
+    "positionErrorMeters": 50.78393690542224,
+    "velocityErrorMetersPerSecond": 6.0084197850060995e-06,
+    "source": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND=%27136472%3B%27&EPHEM_TYPE=%27VECTORS%27&CENTER=%27500%40399%27&START_TIME=%272026-11-15+12%3A00%27&STOP_TIME=%272026-11-15+12%3A01%27&STEP_SIZE=%271+m%27&REF_PLANE=%27FRAME%27&OUT_UNITS=%27KM-S%27&VEC_TABLE=%272%27&CSV_FORMAT=%27YES%27&TIME_TYPE=%27UT%27&VEC_CORR=%27NONE%27",
+    "referenceStateSI": [
+      -6959153810451.632,
+      -2874215127113.8057,
+      2673118857060.834,
+      24587.52104647953,
+      -19593.95378009414,
+      -9132.75804536629
+    ]
+  }
+]

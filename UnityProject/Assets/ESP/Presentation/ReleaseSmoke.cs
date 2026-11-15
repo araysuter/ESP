@@ -30,6 +30,9 @@ namespace ESP.Presentation
         }
         private IEnumerator Start()
         {
+            try { PlanetSmoke.Validate(); }
+            catch (Exception error) { Fail("planetary resources: " + error.Message); }
+            if (failed) yield break;
             yield return null;
             var director = FindFirstObjectByType<MissionDirector>();
             var driver = FindFirstObjectByType<RocketFlightDriver>();
@@ -43,7 +46,7 @@ namespace ESP.Presentation
                 { Fail("missing vehicle mesh"); yield break; }
             for (int vehicle = 0; vehicle < 3; vehicle++)
             {
-                MissionSession.Instance.NewMission();
+                MissionSession.Instance.NewMission(false);
                 director.SelectVehicle(vehicle); director.GoToLaunch(0); director.Launch();
                 driver.SetTimeRate(20);
                 float deadline = Time.realtimeSinceStartup + 30;

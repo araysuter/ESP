@@ -4,9 +4,9 @@ using UnityEngine.Rendering;
 namespace ESP.Presentation
 {
     /// <summary>
-    /// Original visual atmosphere approximation: fixed eight-sample exponential
-    /// density integral along an ellipsoid-clipped ray. Not flight weather or a
-    /// radiometrically calibrated scattering model. One full-screen draw, no LUTs.
+    /// Visual single-scattering approximation with eight view samples and six
+    /// sunlight samples per illuminated point, clipped to a WGS84 ellipsoid.
+    /// Not flight weather or calibrated radiometry. One full-screen draw, no LUTs.
     /// </summary>
     public sealed class ContinuousAtmosphere : MonoBehaviour
     {

@@ -23,7 +23,7 @@ namespace ESP.Presentation
             director = FindFirstObjectByType<MissionDirector>();
             explosion = FindFirstObjectByType<RocketExplosion>();
             if (!Check(driver != null && director != null && explosion != null && explosion.effectShader != null, "wiring")) yield break;
-            MissionSession.Instance?.NewMission();
+            MissionSession.Instance?.NewMission(false);
             director.GoToLaunch(0);
             int flag = Array.IndexOf(args, "-espVehicle");
             if (flag >= 0 && flag + 1 < args.Length && int.TryParse(args[flag + 1], out int vehicle)) director.SelectVehicle(vehicle);

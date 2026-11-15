@@ -221,9 +221,15 @@ internal static class Program
         Near(p.TotalPropellantKg, s.PropellantKg + r.BoosterPropellantKg + 50, 1e-10, "active plus attached solid plus future fuel");
         Near(s.MassKg, 1000 + 200 + 100 + p.TotalPropellantKg, 1e-9, "total fuel agrees with total mass");
         if (p.DragForceNewtons <= 0 || p.AirSpeedMetersPerSecond <= 0) throw new Exception("Telemetry force test did not exercise drag");
-        if (!r.Stage()) throw new Exception("Telemetry staging test failed to stage");
-        Near(r.Physics.TotalPropellantKg, 50 + r.BoosterPropellantKg, 1e-10, "discarded stage fuel excluded");
-        Near(r.State.MassKg, 200 + 100 + r.Physics.TotalPropellantKg, 1e-9, "staged total mass and propellant consistent");
+        if (r.Stage()) throw new Exception("Telemetry staging bypassed attached burning solids");
+        Near(r.Physics.TotalPropellantKg, p.TotalPropellantKg, 0, "rejected staging preserves propellant telemetry");
+        r.Throttle = 0; // Preserve liquid fuel to verify its exclusion after valid core separation.
+        for (int i = 0; i < 600 && r.BoosterPropellantKg > 0; i++) r.Step();
+        if (!r.JettisonBoosters()) throw new Exception("Telemetry test failed to jettison spent boosters");
+        Near(r.Physics.TotalPropellantKg, r.State.PropellantKg + 50, 1e-10, "spent solids excluded from propellant telemetry");
+        if (!r.Stage()) throw new Exception("Telemetry staging test failed after booster jettison");
+        Near(r.Physics.TotalPropellantKg, 50, 1e-10, "discarded stage fuel excluded");
+        Near(r.State.MassKg, 200 + r.Physics.TotalPropellantKg, 1e-9, "staged total mass and propellant consistent");
     }
 
     static void Run(RocketSimulation r, int count) { for (int i = 0; i < count; i++) r.Step(); }

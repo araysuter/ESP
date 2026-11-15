@@ -13,7 +13,8 @@
     ],
     "outputBytes": 648596,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Venus",
@@ -29,7 +30,8 @@
     ],
     "outputBytes": 565527,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Mars",
@@ -45,7 +47,8 @@
     ],
     "outputBytes": 447709,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Jupiter",
@@ -61,7 +64,8 @@
     ],
     "outputBytes": 326193,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Saturn",
@@ -77,7 +81,8 @@
     ],
     "outputBytes": 137672,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Uranus",
@@ -93,7 +98,8 @@
     ],
     "outputBytes": 36647,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Neptune",
@@ -109,7 +115,8 @@
     ],
     "outputBytes": 89230,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Pluto",
@@ -125,7 +132,8 @@
     ],
     "outputBytes": 336802,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Ceres",
@@ -141,7 +149,8 @@
     ],
     "outputBytes": 796458,
     "fictional": true,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Eris",
@@ -157,7 +166,8 @@
     ],
     "outputBytes": 702495,
     "fictional": true,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Haumea",
@@ -173,7 +183,8 @@
     ],
     "outputBytes": 634426,
     "fictional": true,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Makemake",
@@ -189,7 +200,8 @@
     ],
     "outputBytes": 703319,
     "fictional": true,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "Sun",
@@ -205,7 +217,8 @@
     ],
     "outputBytes": 461172,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "SaturnRings",
@@ -221,7 +234,8 @@
     ],
     "outputBytes": 13466,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   },
   {
     "body": "VenusClouds",
@@ -237,6 +251,7 @@
     ],
     "outputBytes": 159191,
     "fictional": false,
-    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+    "provenance": "User-supplied NASA imagery; user confirmed nasa.gov origin and permission to use on 2026-11-15. Exact upstream item URL was not supplied.",
+    "usageGuidance": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
   }
 ]

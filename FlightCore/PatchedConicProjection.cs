@@ -43,6 +43,20 @@ namespace FlightCore
                 h=Math.Min(h,Math.Max(1,.25*moonBoundary/Math.Max(1,(velocity-moonVelocity).Magnitude())));
                 h=Math.Min(h,Math.Max(1,.25*earthBoundary/Math.Max(1,velocity.Magnitude())));
                 h=Math.Min(h,Math.Max(1,.25*(r-radius)/Math.Max(1,speed)));
+                // A solar step can otherwise cross a small planetary SOI without
+                // sampling it at any RK stage. Use each moving body's relative
+                // speed for both its SOI and surface approach.
+                // Real planets cannot intersect the Earth/Moon neighborhood.
+                if (primary != CelestialPrimary.Earth && primary != CelestialPrimary.Moon)
+                foreach (var body in LunarEphemeris.InnerPlanets)
+                {
+                    if (!ephemeris.TryPlanet(body,time,out var p,out var v,out _)) continue;
+                    double distance=(position-p).Magnitude();
+                    double relativeSpeed=Math.Max(1,(velocity-v).Magnitude());
+                    double boundary=Math.Abs(distance-ephemeris.Soi(body,time));
+                    h=Math.Min(h,Math.Max(1,.25*boundary/relativeSpeed));
+                    h=Math.Min(h,Math.Max(1,.25*Math.Max(0,distance-LunarEphemeris.Radius(body))/relativeSpeed));
+                }
                 var k1p=velocity; var k1v=ephemeris.Acceleration(position,time,gravityMultiplier);
                 var k2p=velocity+k1v*(h*.5); var k2v=ephemeris.Acceleration(position+k1p*(h*.5),time+h*.5,gravityMultiplier);
                 var k3p=velocity+k2v*(h*.5); var k3v=ephemeris.Acceleration(position+k2p*(h*.5),time+h*.5,gravityMultiplier);
