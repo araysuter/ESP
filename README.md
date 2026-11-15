@@ -11,7 +11,7 @@ Download packages from [GitHub Releases](https://github.com/araysuter/ESP/releas
 - **ESP-0.1.0-Windows.zip** — Portable Windows package; extract the entire ZIP before running `ESP.exe`.
 - **SHA256SUMS.txt** — SHA-256 checksums for the downloadable packages.
 
-The [downloadable builds workflow](.github/workflows/download-builds.yml) uses standard GitHub-hosted runners. To publish, open Actions → Downloadable app builds → Run workflow, select `main`, set `version` to `0.1.0`, and enable `publish`. With `publish` disabled, the run is a rehearsal that produces Actions artifacts only. Publishing a GitHub Release tagged `vMAJOR.MINOR.PATCH` also triggers a build of that revision and attaches its packages after checks pass. Filenames use the selected version; releases are not created on every push to `main`. See [downloadable builds setup](docs/download-builds.md) for authentication and packaging details.
+The [downloadable builds workflow](.github/workflows/download-builds.yml) uses standard GitHub-hosted runners. To rehearse Windows independently, open Actions → Downloadable app builds → Run workflow, select a branch, set `platform` to `windows`, and leave `publish` disabled. Download the `ESP-Windows` artifact after it passes. To publish, select `main`, set a version such as `0.1.0`, select `both`, and enable `publish`. Publishing a GitHub Release tagged `vMAJOR.MINOR.PATCH` also triggers both builds. Filenames use the selected version; releases are not created on every push to `main`. See [downloadable builds setup](docs/download-builds.md) for authentication and packaging details.
 
 Packages are not Apple Developer ID signed/notarized or Windows Authenticode signed, so your operating system may warn before launching. Hosted player checks are headless on both platforms. They do not verify interactive graphics or gameplay; the downloaded macOS player is checked separately on Studio, and Windows still needs a Windows PC playtest. Check the release notes and [mission acceptance checklist](docs/mission-acceptance.md) for verification status; a configured workflow alone is not proof that a package runs successfully.
 
@@ -32,6 +32,22 @@ ESP_BUILD_PATH="$PWD/Builds/ESP.app" "$UNITY_EDITOR" \
 ```
 
 Open `Builds/ESP.app` after the build succeeds. `BuildMission.Build` rebuilds the detailed vehicle prefabs from the bundled runtime assets and saves `Assets/ESP/Art/Mission.unity`. The separate Earth and asset preview scenes are useful for inspecting art and coordinate placement. Blender **5.2.3 LTS** is used for asset preparation. The bundled runtime exports are sufficient to build the player. [Mission integration](docs/mission-integration.md) · [Vehicle asset build handoff](docs/vehicle-asset-build.md)
+
+For a Windows x64 development player, install the matching editor and **Windows Build Support (Mono)** in Unity Hub and activate an eligible license. Close the editor for this checkout, then run from the repository root in PowerShell, replacing the editor path if necessary:
+
+```powershell
+$unity = 'C:\Program Files\Unity\Hub\Editor\6000.6.9f1\Editor\Unity.exe'
+$repo = (Get-Location).Path
+New-Item -ItemType Directory -Force Builds\Windows | Out-Null
+$argsForUnity = @('-batchmode', '-quit', '-nographics', '-buildTarget', 'StandaloneWindows64',
+  '-projectPath', "`"$repo\UnityProject`"", '-executeMethod', 'BuildMission.Build',
+  '-espBuildPath', "`"$repo\Builds\Windows\ESP.exe`"", '-logFile', "`"$repo\Builds\windows-unity-build.log`"")
+$build = Start-Process -FilePath $unity -ArgumentList $argsForUnity -Wait -PassThru
+if ($build.ExitCode -ne 0) { throw "Unity build failed; see Builds\windows-unity-build.log" }
+Start-Process -FilePath "$repo\Builds\Windows\ESP.exe"
+```
+
+Keep `ESP.exe`, `ESP_Data`, `UnityPlayer.dll`, and the other generated files together. This development build is separate from the release installer and ZIP produced by Actions.
 
 ## Controls
 

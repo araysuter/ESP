@@ -4,7 +4,9 @@
 
 ## Release v0.1.0 and later
 
-From Actions → Downloadable app builds → Run workflow, select `main`, enter a version such as `0.1.0`, and enable `publish`. The workflow builds and tests both packages before creating the matching `v0.1.0` release. Leave publish disabled for a rehearsal with downloadable Actions artifacts only. Alternatively, publishing a GitHub Release with a `vMAJOR.MINOR.PATCH` tag automatically builds that exact revision and attaches the packages when checks pass. Release commits must be on main. Existing tags pointing to another commit are never moved.
+From Actions → Downloadable app builds → Run workflow, select a branch, enter a version such as `0.1.0`, choose `windows` to rehearse only Windows, and leave `publish` disabled. The `ESP-Windows` artifact contains the installer and portable ZIP if the Windows package checks succeed. A Windows-only run does not depend on the macOS build. Choose `macos` for a macOS-only rehearsal, or `both` for the complete rehearsal.
+
+To publish, select `main`, choose `both`, and enable `publish`. The workflow builds and tests both packages before creating the matching `v0.1.0` release. Alternatively, publishing a GitHub Release with a `vMAJOR.MINOR.PATCH` tag automatically builds that exact revision for both platforms and attaches the packages when checks pass. Release commits must be on main. Existing tags pointing to another commit are never moved.
 
 Each release includes:
 
