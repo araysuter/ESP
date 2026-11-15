@@ -23,7 +23,7 @@ namespace ESP.Presentation
             yield return null; yield return null;
             var director = GetComponent<MissionDirector>();
             var session = MissionSession.Instance;
-            session.NewMission(); director.ShowMap();
+            session.NewMission(false); director.ShowMap();
             var camera = director.mapCamera;
             camera.GetComponent<GlobeCameraControls>().enabled = false;
             var effect = director.mapRoot.GetComponentInChildren<AuroraCurtains>();

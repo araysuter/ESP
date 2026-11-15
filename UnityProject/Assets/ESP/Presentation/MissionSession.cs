@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace ESP.Presentation
 {
-    public enum MissionMenuPage { None, Start, Pause, Settings, Cheats }
+    public enum MissionMenuPage { None, Start, Pause, Settings, Cheats, Tutorial }
 
     /// <summary>Owns menu state, explicit fixed-step pause and per-flight sandbox overrides.</summary>
     [DefaultExecutionOrder(-500)]
@@ -37,6 +37,7 @@ namespace ESP.Presentation
         private MissionDirector director;
         private RocketFlightDriver driver;
         private MissionMenuPage returnPage = MissionMenuPage.Start;
+        private MissionMenuPage tutorialReturnPage = MissionMenuPage.None;
         private bool modified, resumeMap = true;
         private float nextTelemetry;
         private static readonly int[] FrameLimits = { 0, 30, 60, 90, 120, 144 };
@@ -91,13 +92,19 @@ namespace ESP.Presentation
 
         private void SyncPause() { if (driver != null) driver.IsPaused = Page != MissionMenuPage.None; }
         private void Navigate(MissionMenuPage page) { Page = page; SyncPause(); }
-        public void NewMission()
+        public void NewMission() => NewMission(true);
+        internal void NewMission(bool showTutorial)
         {
             ClearMissionOverrides();
             director?.ResetMission();
             director?.ShowMap();
             HasSession = true; resumeMap = true;
-            Navigate(MissionMenuPage.None);
+            if (showTutorial && PlayerPrefs.GetInt("ESP.Tutorial.Seen", 0) == 0)
+            {
+                tutorialReturnPage = MissionMenuPage.None;
+                Navigate(MissionMenuPage.Tutorial);
+            }
+            else Navigate(MissionMenuPage.None);
         }
         public void ResumeMission()
         {
@@ -110,8 +117,15 @@ namespace ESP.Presentation
         }
         public void OpenPause() { if (HasSession) Navigate(MissionMenuPage.Pause); }
         public void OpenSettings() { returnPage = HasSession && Page != MissionMenuPage.Start ? MissionMenuPage.Pause : MissionMenuPage.Start; Navigate(MissionMenuPage.Settings); }
+        public void OpenTutorial() { tutorialReturnPage = Page; Navigate(MissionMenuPage.Tutorial); }
+        public void CloseTutorial()
+        {
+            PlayerPrefs.SetInt("ESP.Tutorial.Seen", 1);
+            PlayerPrefs.Save();
+            Navigate(tutorialReturnPage);
+        }
         public void OpenCheats() { if (HasSession) { returnPage = MissionMenuPage.Pause; Navigate(MissionMenuPage.Cheats); } }
-        public void Back() { if (Page == MissionMenuPage.Settings || Page == MissionMenuPage.Cheats) Navigate(returnPage); else if (Page == MissionMenuPage.Pause) ResumeMission(); }
+        public void Back() { if (Page == MissionMenuPage.Tutorial) CloseTutorial(); else if (Page == MissionMenuPage.Settings || Page == MissionMenuPage.Cheats) Navigate(returnPage); else if (Page == MissionMenuPage.Pause) ResumeMission(); }
         public void ReturnToStart()
         {
             resumeMap = director == null || director.IsMapView;

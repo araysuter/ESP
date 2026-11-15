@@ -99,7 +99,7 @@ namespace ESP.Presentation
                 float blend = 1f - Mathf.Exp(-2f * Time.unscaledDeltaTime);
                 transform.position = KeepAboveSurface(Vector3.Lerp(transform.position, targetPosition, blend));
                 Vector3 look = bounds.center - transform.position;
-                if (look.sqrMagnitude > .001f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(look, Vector3.up), blend);
+                if (look.sqrMagnitude > .001f) transform.rotation = Quaternion.LookRotation(look, Vector3.up);
                 return;
             }
             float minDistance = radius * 1.5f;
