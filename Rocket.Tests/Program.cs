@@ -11,8 +11,27 @@ internal static class Program
     private static RocketSimulation Create(double step, StageDefinition[] stages) => new RocketSimulation(step, stages, Offline, 0.5, -1.0);
     private static int Main()
     {
-        try { PadAndReset(); BurnAndStage(); Impact(); Convergence(30); Convergence(60); Console.WriteLine("Rocket tests passed."); return 0; }
+        try { PadAndReset(); BurnAndStage(); Impact(); ManualRotation(); Convergence(30); Convergence(60); Console.WriteLine("Rocket tests passed."); return 0; }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
+    }
+    private static void ManualRotation()
+    {
+        var rocket = Create(.02, StageDefinition.DemoStages());
+        rocket.Launch();
+        rocket.SetRotationInputs(0, 0, 1);
+        Run(rocket, 100);
+        var axis = rocket.ThrustDirectionInertial;
+        var forward = rocket.ManualForwardInertial;
+        rocket.SetRotationInputs(0, 0, 0);
+        Run(rocket, 50);
+        if ((rocket.ManualForwardInertial - forward).Magnitude() < .1) throw new Exception("Roll must continue after release");
+        if ((rocket.ThrustDirectionInertial - axis).Magnitude() > 1e-8) throw new Exception("Roll must preserve thrust axis");
+        rocket.Reset(); rocket.Launch();
+        rocket.SetRotationInputs(1, 0, 0);
+        Run(rocket, 200);
+        if ((rocket.ThrustDirectionInertial - axis).Magnitude() < .1) throw new Exception("Pitch should rotate beyond vertical");
+        rocket.Reset();
+        if (rocket.ManualRotation) throw new Exception("Reset must clear manual rotation");
     }
     private static void PadAndReset()
     {
