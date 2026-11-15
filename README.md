@@ -25,13 +25,16 @@ Open `Builds/ESP.app` after the build succeeds. `BuildMission.Build` rebuilds th
 | Explore the globe | Drag to rotate, scroll to zoom, and right-click a visible point for modeled weather and regional imagery |
 | Change the map layer | **Surface**, **Satellite**, or **Clouds** for bundled Blue Marble, dated MODIS true color, or daytime cloud fraction |
 | Choose a launch site and vehicle | Select a globe marker or enter **Launch View**, then use the vehicle selector on the pad |
+| Menus / pause | **Esc** or **Menu**; New Mission begins at the globe, Resume retains the current in-memory session |
+| Physics / cheats | Pause → **Live physics panel** or **Cheats**; modified flights cannot receive normal orbit verification |
+| Frame rate | Settings → **30 / 60 / 90 / 120 / 144 / Unlimited**, plus VSync; default 60 FPS, VSync off |
 | Fly | Select **Launch**. Assistance is enabled by default and uses the same flight controls as manual flight |
 | Take manual control | Use the throttle slider or **W/S** or **↑/↓** to change pitch and disable assistance |
 | Separate stages | Press **Space** or use the staging button after launch. For SLS, the action jettisons attached, spent solids before advancing the liquid stage |
 | Change simulation speed | Select **1×**, **5×**, or **20×**. The HUD displays mission time and the selected rate |
 | Start again | Select **Reset** or change launch sites |
 
-Orbit verification requires 60 continuous seconds of unpowered flight above the simulator's conservative 180 km perigee clearance criterion. The map uses the simulated Earth-fixed position. Above 120 km, the flight view uses a separate scaled Earth backdrop. [Mission controls and acceptance checklist](docs/mission-acceptance.md) · [Vehicle parameters and guidance](docs/vehicle-specs.md)
+Orbit verification requires 60 continuous seconds of unpowered flight above the simulator's conservative 180 km perigee clearance criterion. The map uses the simulated Earth-fixed position. Above 120 km, the flight view uses a separate scaled Earth backdrop. [Mission controls and acceptance checklist](docs/mission-acceptance.md) · [Vehicle parameters and guidance](docs/vehicle-specs.md) · [Physics audit and verification](docs/physics-verification.md)
 
 ## Weather, Earth imagery, and credits
 
