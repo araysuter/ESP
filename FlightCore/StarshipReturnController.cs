@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace FlightCore
 {
@@ -17,7 +18,10 @@ namespace FlightCore
         int candidate, refinementRound;
         double refineWait, refineDv, refineNormal, bestNormal, requestedNormal;
         double epoch, period, bestWait, bestDv, bestMiss=double.PositiveInfinity, burnTime, requestedDv, deliveredDv;
-        bool refining, polishing, validating, hasApproachPoint;
+        bool refining, polishing, validating, hasApproachPoint, predictionOnly;
+        int completedPlanningCandidates;
+        public int PlanningCompletedCandidates => Volatile.Read(ref completedPlanningCandidates);
+        public int PlanningCandidateUpperBound => 853;
         Vector3d approachPosition,previousAxis;double approachTime,previousAxisTime;bool hasPreviousAxis;
         int polishIteration;
         readonly Vector3d[] residuals=new Vector3d[3];
@@ -102,20 +106,22 @@ namespace FlightCore
                     else if(refinementRound==0) {wait=Math.Max(60,refineWait+((candidate/25)-2)*period/96);dv=Math.Max(25,refineDv+(((candidate/5)%5)-2)*24);normal=refineNormal+((candidate%5)-2)*100;}
                     else {double scale=Math.Pow(4,refinementRound);wait=Math.Max(60,refineWait+((candidate/5)-2)*period/(96*scale));dv=refineDv;normal=refineNormal+((candidate%5)-2)*100/scale;}
                     trial=seed!.ReturnClone(4);trial.EnableReturn();trialController=new StarshipReturnController(latitude,longitude,catchAltitude);
-                    trialController.Phase=StarshipReturnPhase.CoastToBurn;trialController.burnTime=epoch+wait;trialController.requestedDv=dv;trialController.requestedNormal=normal;
+                    trialController.predictionOnly=true;trialController.Phase=StarshipReturnPhase.CoastToBurn;trialController.burnTime=epoch+wait;trialController.requestedDv=dv;trialController.requestedNormal=normal;
                 }
-                double predictionStep=(trial.State.AltitudeMeters<120000||trialController!.Phase==StarshipReturnPhase.DeorbitBurn||trialController.Phase==StarshipReturnPhase.FlipRetrograde)?(refinementRound>=3?.02:.2):4;
+                var before=trial.State;
+                double predictionStep=(before.AltitudeMeters<120000||trialController!.Phase==StarshipReturnPhase.DeorbitBurn||trialController.Phase==StarshipReturnPhase.FlipRetrograde)?(refinementRound>=3?.02:.2):4;
                 if(Math.Abs(trial.FixedStep-predictionStep)>.001)trial=trial.ReturnClone(predictionStep);
-                trialController!.AdvanceGuidance(trial);trial.Step();
-                if((!validating&&trialController.hasApproachPoint)||trial.State.IsComplete||trialController.IsComplete||trial.State.MissionTime>epoch+period+10000)
+                trialController!.AdvanceGuidance(trial,before);trial.Step();
+                var after=trial.State;
+                if((!validating&&trialController.hasApproachPoint)||after.IsComplete||trialController.IsComplete||after.MissionTime>epoch+period+10000)
                 {
-                    var point=trialController.hasApproachPoint?trialController.approachPosition:trial.State.Position;double pointTime=trialController.hasApproachPoint?trialController.approachTime:trial.State.MissionTime;
+                    var point=trialController.hasApproachPoint?trialController.approachPosition:after.Position;double pointTime=trialController.hasApproachPoint?trialController.approachTime:after.MissionTime;
                     if(polishing&&!validating)residuals[candidate]=LandingResidual(point,pointTime);
                     double miss=trialController.SurfaceDistance(point,pointTime);
                     if(!trialController.hasApproachPoint)miss=double.PositiveInfinity;
                     if(validating)PredictedCatchFeasible=trial.IsCaught;
                     if(!validating&&miss<bestMiss){bestMiss=miss;bestWait=trialController.burnTime-epoch;bestDv=trialController.requestedDv;bestNormal=trialController.requestedNormal;PredictedCatchFeasible=trial.IsCaught;}
-                    candidate++;trial=null;trialController=null;
+                    Interlocked.Increment(ref completedPlanningCandidates);candidate++;trial=null;trialController=null;
                 }
             }
         }
@@ -124,20 +130,25 @@ namespace FlightCore
             if(sim.Primary==CelestialPrimary.Earth)return true;
             sim.Throttle=0;Phase=StarshipReturnPhase.Failed;Status="Starship return stopped: current primary is not Earth";return false;
         }
-        void AdvanceGuidance(RocketSimulation sim)
+        void AdvanceGuidance(RocketSimulation sim) { if(RequireEarth(sim))AdvanceGuidance(sim,sim.State); }
+        void AdvanceGuidance(RocketSimulation sim,RocketSnapshot s)
         {
             if(!RequireEarth(sim))return;
-            var s=sim.State;var up=s.Position.Normalize();
+            var up=s.Position.Normalize();
             var axisRate=hasPreviousAxis&&s.MissionTime>previousAxisTime?(sim.ReturnAxis-previousAxis)*(1/(s.MissionTime-previousAxisTime)):Vector3d.Zero;
             previousAxis=sim.ReturnAxis;previousAxisTime=s.MissionTime;hasPreviousAxis=true;var air=s.Velocity-Aerodynamics.CorotatingAirVelocity(s.Position,Vector3d.Zero);
             double speed=air.Magnitude();var retro=speed>1?air*(-1/speed):up;
             var normal=Cross(s.Position,s.Velocity).Normalize();
             double totalDv=Math.Sqrt(requestedDv*requestedDv+requestedNormal*requestedNormal);
             var burnAxis=totalDv>0?(retro*requestedDv+normal*requestedNormal).Normalize():retro;
-            TargetDistanceMeters=SurfaceDistance(s.Position,s.MissionTime);
-            HeatFluxWattsPerSquareMeter=sim.ReturnHeatFluxWattsPerSquareMeter;
-            PeakHeatFluxWattsPerSquareMeter=Math.Max(PeakHeatFluxWattsPerSquareMeter,HeatFluxWattsPerSquareMeter);
-            PeakDynamicPressurePascals=Math.Max(PeakDynamicPressurePascals,s.DynamicPressurePascals);
+            // Prediction controls do not consume presentation status or peak telemetry.
+            // Keep the same force integration while avoiding millions of unused evaluations/allocations.
+            if(!predictionOnly) {
+                TargetDistanceMeters=SurfaceDistance(s.Position,s.MissionTime);
+                HeatFluxWattsPerSquareMeter=sim.ReturnHeatFluxWattsPerSquareMeter;
+                PeakHeatFluxWattsPerSquareMeter=Math.Max(PeakHeatFluxWattsPerSquareMeter,HeatFluxWattsPerSquareMeter);
+                PeakDynamicPressurePascals=Math.Max(PeakDynamicPressurePascals,s.DynamicPressurePascals);
+            }
             if(s.IsComplete) { Phase=sim.IsCaught?StarshipReturnPhase.Caught:s.IsDestroyed?StarshipReturnPhase.Failed:StarshipReturnPhase.Landed;Status=s.Status;sim.Throttle=0;return; }
             sim.Throttle=0;
             if(Phase==StarshipReturnPhase.CoastToBurn||Phase==StarshipReturnPhase.FlipRetrograde)
@@ -181,8 +192,15 @@ namespace FlightCore
                 if(s.AltitudeMeters<120000)Phase=StarshipReturnPhase.AtmosphericEntry;
                 double vertical=Dot(air,up), gravity=Gravity.Acceleration(s.Position).Magnitude();
                 double net=sim.ReturnAvailableThrust/s.MassKg-gravity;
-                double stop=net>0?vertical*vertical/(2*net):double.PositiveInfinity;
-                if(s.AltitudeMeters<Math.Max(3000,stop+Math.Abs(vertical)*15+catchAltitude+300)&&vertical<0)
+                double downward=Math.Max(0,-vertical);
+                double stop=net>0?downward*downward/(2*net):double.PositiveInfinity;
+                // Keep the aerodynamic belly descent until a powered finite flip is needed.
+                // The 45 deg/s kinematic attitude estimate gives an approximate 2 s flip;
+                // stopping distance and explicit margins are gameplay guidance estimates.
+                double flipAngle=Math.Acos(Math.Max(-1,Math.Min(1,Dot(sim.ReturnAxis,up))));
+                double flipSeconds=flipAngle/(45*Math.PI/180)+.5;
+                double flipAltitude=catchAltitude+downward*flipSeconds+1.7*stop+200;
+                if(s.AltitudeMeters<Math.Max(catchAltitude+300,flipAltitude)&&vertical<0)
                     { Phase=StarshipReturnPhase.LandingFlip;hasApproachPoint=true;approachPosition=s.Position;approachTime=s.MissionTime; }
             }
             if(Phase==StarshipReturnPhase.LandingFlip||Phase==StarshipReturnPhase.PoweredLanding)
@@ -193,7 +211,7 @@ namespace FlightCore
                 var lugRelativeVelocity=s.Velocity+axisRate*21-Aerodynamics.CorotatingAirVelocity(lug,Vector3d.Zero);
                 var target=targetLug-sim.ReturnAxis*21;
                 TargetDistanceMeters=SurfaceDistance(lug,s.MissionTime);
-                if(TargetDistanceMeters<50&&s.AltitudeMeters>=catchAltitude-3&&s.AltitudeMeters<=catchAltitude+100&&lugRelativeVelocity.Magnitude()<30)CatchArmClosure01=Math.Min(1,CatchArmClosure01+.18*sim.FixedStep);
+                if(s.MissionTime>=epoch+10&&TargetDistanceMeters<50&&s.AltitudeMeters>=catchAltitude-3&&s.AltitudeMeters<=catchAltitude+100&&lugRelativeVelocity.Magnitude()<30)CatchArmClosure01=Math.Min(1,CatchArmClosure01+.18*sim.FixedStep);
                 var offset=target-s.Position;double h=Dot(s.Position-target,up);
                 // Velocity feedback uses COM motion. Differenced attitude motion would feed
                 // an unsmoothed derivative back into the attitude command itself.
@@ -212,14 +230,30 @@ namespace FlightCore
                 double axial=Math.Max(0,Dot(acceleration,up));var lateral=acceleration-up*axial;
                 if(lateral.Magnitude()>axial*.577&&lateral.Magnitude()>0)lateral=lateral.Normalize()*(axial*.577);
                 acceleration=up*axial+lateral;sim.ReturnCommand=acceleration.Magnitude()>0?acceleration.Normalize():up;
-                if(Dot(sim.ReturnAxis,sim.ReturnCommand)>.9) {Phase=StarshipReturnPhase.PoweredLanding;sim.Throttle=Math.Min(1,acceleration.Magnitude()*s.MassKg/sim.ReturnAvailableThrust);}
+                double alignment=Dot(sim.ReturnAxis,sim.ReturnCommand);
+                bool turning=Phase==StarshipReturnPhase.LandingFlip||alignment<.98;
+                sim.ReturnAttitudeSlewDegreesPerSecond=turning?45:10;
+                // Ignition precedes completion of the flip. These are ordinary thrust/fuel
+                // commands along the actual body axis, including its initial lateral force.
+                if(turning)sim.Throttle=.08;
+                if(alignment>.9) {
+                    Phase=StarshipReturnPhase.PoweredLanding;
+                    sim.Throttle=Math.Max(turning?.03:0,Math.Min(1,acceleration.Magnitude()*s.MassKg/sim.ReturnAvailableThrust));
+                }
                 var lugGeo=EarthFrames.EcefToGeodetic(EarthFrames.InertialToEcef(lug,Omega*s.MissionTime));
                 CatchLugDistanceMeters=SurfaceDistance(lug,s.MissionTime);CatchLugAltitudeErrorMeters=lugGeo.AltitudeMeters-(catchAltitude+21);CatchLugSpeedMetersPerSecond=lugRelativeVelocity.Magnitude();
                 if(CatchArmClosure01>=.99&&Math.Abs(CatchLugAltitudeErrorMeters)<.5&&CatchLugDistanceMeters<.35&&CatchLugSpeedMetersPerSecond<3&&Dot(sim.ReturnAxis,up)>Math.Cos(5*Math.PI/180))
                 {sim.CatchAtCurrentPosition();Phase=StarshipReturnPhase.Caught;Status="Caught at Starbase within physical envelope";return;}
             }
-            Status=PhaseLabel(Phase)+" | Starbase "+(TargetDistanceMeters/1000).ToString("F1")+" km";
-            if(s.PropellantKg<=0&&(Phase==StarshipReturnPhase.PoweredLanding||Phase==StarshipReturnPhase.LandingFlip))Status="Return propellant exhausted; ballistic descent";
+            if(!predictionOnly) {
+                string countdown="";
+                if(Phase==StarshipReturnPhase.CoastToBurn) {
+                    double remaining=Math.Max(0,burnTime-s.MissionTime);
+                    countdown=" | burn in "+Math.Floor(remaining/60).ToString("F0")+":"+((int)(remaining%60)).ToString("00");
+                }
+                Status=PhaseLabel(Phase)+countdown+" | Starbase "+(TargetDistanceMeters/1000).ToString("F1")+" km";
+                if(s.PropellantKg<=0&&(Phase==StarshipReturnPhase.PoweredLanding||Phase==StarshipReturnPhase.LandingFlip))Status="Return propellant exhausted; ballistic descent";
+            }
         }
         static string PhaseLabel(StarshipReturnPhase phase)
         {

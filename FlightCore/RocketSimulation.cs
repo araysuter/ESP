@@ -18,6 +18,7 @@ namespace FlightCore
         internal bool ReturnMode;
         internal Vector3d ReturnCommand, ReturnAxis;
         internal double ReturnBankRadians;
+        internal double ReturnAttitudeSlewDegreesPerSecond=10;
         public Vector3d ReturnAttitudeDirection => ReturnAxis;
         public double ReturnBankAngleRadians => ReturnBankRadians;
         public Vector3d AirRelativeVelocity { get { var geo=Geo(position,time);return velocity-Air(position,time,geo).velocity; } }
@@ -33,10 +34,10 @@ namespace FlightCore
             c.position=position;c.velocity=velocity;c.time=time;c.fuel=fuel;c.stage=stage;c.boosterFuel=boosterFuel;c.boosterAttached=boosterAttached;
             c.gravityMultiplier=gravityMultiplier;c.infiniteFuel=infiniteFuel;c.crashDestructionEnabled=crashDestructionEnabled;c.HasUsedCheats=HasUsedCheats;
             c.commanded=commanded;c.launched=launched;c.landed=landed;c.destroyed=destroyed;c.actualPitch=actualPitch;c.actualHeading=actualHeading;
-            c.ReturnBankRadians=ReturnBankRadians;c.ReturnMode=ReturnMode;c.ReturnAxis=ReturnAxis;c.ReturnCommand=ReturnCommand;c.throttle=throttle;
+            c.ReturnAttitudeSlewDegreesPerSecond=ReturnAttitudeSlewDegreesPerSecond;c.ReturnBankRadians=ReturnBankRadians;c.ReturnMode=ReturnMode;c.ReturnAxis=ReturnAxis;c.ReturnCommand=ReturnCommand;c.throttle=throttle;
             return c;
         }
-        internal void EnableReturn() { ReturnMode=true;ReturnAxis=Direction(Geo(position,time),time,actualPitch,actualHeading);ReturnCommand=ReturnAxis;throttle=0; }
+        internal void EnableReturn() { ReturnAttitudeSlewDegreesPerSecond=10;ReturnMode=true;ReturnAxis=Direction(Geo(position,time),time,actualPitch,actualHeading);ReturnCommand=ReturnAxis;throttle=0; }
         internal void CatchAtCurrentPosition() { IsCaught=true;landed=true;throttle=0;velocity=Rotation(position); }
 
         bool infiniteFuel, crashDestructionEnabled = true;
@@ -69,7 +70,7 @@ namespace FlightCore
             Check(latitudeRadians,-Math.PI/2,Math.PI/2);if(!Finite(longitudeRadians)||!Finite(padAltitudeMeters))throw new ArgumentOutOfRangeException(nameof(longitudeRadians));
             celestial=launchUtc.HasValue ? new LunarEphemeris(launchUtc.Value) : null;this.step=step;this.stages=(StageDefinition[])stages.Clone();this.atmosphere=atmosphere??throw new ArgumentNullException(nameof(atmosphere));lat=latitudeRadians;lon=longitudeRadians;pad=padAltitudeMeters;this.booster=booster;Reset();
         }
-        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";ReturnMode=false;IsCaught=false;ReturnBankRadians=0;ReturnAxis=ReturnCommand=Vector3d.Zero;}
+        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";ReturnMode=false;IsCaught=false;ReturnBankRadians=0;ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ReturnCommand=Vector3d.Zero;}
         public void Launch(){if(!landed)commanded=true;}
         public bool Stage(){if(landed||stage>=stages.Length-1)return false;stage++;fuel=stages[stage].PropellantKg;return true;}
         /// <summary>Discard spent booster dry mass without a separation impulse. Burning boosters cannot be jettisoned.</summary>
@@ -103,7 +104,7 @@ namespace FlightCore
         public void Step()
         {
             if(landed||!commanded)return;
-            if(ReturnMode) ReturnAxis=StarshipReturnController.Slew(ReturnAxis,ReturnCommand,10*Math.PI/180*step);
+            if(ReturnMode) ReturnAxis=StarshipReturnController.Slew(ReturnAxis,ReturnCommand,ReturnAttitudeSlewDegreesPerSecond*Math.PI/180*step);
             actualPitch=Move(actualPitch,pitch,5*step);double delta=((heading-actualHeading+540)%360)-180;actualHeading=(actualHeading+Math.Max(-5*step,Math.Min(5*step,delta))+360)%360;
             if(!launched){var padGeo=Geo(position,time);var air=Air(position,time,padGeo);var engine=Engine(air.sample.PressurePascals);double coreThrust=fuel>0?engine.thrust:0;double solidThrust=BoosterBurning?booster!.ThrustNewtons:0;double thrust=coreThrust+solidThrust;var up=Direction(padGeo,time,90,0);var gravityVector=Gravity.Acceleration(position)*gravityMultiplier;double gravity=-(gravityVector.X*up.X+gravityVector.Y*up.Y+gravityVector.Z*up.Z);if(thrust*Math.Sin(actualPitch*Math.PI/180)<=Mass(fuel,boosterFuel)*gravity){
                 // Hold-down burns both propellants; a mass-driven liftoff is checked next tick.

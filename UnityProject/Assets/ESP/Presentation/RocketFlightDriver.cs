@@ -42,6 +42,7 @@ namespace ESP.Presentation
         public void SetTimeRate(int rate)
         {
             if (Array.IndexOf(new[] { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 }, rate) < 0) throw new ArgumentOutOfRangeException(nameof(rate));
+            if (rate > 1 && (IsPlanningReturn || ReturnNeedsRealTime)) return;
             if (rate > 20 && !CanHighWarp) return;
             if (TimeRate != rate) actualTimeRate = 0;
             TimeRate = rate;
@@ -214,7 +215,8 @@ namespace ESP.Presentation
             }
             // Cap requested work to what can be simulated this frame. Do not queue
             // unbounded future flight after the player selects a lower rate.
-            if (TimeRate > 20 && !CanHighWarp) TimeRate = 20;
+            if (ReturnNeedsRealTime) TimeRate = 1;
+            else if (TimeRate > 20 && !CanHighWarp) TimeRate = 20;
             double requested = accumulator + Time.unscaledDeltaTime * TimeRate;
             SimulationCatchingUp = requested >= 500 * StepSeconds;
             accumulator = Math.Min(requested, 500 * StepSeconds);
@@ -234,6 +236,7 @@ namespace ESP.Presentation
                     AssistanceEnabled = false; TimeRate = 1; accumulator = 0;
                     break;
                 }
+                if (TimeRate > 1 && ReturnNeedsRealTime) { TimeRate = 1; accumulator = 0; break; }
                 if (TimeRate > 20 && !CanHighWarp) { TimeRate = 20; accumulator = 0; break; }
             }
             if (Time.unscaledDeltaTime > 0)

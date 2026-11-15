@@ -93,6 +93,7 @@ namespace ESP.Presentation
                 // The imported assembly is already centered on the orbital mount.
                 var tower = Object.Instantiate(importedStructure, root.transform, false);
                 tower.name = StarbaseTowerName;
+                TowerCatchAnimator.Attach(tower.transform);
             }
             else
             {

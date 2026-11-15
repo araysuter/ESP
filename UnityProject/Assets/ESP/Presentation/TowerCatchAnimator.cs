@@ -6,8 +6,13 @@ namespace ESP.Presentation
     public sealed class TowerCatchAnimator : MonoBehaviour
     {
         Transform carriage, leftPivot, rightPivot;
+        const float HighOffsetMeters = 50f;
+        const float CarriageSpeedMetersPerSecond = 5f;
         float closure, targetClosure, targetHeight;
+        double previousSimulationTime;
+        bool hasSimulationTime;
         public bool IsBound => leftPivot && rightPivot;
+        public bool AtCatchHeight => carriage && Mathf.Abs(carriage.localPosition.y - HighOffsetMeters) < .05f;
 
         public static TowerCatchAnimator Attach(Transform towerRoot)
         {
@@ -22,8 +27,18 @@ namespace ESP.Presentation
             animator.carriage.SetParent(towerRoot, false);
             animator.leftPivot = Pivot(animator.carriage, left, new Vector3(6, 66, -29.2f), "Left arm pivot");
             animator.rightPivot = Pivot(animator.carriage, right, new Vector3(-6, 66, -29.2f), "Right arm pivot");
-            animator.Apply();
+            animator.ResetWaitingPose();
             return animator;
+        }
+        public bool IsOpen => closure <= .001f;
+        public void ResetWaitingPose()
+        {
+            simulationDriven = true;
+            hasSimulationTime = false;
+            closure = targetClosure = 0;
+            targetHeight = HighOffsetMeters;
+            carriage.localPosition = Vector3.up * HighOffsetMeters;
+            Apply();
         }
         static Transform Find(Transform root, string name)
         {
@@ -44,10 +59,29 @@ namespace ESP.Presentation
         public void SetTarget(float armClosure01, float carriageHeightMeters)
         {
             simulationDriven = false;
+            hasSimulationTime = false;
             targetClosure = Mathf.Clamp01(armClosure01);
             targetHeight = Mathf.Clamp(carriageHeightMeters, -35, 40);
         }
         bool simulationDriven;
+        // Presentation follows elapsed simulation time, including time warp.
+        // The flight controller must independently gate capture on carriage arrival.
+        public void SetApproachPose(float armClosure01, double simulationTime)
+        {
+            simulationDriven = true;
+            double dt = hasSimulationTime ? System.Math.Max(0, simulationTime - previousSimulationTime) : 0;
+            previousSimulationTime = simulationTime;
+            hasSimulationTime = true;
+            var pos = carriage.localPosition;
+            pos.y = Mathf.MoveTowards(pos.y, HighOffsetMeters,
+                (float)System.Math.Min(dt * CarriageSpeedMetersPerSecond, HighOffsetMeters));
+            carriage.localPosition = pos;
+            // Open while rising; once ready, follow the controller's closure.
+            float goal = AtCatchHeight ? Mathf.Clamp01(armClosure01) : 0;
+            closure = Mathf.MoveTowards(closure, goal, (float)System.Math.Min(dt * .18, 1));
+            targetClosure = goal;
+            Apply();
+        }
         public void SetSimulationPose(float armClosure01, float carriageHeightMeters)
         {
             simulationDriven = true;
