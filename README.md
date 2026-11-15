@@ -1,6 +1,6 @@
 # ESP
 
-ESP is an original Earth-scale rocket sandbox built for Hack The Nest with Unity and a pure C# flight core. Explore a WGS84 globe, choose a representative launch site at Starbase or Kennedy LC-39A, then fly an assisted or manual mission. The three vehicle options are the fictional ESP Demo Rocket, a Starship/Super Heavy preset, and an SLS Block 1 preset with parallel solid boosters. The representative vehicles use estimated game parameters.
+ESP is an original Earth-scale rocket sandbox built for Hack The Nest with Unity and a pure C# flight core. Explore a WGS84 globe, choose a representative launch site at Starbase or Kennedy LC-39B, then fly an assisted or manual mission. The three vehicle options are the fictional ESP Demo Rocket, a Starship/Super Heavy preset, and an SLS Block 1 preset with parallel solid boosters. The representative vehicles use estimated game parameters.
 
 ## Run the mission
 
@@ -73,9 +73,9 @@ dotnet run --project Atmosphere.Probe -c Release -- \
 
 ## Verification record
 
-Run the packaged smoke test with `Builds/ESP.app/Contents/MacOS/ESP -espFlightSmoke`. It starts an assisted LC-39A mission and checks orbit and site-change reset. Append `-espVehicle 1` for Starship or `-espVehicle 2` for SLS.
+Run the packaged smoke test with `Builds/ESP.app/Contents/MacOS/ESP -espFlightSmoke`. It starts an assisted Kennedy mission and checks orbit and site-change reset. Append `-espVehicle 1` for Starship or `-espVehicle 2` for SLS.
 
-- **Headless baseline.** The flight core's .NET 9 CI passed after PR #10 merged. Offline missions at both sites and a historical NASA-weather mission at LC-39A passed at 20 ms and 10 ms steps. [Flight verification details](docs/rocket-flight.md)
+- **Headless baseline.** The flight core's .NET 9 CI passed after PR #10 merged. Offline missions at Starbase and the former LC-39A site, and a historical NASA-weather mission at LC-39A, passed at 20 ms and 10 ms steps. The LC-39B mission and vehicle cases were added to CI. [Flight verification details](docs/rocket-flight.md)
 - **Packaged flight checkpoint, November 14.** The macOS ARM64 development player completed `-espFlightSmoke` with a live-fetched NASA GEOS-FP analysis valid at 09:00 UTC. It staged at approximately 148 s, verified 60 s of unpowered orbit at 481.14 s and about 227.5 km altitude, displayed the simulated map position, and reset when switching sites. The scaled Earth camera rendered during flight. The Unity build also passed parser and compilation checks. [Mission integration record](docs/mission-integration.md)
 - **Representative vehicle packages.** Recorded macOS ARM64 runs verified orbit at 529.36 s for Starship and at 1,109.32 s for SLS, followed by successful map and site-change reset. Both used a frozen Open-Meteo profile because the available NASA analysis was stale. [Vehicle verification details](docs/vehicle-specs.md)
 - **Remaining platform verification.** Packaged checks were performed in the Apple Silicon macOS VM. Windows, Intel macOS, and judging hardware remain unverified. A packaged offline rehearsal remains on the acceptance checklist. The flight models use representative parameters and simplified atmosphere, impact, and terrain assumptions. [Mission acceptance checklist](docs/mission-acceptance.md)

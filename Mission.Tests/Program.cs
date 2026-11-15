@@ -13,6 +13,7 @@ internal static class Program
         {
             Compare("site A offline", 25.997, -97.156, null);
             Compare("LC-39A offline", 28.608422, -80.604133, null);
+            Compare("LC-39B offline", 28.627306, -80.620869, null);
             Compare("LC-39A historical weather", 28.608422, -80.604133, LoadWeather());
             Console.WriteLine("Mission tests passed."); return 0;
         }

@@ -61,6 +61,9 @@ namespace ESP.Presentation
         public Transform RocketVisual { get; private set; }
         public bool IsMapView { get; private set; } = true;
         public int SelectedSiteIndex { get; private set; }
+        public float RocketBaseHeightMeters => LaunchEnvironment.RocketBaseHeightFor(
+            siteStructurePrefabs != null && SelectedSiteIndex < siteStructurePrefabs.Length
+                ? siteStructurePrefabs[SelectedSiteIndex] : null);
         public string SiteName => LaunchSites.All[SelectedSiteIndex].Name;
         public string FlightStatus => FlightDriver == null ? "Flight simulation unavailable" : FlightDriver.Status;
         public string WeatherSummary
@@ -160,7 +163,7 @@ namespace ESP.Presentation
             if (rocketPrefab)
             {
                 GameObject rocket = Instantiate(rocketPrefab, environment.transform);
-                rocket.transform.localPosition = Vector3.up * LaunchEnvironment.RocketBaseHeightMeters;
+                rocket.transform.localPosition = Vector3.up * RocketBaseHeightMeters;
                 RocketVisual = rocket.transform;
             }
             ResetLaunchFraming();
@@ -291,7 +294,7 @@ namespace ESP.Presentation
             yield return new WaitForSeconds(1); GoToLaunch(1);
             yield return new WaitForSeconds(2); ScreenCapture.CaptureScreenshot(Path.Combine(Application.persistentDataPath, "mission-kennedy.png"));
             yield return new WaitForSeconds(1); ShowMap();
-            picker.Select(28.608422, -80.604133);
+            picker.Select(LaunchSites.All[1].Latitude, LaunchSites.All[1].Longitude);
             yield return new WaitForSeconds(25);
             Debug.Log("ESP_MISSION_WEATHER " + WeatherSummary);
             ScreenCapture.CaptureScreenshot(Path.Combine(Application.persistentDataPath, "mission-weather.png"));
