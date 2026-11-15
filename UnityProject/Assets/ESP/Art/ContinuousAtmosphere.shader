@@ -2,7 +2,7 @@ Shader "ESP/Continuous Atmosphere"
 {
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent+100" "RenderType"="Transparent" }
+        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent+100" "RenderType"="Transparent" "DisableBatching"="True" }
         Pass
         {
             Name "ContinuousAir"
@@ -23,7 +23,9 @@ Shader "ESP/Continuous Atmosphere"
             Varyings Vert(Attributes input)
             {
                 Varyings output;
-                output.positionCS = float4(input.positionOS.xy, 0, 1);
+                // Interior clip depth works with reversed-Z Metal as well as GL;
+                // never put this always-tested quad exactly on a clipping plane.
+                output.positionCS = float4(input.positionOS.xy, .5, 1);
                 output.screen = input.positionOS.xy;
                 return output;
             }
@@ -36,23 +38,26 @@ Shader "ESP/Continuous Atmosphere"
                 float discriminant = b * b - a * c;
                 if (discriminant < 0) return float2(1, -1);
                 float root = sqrt(max(0, discriminant));
-                return float2((-b - root) / a, (-b + root) / a);
+                // Stable near-surface root avoids subtracting nearly equal numbers.
+                float q = -b - (b >= 0 ? root : -root);
+                if (abs(q) < 1e-12) return float2(-b / a, -b / a);
+                float t0 = q / a, t1 = c / q;
+                return float2(min(t0, t1), max(t0, t1));
             }
             half4 Frag(Varyings input) : SV_Target
             {
                 float3 origin = _CameraPlanet.xyz;
                 float3 ray = normalize(_ForwardPlanet.xyz +
                     input.screen.x * _ViewParams.x * _ViewParams.y * _RightPlanet.xyz +
-                    input.screen.y * _ViewParams.x * _UpPlanet.xyz);
+                    input.screen.y * _ProjectionParams.x * _ViewParams.x * _UpPlanet.xyz);
                 float2 outer = IntersectEllipsoid(origin, ray, EarthRadii + .1);
                 float begin = max(0, outer.x), end = outer.y;
                 if (end <= begin) return 0;
                 float2 ground = IntersectEllipsoid(origin, ray, EarthRadii);
                 bool hitsGround = ground.y >= 0 && ground.x >= 0;
                 if (hitsGround) end = min(end, ground.x);
-                // An underground camera must not integrate through Earth's interior.
-                // Camera controls own collision; this only keeps the visual finite.
-                if (dot(origin / EarthRadii, origin / EarthRadii) < .999999) return 0;
+                // CPU clamps only the visual integration origin above the ellipsoid.
+                // No all-sky rejection for a sub-meter float rounding discrepancy.
                 float lengthThroughAir = max(0, end - begin);
                 if (lengthThroughAir < .0000001) return 0;
                 float3 sun = normalize(_SunPlanet.xyz);

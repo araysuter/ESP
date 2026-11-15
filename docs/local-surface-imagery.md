@@ -45,7 +45,7 @@ No provider credentials or commercial map tiles are used.
 - At most 25 USGS tiles and 9 NASA tiles are desired at one time. Their zoom
   decreases with altitude. USGS fades away between 14–18 km; all optional
   tiles fade between 45–60 km and stop requesting above 60 km.
-- The cache contains at most 48 decoded 256×256 textures (about 12 MiB at RGBA8,
+- The cache contains at most 48 decoded 256×256 textures (about 16 MiB at RGBA8 with mipmaps,
   excluding Unity resource overhead). Two requests may be active, with a 15 s
   timeout and at most one new request per 0.15 s. No disk cache or background
   global prefetch exists. Old requests are aborted as the footprint moves.

@@ -45,6 +45,10 @@ namespace ESP.Presentation
             Vector3 padCameraPosition = director.launchCamera.transform.position;
             Quaternion padCameraRotation = director.launchCamera.transform.rotation;
             Capture("reset-smoke-pad.png");
+            yield return new WaitForSecondsRealtime(8f);
+            var surface = director.GetComponent<LocalSurfaceTiles>();
+            Debug.Log("ESP_SURFACE_REVIEW resident=" + surface.ResidentTileCount + " active=" + surface.ActiveRequestCount + " status=" + surface.Status);
+            Capture("reset-smoke-pad-loaded.png");
             yield return new WaitForSecondsRealtime(.15f);
 
             // Reproduce the camera orbit state that previously allowed looking

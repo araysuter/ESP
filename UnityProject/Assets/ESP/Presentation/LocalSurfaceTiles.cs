@@ -233,7 +233,7 @@ namespace ESP.Presentation
                 }
                 EvictForOneTile();
                 image.wrapMode = TextureWrapMode.Clamp;
-                image.filterMode = FilterMode.Bilinear;
+                image.filterMode = FilterMode.Trilinear;
                 image.anisoLevel = 4;
                 tiles.Add(key, BuildTile(key, image));
                 Status = key.Source == 1 ? "USDA / USGS aerial imagery near craft (source resolution varies)" : "NASA / USGS Landsat WELD 2000 (30 m source)";
