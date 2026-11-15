@@ -10,6 +10,7 @@ namespace FlightCore
     {
         public LunarManeuver Maneuver { get; internal set; }
         public double DepartureTime { get; internal set; }
+        public double DepartureBurnStart { get; internal set; }
         public Vector3d DeltaV { get; internal set; }
         public double MoonClosestTime { get; internal set; }
         public double MoonClosestRadius { get; internal set; }
@@ -37,7 +38,7 @@ namespace FlightCore
         /// <summary>Searches a bounded set of parking-orbit departure times, flight times, and lunar aim points.</summary>
         public static bool TryPlan(LunarEphemeris ephemeris, Vector3d position, Vector3d velocity, double epoch,
             LunarManeuver maneuver, double availableDeltaV, CancellationToken cancellation,
-            Action<int>? progress, out LunarTransferPlan? plan, out string reason)
+            Action<int>? progress, out LunarTransferPlan? plan, out string reason, double minimumDepartureRadius=0)
         {
             if(ephemeris==null) throw new ArgumentNullException(nameof(ephemeris));
             plan=null;
@@ -60,6 +61,7 @@ namespace FlightCore
                 cancellation.ThrowIfCancellationRequested();
                 double wait=600+phase*elements.PeriodSeconds/phaseCount;
                 CoastEarth(position,velocity,wait,out var departureP,out var departureV);
+                if(departureP.Magnitude()<minimumDepartureRadius)continue;
                 foreach(double days in new[]{2.75,3.25,3.75,4.25,4.75,5.5,6.25})
                 {
                     double arrival=epoch+wait+days*Day;
@@ -105,9 +107,9 @@ namespace FlightCore
                         {
                             // Keep the unpowered return above modeled atmosphere;
                             // this maneuver does not also perform Earth reentry.
-                            if(!trace.Returned || trace.EarthRadius<Surface+130000 || trace.EarthRadius>40000000) continue;
+                            if(!trace.Returned || trace.EarthRadius<Surface+500000 || trace.EarthRadius>40000000) continue;
                             // Aim for a return near Earth; a surviving perigee is preferable.
-                            score=dv.Magnitude()+Math.Abs(trace.EarthRadius-(Surface+150000))/4000;
+                            score=dv.Magnitude()+Math.Abs(trace.EarthRadius-(Surface+1000000))/4000;
                         }
                         if(score<best)
                         {
@@ -121,6 +123,115 @@ namespace FlightCore
             }
             reason=plan==null ? "No safe lunar trajectory was found ("+solutions+" transfers, "+affordable+" within fuel, "+notDownward+" outward, "+checkedCount+" coasts, "+encounters+" lunar encounters; best departure periapsis "+(bestDeparturePeri/1000).ToString("F0")+" km)" : "";
             return plan!=null;
+        }
+
+        // Low-thrust vehicles first raise their parking apogee with ordinary
+        // prograde thrust. Lunar departure then occurs where orbital curvature
+        // during the long burn is much smaller. This is not an impulse or teleport.
+        internal static bool PrepareParkingOrbit(RocketSimulation initial,CancellationToken ct,
+            out RocketSimulation prepared,out double usedDeltaV,out string reason)
+        {
+            prepared=initial.ReturnClone(.25);prepared.EnableLunarPointing();usedDeltaV=0;
+            double start=prepared.State.MissionTime;
+            while(true)
+            {
+                ct.ThrowIfCancellationRequested();var state=prepared.State;
+                var orbit=OrbitDiagnostics.Compute(state.Position,state.Velocity);
+                if(orbit.ApogeeRadiusMeters>=20000000 && orbit.IsBound)break;
+                if(state.IsComplete||state.PropellantKg<=0||usedDeltaV>3500||state.MissionTime-start>3600 || !orbit.IsBound)
+                {reason="Unable to raise a safe parking orbit with available thrust and propellant";return false;}
+                prepared.ReturnCommand=state.Velocity.Normalize();
+                prepared.Throttle=Dot(prepared.ReturnAxis,prepared.ReturnCommand)>.999 ? 1 : 0;
+                usedDeltaV+=prepared.ReturnAvailableThrust*prepared.Throttle/state.MassKg*prepared.FixedStep;
+                prepared.Step();
+                if(prepared.State.AltitudeMeters<120000)
+                {reason="Low-thrust parking burn would enter the atmosphere";return false;}
+            }
+            prepared.Throttle=0;
+            // Start the search near apogee; keep the safe, raised orbit's phasing
+            // opportunities and enough time for the attitude slew.
+            prepared=prepared.ReturnClone(10);
+            while(Dot(prepared.State.Position,prepared.State.Velocity)>0)
+            {
+                ct.ThrowIfCancellationRequested();prepared.Step();
+                if(prepared.State.IsComplete||prepared.State.MissionTime-start>2*Day)
+                {reason="Raised parking orbit failed to reach apogee safely";return false;}
+            }
+            reason="";return true;
+        }
+
+        // Shoot the actual engine/attitude/mass-flow simulation at the selected
+        // Moon-entry state. The impulse is only an initial guess, never execution.
+        internal static bool RefineDeparture(RocketSimulation snapshot, LunarTransferPlan plan,
+            CancellationToken ct, out string reason)
+        {
+            var e=snapshot.Celestial!;
+            Vector3d target=e.MoonPosition(plan.MoonEntryTime)+plan.MoonEntryOffset;
+            Vector3d dv=plan.DeltaV;
+            double initial=dv.Magnitude();
+            // Low-thrust departures have already raised their parking orbit.
+            // Center the initial burn estimate on the impulse epoch, then solve
+            // the real finite trajectory while holding the start time fixed.
+            plan.DepartureBurnStart=plan.DepartureTime-snapshot.LunarBurnSeconds(initial)*.5;
+            for(int iteration=0;iteration<15;iteration++)
+            {
+                ct.ThrowIfCancellationRequested();
+                if(!FiniteDeparture(snapshot,plan,dv,ct,out var current))
+                { reason="Finite departure is unsafe or exceeds available thrust/propellant";return false; }
+                var residual=target-current;
+                if(residual.Magnitude()<3000)
+                {
+                    if(dv.Magnitude()+plan.CaptureDeltaV>snapshot.LunarAvailableDeltaV())
+                    {reason="Insufficient propellant for finite departure and lunar capture";return false;}
+                    plan.DeltaV=dv;reason="";return true;
+                }
+                const double probe=1;
+                if(!FiniteDeparture(snapshot,plan,dv+new Vector3d(probe,0,0),ct,out var px) ||
+                   !FiniteDeparture(snapshot,plan,dv+new Vector3d(0,probe,0),ct,out var py) ||
+                   !FiniteDeparture(snapshot,plan,dv+new Vector3d(0,0,probe),ct,out var pz))
+                {reason="Unable to refine a safe finite departure";return false;}
+                var x=(px-current)*(1/probe);var y=(py-current)*(1/probe);var z=(pz-current)*(1/probe);
+                double det=Dot(x,Cross(y,z));
+                if(double.IsNaN(det)||Math.Abs(det)<1e-9)break;
+                var change=new Vector3d(Dot(residual,Cross(y,z))/det,Dot(x,Cross(residual,z))/det,Dot(x,Cross(y,residual))/det);
+                double size=change.Magnitude();if(size>300)change*=300/size;
+                dv+=change;
+                if(double.IsNaN(dv.Magnitude()) || dv.Magnitude()>initial+3000)break;
+            }
+            reason="Finite departure targeting did not converge; try a different parking orbit";return false;
+        }
+        static bool FiniteDeparture(RocketSimulation snapshot,LunarTransferPlan plan,Vector3d dv,
+            CancellationToken ct,out Vector3d arrival)
+        {
+            arrival=Vector3d.Zero;
+            double remaining=dv.Magnitude(), duration=snapshot.LunarBurnSeconds(remaining);
+            double start=plan.DepartureBurnStart;
+            if(double.IsNaN(duration)||double.IsInfinity(duration)||duration>7200 || start<snapshot.State.MissionTime+30) return false;
+            var sim=snapshot.ReturnClone(10);sim.EnableLunarPointing();var axis=dv.Normalize();sim.ReturnCommand=axis;
+            while(sim.State.MissionTime+10<start)
+            {ct.ThrowIfCancellationRequested();sim.Step();if(sim.State.IsComplete)return false;}
+            sim=sim.ReturnClone(.25);
+            while(sim.State.MissionTime<start)
+            {
+                double left=start-sim.State.MissionTime;
+                if(left<sim.FixedStep)sim=sim.ReturnClone(left);
+                sim.Step();
+            }
+            sim=sim.ReturnClone(.25);
+            double deadline=sim.State.MissionTime+duration+120;
+            while(remaining>.02)
+            {
+                ct.ThrowIfCancellationRequested();var state=sim.State;
+                if(state.IsComplete||state.PropellantKg<=0||state.MissionTime>deadline)return false;
+                double thrust=sim.ReturnAvailableThrust;if(thrust<=0)return false;
+                sim.Throttle=Dot(sim.ReturnAxis,axis)>.999 ? Math.Min(1,remaining*state.MassKg/(thrust*sim.FixedStep)) : 0;
+                remaining=Math.Max(0,remaining-thrust*sim.Throttle/state.MassKg*sim.FixedStep);
+                sim.Step();
+                if(sim.State.AltitudeMeters<120000)return false;
+            }
+            sim.Throttle=0;var end=sim.State;
+            arrival=PredictAt(e:snapshot.Celestial!,p:end.Position,v:end.Velocity,t:end.MissionTime,end:plan.MoonEntryTime);
+            return !double.IsNaN(arrival.Magnitude())&&!double.IsInfinity(arrival.Magnitude());
         }
 
         struct EncounterTrace { public bool Encounter,Returned; public double MoonRadius,MoonSpeed,MoonTime,EarthRadius,MoonEntryTime; public Vector3d MoonOffset,MoonEntryOffset; }
@@ -145,6 +256,7 @@ namespace FlightCore
                 if(passed && er<Surface){returned=true;break;}
                 double h=Math.Min(900,Math.Max(2,.025*er/Math.Max(1,v.Magnitude())));
                 if(mr<150000000) h=Math.Min(h,Math.Max(2,.025*mr/Math.Max(1,mv)));
+                if(Math.Abs(mr-LunarEphemeris.MoonSoi)<2000000)h=Math.Min(h,10);
                 if(entered && mr<LunarEphemeris.MoonRadius+2000000) h=Math.Min(h,Math.Max(1,.3*Math.Max(0,mr-LunarEphemeris.MoonRadius)/Math.Max(1,mv)));
                 if(passed && er<Surface+50000000) h=Math.Min(h,Math.Max(1,.3*Math.Max(0,er-Surface)/Math.Max(1,v.Magnitude())));
                 Step(e,ref p,ref v,t,h); t+=h;
@@ -185,6 +297,7 @@ namespace FlightCore
                 double er=p.Magnitude(),mr=(p-e.MoonPosition(t)).Magnitude();
                 double h=Math.Min(900,Math.Max(2,.025*er/Math.Max(1,v.Magnitude())));
                 if(mr<150000000)h=Math.Min(h,Math.Max(2,.025*mr/Math.Max(1,(v-e.MoonVelocity(t)).Magnitude())));
+                if(Math.Abs(mr-LunarEphemeris.MoonSoi)<2000000)h=Math.Min(h,10);
                 h=Math.Min(h,end-t);Step(e,ref p,ref v,t,h);t+=h;
             }
             return p;

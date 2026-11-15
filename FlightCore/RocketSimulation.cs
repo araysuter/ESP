@@ -72,6 +72,9 @@ namespace FlightCore
             var c=new RocketSimulation(newStep,stages,atmosphere,lat,lon,pad,booster,celestial?.LaunchUtc);
             c.position=position;c.velocity=velocity;c.time=time;c.fuel=fuel;c.stage=stage;c.boosterFuel=boosterFuel;c.boosterAttached=boosterAttached;
             c.gravityMultiplier=gravityMultiplier;c.infiniteFuel=infiniteFuel;c.crashDestructionEnabled=crashDestructionEnabled;c.HasUsedCheats=HasUsedCheats;
+            c.manualRotation=manualRotation;c.manualAxis=manualAxis;c.manualRight=manualRight;c.manualForward=manualForward;
+            c.pitchRate=pitchRate;c.yawRate=yawRate;c.rollRate=rollRate;c.pitchControl=pitchControl;c.yawControl=yawControl;c.rollControl=rollControl;
+            c.pitch=pitch;c.heading=heading;
             c.commanded=commanded;c.launched=launched;c.landed=landed;c.destroyed=destroyed;c.actualPitch=actualPitch;c.actualHeading=actualHeading;
             c.ReturnAttitudeSlewDegreesPerSecond=ReturnAttitudeSlewDegreesPerSecond;c.ReturnBankRadians=ReturnBankRadians;c.ReturnMode=ReturnMode;c.ReturnAerodynamics=ReturnAerodynamics;c.ReturnAxis=ReturnAxis;c.ReturnCommand=ReturnCommand;c.throttle=throttle;
             return c;

@@ -15,14 +15,9 @@ public static class LunarGuidanceTests
     public static void Run()
     {
         RejectInvalidStarts();
-        foreach(int scenario in new[]{0,1,2})
+        foreach(int scenario in new[]{0,1,2,3})
             foreach(var mode in new[]{LunarManeuver.LunarOrbit,LunarManeuver.FreeReturn})
                 RunMission(scenario,mode);
-        // This low-thrust fixture currently exposes the finite-burn targeting
-        // limitation. Opt in to reproduce it while improving the planner.
-        if(Environment.GetEnvironmentVariable("ESP_TEST_SLS_LUNAR")=="1")
-            foreach(var mode in new[]{LunarManeuver.LunarOrbit,LunarManeuver.FreeReturn})
-                RunMission(3,mode);
         Console.WriteLine("Lunar guidance finite-burn missions passed.");
     }
     static RocketSimulation Create(DateTime epoch,bool infinite,double node,double inclination,bool sls=false)
@@ -56,7 +51,35 @@ public static class LunarGuidanceTests
         if((sim.State.Position-before.Position).Magnitude()>0 || (sim.State.Velocity-before.Velocity).Magnitude()>0 || sim.State.MissionTime!=before.MissionTime)
             throw new Exception("Failed planning changed the live vessel");
         guidance.Cancel(sim);
+        var finiteSls=Create(epoch,false,0,0,true);var finiteGuidance=new LunarMissionGuidance();
+        if(!finiteGuidance.TryStart(finiteSls,LunarManeuver.LunarOrbit,out reason))throw new Exception("SLS fuel test could not start: "+reason);
+        var finiteBefore=finiteSls.State;
+        if(finiteGuidance.Calculate(CancellationToken.None,out _))throw new Exception("Fuel-insufficient SLS mission was accepted");
+        if(finiteSls.State.MissionTime!=finiteBefore.MissionTime || finiteSls.State.PropellantKg!=finiteBefore.PropellantKg)
+            throw new Exception("Failed SLS planning consumed live time or fuel");
         if(sim.Throttle!=0 || guidance.Phase!=LunarMissionPhase.Failed)throw new Exception("Cancellation did not restore control");
+    }
+    static void CheckAbortPaths(RocketSimulation sim,LunarMissionGuidance planned)
+    {
+        // Reuse the expensive computed plan, but exercise each abort on isolated
+        // vehicle/controller copies. These are failure-path tests, not trajectories.
+        var copyMethod=typeof(object).GetMethod("MemberwiseClone",Flags)!;
+        LunarMissionGuidance Copy()=>(LunarMissionGuidance)copyMethod.Invoke(planned,null)!;
+        void Phase(LunarMissionGuidance g,LunarMissionPhase phase)=>typeof(LunarMissionGuidance)
+            .GetField("<Phase>k__BackingField",Flags)!.SetValue(g,phase);
+        void Failed(RocketSimulation vehicle,LunarMissionGuidance g,string cause)
+        {
+            if(g.Phase!=LunarMissionPhase.Failed || vehicle.Throttle!=0 || !vehicle.ManualRotation)
+                throw new Exception("Unsafe lunar abort: "+cause);
+        }
+        var vessel=Clone(sim,.02);var guidance=Copy();guidance.Cancel(vessel);Failed(vessel,guidance,"cancel");
+        vessel=Clone(sim,.02);guidance=Copy();Phase(guidance,LunarMissionPhase.DepartureBurn);
+        Set(vessel,"fuel",0d);guidance.Update(vessel);Failed(vessel,guidance,"fuel exhausted during departure");
+        vessel=Clone(sim,.02);guidance=Copy();vessel.GravityMultiplier=.5;
+        guidance.Update(vessel);Failed(vessel,guidance,"changed gravity");
+        vessel=Clone(sim,.02);guidance=Copy();Phase(guidance,LunarMissionPhase.CoastToMoon);
+        Set(vessel,"time",planned.Plan!.MoonClosestTime+3601);
+        guidance.Update(vessel);Failed(vessel,guidance,"missed Moon encounter");
     }
     static void RunMission(int scenario,LunarManeuver mode)
     {
@@ -69,12 +92,13 @@ public static class LunarGuidanceTests
         if(!guidance.Calculate(CancellationToken.None,out reason))throw new Exception(mode+" planning failed: "+reason);
         if(sim.State.MissionTime!=snapshot.MissionTime || (sim.State.Position-snapshot.Position).Magnitude()>0)throw new Exception("Search advanced the live vessel");
         if(!guidance.Activate(sim,out reason))throw new Exception("Activation failed: "+reason);
+        if(scenario==3 && mode==LunarManeuver.LunarOrbit) CheckAbortPaths(sim,guidance);
         double step=10;int count=0;
         while(!guidance.IsComplete && sim.State.MissionTime<21*86400)
         {
             var state=sim.State;
             double wanted=(guidance.IsBurning || (guidance.Phase==LunarMissionPhase.CoastToDeparture && state.MissionTime>guidance.DepartureBurnStart-120) ||
-                (guidance.Phase==LunarMissionPhase.CoastToMoon && mode==LunarManeuver.LunarOrbit && state.MissionTime>guidance.Plan!.MoonClosestTime-1200)) ? .02 : 10;
+                (guidance.Phase==LunarMissionPhase.CoastToMoon && mode==LunarManeuver.LunarOrbit && guidance.NeedsRealTime(sim))) ? .02 : 10;
             if(wanted!=step){sim=Clone(sim,wanted);step=wanted;}
             guidance.Update(sim);if(guidance.IsComplete)break;
             sim.Step();if(++count>3000000)throw new Exception("Guidance test exceeded step budget");

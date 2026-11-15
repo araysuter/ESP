@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 900" role="img" aria-labelledby="title desc">
+  <title id="title">ESP — Earth Space Program</title>
+  <desc id="desc">A blue rocket ascending beside a stylized Earth and orbit, above the letters ESP.</desc>
+  <g fill="none" stroke="#167fe4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- A restrained globe and a broken orbital path keep the mark legible at small sizes. -->
+    <circle cx="450" cy="364" r="218" stroke-width="18"/>
+    <path d="M264 254c36-27 58-30 76-18l30 17-10 27-37 8-18 29-27 7-21-24m79 71 38-21 32 8 19 26-5 28 29 21-5 39-29 10-13 32-27 31-24-10-6-42-20-18-8-39-21-27 10-27Zm166-191 25 14 5 28 33 13 16 27 30 2 17 28-15 25-34-11-22 13-19-22-33-6-11-26-27-8-5-24Z" fill="#167fe4" stroke="none"/>
+    <path d="M164 641C272 630 475 503 626 355c70-69 121-134 134-177M548 164c56-26 120-47 160-44" stroke-width="19"/>
+    <path d="M190 582c66-48 119-103 161-158" stroke="#64c5ff" stroke-width="6" opacity=".9"/>
+  </g>
+  <!-- Original launch silhouette, with a light-blue window and a tapered plume. -->
+  <g fill="#167fe4">
+    <path d="M141 37c24 22 37 53 37 92v143l24 39v36h-29l-10-23h-44l-10 23H80v-36l24-39V129c0-39 13-70 37-92Z"/>
+    <path d="M115 344h52l-8 28-18 18-18-18Z"/>
+    <path d="M141 383c13 32 18 70 17 110-1 54-8 94-17 129-9-35-16-75-17-129-1-40 4-78 17-110Z"/>
+  </g>
+  <circle cx="141" cy="155" r="12" fill="#89d8ff"/>
+  <!-- Outlined letterforms avoid a dependency on any installed font. -->
+  <g fill="#167fe4">
+    <path d="M124 702h151v34H164v34h97v33h-97v35h111v34H124Z"/>
+    <path d="M322 702h145v34H354v25h78c29 0 43 13 43 39v32c0 26-14 40-43 40H310v-34h123v-27h-78c-29 0-43-13-43-39v-30c0-26 14-40 42-40Z"/>
+    <path fill-rule="evenodd" d="M514 702h109c38 0 59 19 59 53v16c0 34-21 53-59 53h-69v48h-40Zm40 34v54h66c15 0 22-6 22-19v-16c0-13-7-19-22-19Z"/>
+  </g>
+</svg>

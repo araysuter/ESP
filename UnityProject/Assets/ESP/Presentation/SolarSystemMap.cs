@@ -26,6 +26,7 @@ namespace ESP.Presentation
         private readonly System.Collections.Generic.Dictionary<CelestialPrimary, LineRenderer> planetOrbits = new System.Collections.Generic.Dictionary<CelestialPrimary, LineRenderer>();
         private readonly System.Collections.Generic.List<Material> planetMaterials = new System.Collections.Generic.List<Material>();
         private float nextPlanetOrbit;
+        private RocketSimulation orbitSimulation;
         public int AvailablePlanetCount { get; private set; }
         public bool TryPlanetPosition(CelestialPrimary body, out Vector3 position) { if(planets.TryGetValue(body,out var planet) && planet.gameObject.activeInHierarchy) { position=planet.position; return true; } position=default; return false; }
         private Material material, sunMaterial;
@@ -86,7 +87,7 @@ namespace ESP.Presentation
                 planet.GetComponent<Renderer>().sharedMaterial=pm; planetMaterials.Add(pm); planets.Add(body,planet.transform);
                 if (body == CelestialPrimary.Saturn) SaturnRingVisual.Attach(planet.transform);
                 var o=new GameObject(body+" orbit"); o.layer=MissionInsetView.MapLayer; o.transform.SetParent(owner.mapRoot.transform,false);
-                var line=o.AddComponent<LineRenderer>(); line.useWorldSpace=true; line.positionCount=129; line.alignment=LineAlignment.View; line.sharedMaterial=material; line.shadowCastingMode=ShadowCastingMode.Off; line.receiveShadows=false; planetOrbits.Add(body,line);
+                var line=o.AddComponent<LineRenderer>(); line.useWorldSpace=true; line.positionCount=0; line.alignment=LineAlignment.View; line.sharedMaterial=material; line.shadowCastingMode=ShadowCastingMode.Off; line.receiveShadows=false; planetOrbits.Add(body,line);
             }
             var lunarLine = new GameObject("Approximate Moon orbit");
             lunarLine.layer = MissionInsetView.MapLayer; lunarLine.transform.SetParent(owner.mapRoot.transform, false);
@@ -132,29 +133,33 @@ namespace ESP.Presentation
             var ephemeris = simulation != null ? simulation.Celestial : new LunarEphemeris(sunlight.CurrentUtc == default ? DateTime.UtcNow : sunlight.CurrentUtc);
             double missionTime = simulation != null ? simulation.State.MissionTime : 0;
             double angle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * missionTime;
+            bool refreshPlanetOrbits = !ReferenceEquals(orbitSimulation, simulation) || Time.unscaledTime >= nextPlanetOrbit;
             Vector3 sunPosition = ephemeris != null ? ToMap(EarthFrames.InertialToEcef(ephemeris.SunPosition(missionTime), angle)) : towardSun * AstronomicalUnit;
             AvailablePlanetCount = 0;
             foreach(var pair in planets)
             {
-                Vector3d planetPosition = default;
-                bool available=ephemeris!=null && ephemeris.TryPlanet(pair.Key,missionTime,out planetPosition,out _,out _);
+                Vector3d planetPosition = default, planetVelocity = default;
+                bool available=ephemeris!=null && ephemeris.TryPlanet(pair.Key,missionTime,out planetPosition,out planetVelocity,out _);
                 pair.Value.gameObject.SetActive(available);
                 if (available) AvailablePlanetCount++;
                 if(available) pair.Value.position=ToMap(EarthFrames.InertialToEcef(planetPosition,angle));
                 var pl=planetOrbits[pair.Key]; pl.enabled=available && director.IsMapView && controls!=null && controls.Distance>=1000;
-                if(pl.enabled && Time.unscaledTime>=nextPlanetOrbit)
+                if(pl.enabled && (refreshPlanetOrbits || pl.positionCount == 0))
                 {
-                    double period=pair.Key==CelestialPrimary.Mercury?87.969:pair.Key==CelestialPrimary.Venus?224.701:pair.Key==CelestialPrimary.Mars?686.98:pair.Key==CelestialPrimary.Ceres?1680.0:pair.Key==CelestialPrimary.Jupiter?4332.59:pair.Key==CelestialPrimary.Saturn?10759.22:pair.Key==CelestialPrimary.Uranus?30688.5:pair.Key==CelestialPrimary.Neptune?60182:pair.Key==CelestialPrimary.Pluto?90560:pair.Key==CelestialPrimary.Eris?203646:pair.Key==CelestialPrimary.Haumea?104025:112327;
-                    // The offline dataset spans 17 years. Draw the available arc;
-                    // do not join missing samples to the origin or imply a full orbit.
-                    period=Math.Min(period,3652.5);
-                    var arc=new System.Collections.Generic.List<Vector3>();
-                    for(int j=0;j<=128;j++) { double t=missionTime+(j-64)*period*86400/128; if(ephemeris.TryPlanet(pair.Key,t,out var future,out _,out _)) arc.Add(sunPosition+ToMap(EarthFrames.InertialToEcef(future-ephemeris.SunPosition(t),angle))); }
-                    pl.positionCount=arc.Count; if(arc.Count>0) pl.SetPositions(arc.ToArray());
+                    // A finite reference table cannot cover an outer planet's full year.
+                    // Draw a closed osculating ellipse from its current heliocentric state.
+                    // This is a display approximation; actual positions still use the table.
+                    var ellipse = PlanetOrbitProjection.Build(planetPosition - ephemeris.SunPosition(missionTime),
+                        planetVelocity - ephemeris.SunVelocity(missionTime));
+                    var arc = new Vector3[ellipse.Length];
+                    for (int j = 0; j < arc.Length; j++)
+                        arc[j] = sunPosition + ToMap(EarthFrames.InertialToEcef(ellipse[j], angle));
+                    pl.positionCount = arc.Length;
+                    if (arc.Length > 0) pl.SetPositions(arc);
                 }
                 if(pl.enabled) pl.widthMultiplier=Mathf.Max(.1f,controls.Distance*.0014f);
             }
-            if(Time.unscaledTime>=nextPlanetOrbit) nextPlanetOrbit=Time.unscaledTime+2;
+            if (refreshPlanetOrbits) { nextPlanetOrbit = Time.unscaledTime + 2; orbitSimulation = simulation; }
             if (moonObject != null && ephemeris != null)
             {
                 moonObject.position = ToMap(EarthFrames.InertialToEcef(ephemeris.MoonPosition(missionTime), angle));

@@ -3,16 +3,18 @@ using System.Threading;
 
 namespace FlightCore
 {
-    public enum LunarMissionPhase { Idle, Planning, CoastToDeparture, DepartureBurn, CoastToCorrection, CorrectionBurn, CoastToMoon, CaptureBurn, ReturnCoast, Complete, Failed }
+    public enum LunarMissionPhase { Idle, Planning, ParkingBurn, CoastToDeparture, DepartureBurn, CoastToCorrection, CorrectionBurn, CoastToMoon, CaptureBurn, ReturnCoast, Complete, Failed }
 
     /// <summary>Experimental finite-burn lunar guidance. The predictor proposes an
     /// encounter; the live vehicle always moves through ordinary forces and fuel use.</summary>
     public sealed class LunarMissionGuidance
     {
         LunarEphemeris? ephemeris;
+        RocketSimulation? planningSnapshot;
         Vector3d initialPosition,initialVelocity,burnAxis;
         double epoch,available,remainingDeltaV,burnStart,correctionAt;
         bool moonEncountered;
+        double parkingDeltaV;
         int candidates;
         public LunarMissionPhase Phase { get; private set; }
         public LunarManeuver Maneuver { get; private set; }
@@ -20,7 +22,7 @@ namespace FlightCore
         public string Status { get; private set; } = "Lunar guidance idle";
         public int PlanningCandidates => Volatile.Read(ref candidates);
         public bool IsComplete => Phase==LunarMissionPhase.Complete || Phase==LunarMissionPhase.Failed;
-        public bool IsBurning => Phase==LunarMissionPhase.DepartureBurn || Phase==LunarMissionPhase.CorrectionBurn || Phase==LunarMissionPhase.CaptureBurn;
+        public bool IsBurning => Phase==LunarMissionPhase.ParkingBurn || Phase==LunarMissionPhase.DepartureBurn || Phase==LunarMissionPhase.CorrectionBurn || Phase==LunarMissionPhase.CaptureBurn;
         public bool IsActive => Phase!=LunarMissionPhase.Idle && !IsComplete;
         public bool CanCoastWarp => Phase==LunarMissionPhase.CoastToDeparture || Phase==LunarMissionPhase.CoastToCorrection || Phase==LunarMissionPhase.CoastToMoon || Phase==LunarMissionPhase.ReturnCoast;
         public double DepartureBurnStart => burnStart;
@@ -30,7 +32,7 @@ namespace FlightCore
             double t=sim.State.MissionTime;
             if(Phase==LunarMissionPhase.CoastToDeparture && t>=burnStart-60)return true;
             if(Phase==LunarMissionPhase.CoastToCorrection && t>=correctionAt-10)return true;
-            if(Phase==LunarMissionPhase.CoastToMoon && Maneuver==LunarManeuver.LunarOrbit && Plan!=null && t>=Plan.MoonClosestTime-900)return true;
+            if(Phase==LunarMissionPhase.CoastToMoon && Maneuver==LunarManeuver.LunarOrbit && Plan!=null && t>=Plan.MoonClosestTime-Math.Max(900,sim.LunarBurnSeconds(Plan.CaptureDeltaV)*.5+60))return true;
             return false;
         }
 
@@ -51,6 +53,7 @@ namespace FlightCore
             available=simulation.LunarAvailableDeltaV();
             if(available<=0){reason="No usable propellant or thrust remains";return false;}
             initialPosition=state.Position;initialVelocity=state.Velocity;epoch=state.MissionTime;
+            planningSnapshot=simulation.ReturnClone(.25);
             ephemeris=simulation.Celestial;Maneuver=maneuver;Phase=LunarMissionPhase.Planning;
             Status="Searching lunar trajectories";reason="";return true;
         }
@@ -59,23 +62,40 @@ namespace FlightCore
         public bool Calculate(CancellationToken cancellation,out string reason)
         {
             if(Phase!=LunarMissionPhase.Planning || ephemeris==null)throw new InvalidOperationException("No lunar search is active");
-            bool found=LunarTransferPlanner.TryPlan(ephemeris,initialPosition,initialVelocity,epoch,Maneuver,available,cancellation,
-                count=>Interlocked.Exchange(ref candidates,count),out var plan,out reason);
-            Plan=plan;return found;
+            var departureSnapshot=planningSnapshot!;
+            bool lowThrust=departureSnapshot.LunarBurnSeconds(3200)>600;
+            if(lowThrust)
+            {
+                Status="Preparing a finite-thrust high parking orbit";
+                if(!LunarTransferPlanner.PrepareParkingOrbit(departureSnapshot,cancellation,out departureSnapshot,out parkingDeltaV,out reason))
+                    return false;
+            }
+            var departure=departureSnapshot.State;
+            bool found=LunarTransferPlanner.TryPlan(ephemeris,departure.Position,departure.Velocity,departure.MissionTime,Maneuver,departureSnapshot.LunarAvailableDeltaV(),cancellation,
+                count=>Interlocked.Exchange(ref candidates,count),out var plan,out reason,lowThrust ? 15000000 : 0);
+            if(found && plan!=null && planningSnapshot!=null)
+            {
+                Status="Refining finite lunar departure burn";
+                found=LunarTransferPlanner.RefineDeparture(departureSnapshot,plan,cancellation,out reason);
+            }
+            Plan=found ? plan : null;return found;
         }
         /// <summary>Commit the finished plan on the simulation's owning thread.</summary>
         public bool Activate(RocketSimulation sim,out string reason)
         {
             if(Phase!=LunarMissionPhase.Planning||Plan==null){reason="No lunar plan is available";return false;}
             var state=sim.State;
-            if(Math.Abs(state.MissionTime-epoch)>1e-6 || (state.Position-initialPosition).Magnitude()>.01 || (state.Velocity-initialVelocity).Magnitude()>.001)
+            if(planningSnapshot==null || state.StageIndex!=planningSnapshot.State.StageIndex || state.PropellantKg!=planningSnapshot.State.PropellantKg || sim.InfiniteFuel!=planningSnapshot.InfiniteFuel || sim.GravityMultiplier!=1 || Math.Abs(state.MissionTime-epoch)>1e-6 || (state.Position-initialPosition).Magnitude()>.01 || (state.Velocity-initialVelocity).Magnitude()>.001)
             {reason="Flight changed while planning";Phase=LunarMissionPhase.Failed;Status=reason;return false;}
             double duration=sim.LunarBurnSeconds(Plan.DeltaV.Magnitude());
-            burnStart=Plan.DepartureTime-duration*.5;
+            burnStart=Plan.DepartureBurnStart;
             if(double.IsNaN(duration)||double.IsInfinity(duration)||burnStart<epoch+30)
             {reason="Insufficient time or thrust for the planned departure burn";Phase=LunarMissionPhase.Failed;Status=reason;return false;}
             sim.EnableLunarPointing();burnAxis=Plan.DeltaV.Normalize();remainingDeltaV=Plan.DeltaV.Magnitude();
-            sim.ReturnCommand=burnAxis;Phase=LunarMissionPhase.CoastToDeparture;Status="Coasting to lunar departure burn";reason="";return true;
+            sim.ReturnCommand=burnAxis;
+            if(parkingDeltaV>0) { remainingDeltaV=parkingDeltaV;Phase=LunarMissionPhase.ParkingBurn;Status="Raising parking orbit for low-thrust lunar departure"; }
+            else {Phase=LunarMissionPhase.CoastToDeparture;Status="Coasting to lunar departure burn";}
+            reason="";return true;
         }
         public void Abort(RocketSimulation sim,string reason)
         { sim.EndLunarPointing();Phase=LunarMissionPhase.Failed;Status=reason; }
@@ -87,6 +107,24 @@ namespace FlightCore
             var state=sim.State;
             if(state.IsComplete){Abort(sim,"Lunar guidance stopped: "+state.Status);return;}
             if(sim.GravityMultiplier!=1){Abort(sim,"Lunar guidance stopped because gravity was changed");return;}
+            if(Phase==LunarMissionPhase.ParkingBurn)
+            {
+                if(remainingDeltaV<=.02)
+                {
+                    sim.Throttle=0;remainingDeltaV=Plan.DeltaV.Magnitude();
+                    Phase=LunarMissionPhase.CoastToDeparture;Status="Coasting in raised parking orbit to lunar departure";
+                }
+                else
+                {
+                    if(state.PropellantKg<=0||sim.ReturnAvailableThrust<=0)
+                    {Abort(sim,"Parking orbit burn incomplete: propellant or thrust exhausted");return;}
+                    sim.ReturnCommand=state.Velocity.Normalize();
+                    double alignment=StarshipReturnController.Dot(sim.ReturnAxis,sim.ReturnCommand);
+                    sim.Throttle=alignment>.999 ? Math.Min(1,remainingDeltaV*state.MassKg/(sim.ReturnAvailableThrust*sim.FixedStep)) : 0;
+                    remainingDeltaV=Math.Max(0,remainingDeltaV-sim.ReturnAvailableThrust*sim.Throttle/state.MassKg*sim.FixedStep);
+                    return;
+                }
+            }
             if(Phase==LunarMissionPhase.CoastToDeparture)
             {
                 sim.Throttle=0;sim.ReturnCommand=burnAxis;
@@ -135,7 +173,12 @@ namespace FlightCore
                 {
                     if(moonEncountered && sim.Primary==CelestialPrimary.Earth){Phase=LunarMissionPhase.ReturnCoast;Status="Free return: coasting toward Earth";}
                     if(Phase==LunarMissionPhase.ReturnCoast && state.Position.Magnitude()<40000000 && StarshipReturnController.Dot(state.Position,state.Velocity)<0)
-                    {sim.EndLunarPointing();Phase=LunarMissionPhase.Complete;Status="Free return reached Earth vicinity";}
+                    {
+                        var returnOrbit=OrbitDiagnostics.Compute(state.Position,state.Velocity);
+                        if(returnOrbit.PerigeeRadiusMeters<EarthFrames.SemiMajorAxisMeters+StandardAtmosphere.VacuumGeometricAltitudeMeters)
+                        {Abort(sim,"Free return is unsafe: Earth periapsis enters the atmosphere");return;}
+                        sim.EndLunarPointing();Phase=LunarMissionPhase.Complete;Status="Free return reached Earth vicinity";
+                    }
                     else if(state.MissionTime>Plan.MoonClosestTime+16*86400)
                         Abort(sim,"Predicted free return did not reach Earth vicinity");
                     return;

@@ -27,6 +27,19 @@ Shader "ESP/Star Field"
                 output.screen = input.positionOS.xy;
                 return output;
             }
+            // Defocused aperture: a broad colored wash, a soft interior and
+            // a faint incomplete rim. Avoid crisp polygon outlines.
+            float3 OpticalGhost(float2 offset, float size, float3 tint)
+            {
+                float2 q = offset / size;
+                float r2 = dot(q, q);
+                float r = sqrt(r2);
+                float rimDistance = (r - .82) / .22;
+                float rim = exp(-rimDistance * rimDistance);
+                float crescent = saturate(.55 + q.x * .35 - q.y * .2);
+                return tint * (exp(-r2 * 2.6) * .58
+                    + exp(-r2 * .6) * .16 + rim * crescent * .09);
+            }
             half4 Frag(Varyings input) : SV_Target
             {
                 float3 ray = normalize(_ForwardSky.xyz + input.screen.x * _ViewParams.x * _ViewParams.y * _RightSky.xyz +
@@ -57,19 +70,21 @@ Shader "ESP/Star Field"
                     // remains visible when exposure is reduced. Not radiometry.
                     color += float3(1.0, .975, .92) * disc * (16 + 16 * limb);
                     float2 separation = float2(dot(ray - _SunSky.xyz, _RightSky.xyz), dot(ray - _SunSky.xyz, _UpSky.xyz));
-                    float halo = exp(-angular / max(radius * 3, .001));
+                    float halo = exp(-angular / max(radius * 6, .002));
                     float coreBloom = exp(-angular * angular / max(radius * radius * 5, .000001));
                     float streak = exp(-abs(separation.y) / max(radius * .10, .0001)) *
-                        exp(-abs(separation.x) / max(radius * 10, .004));
+                        exp(-abs(separation.x) / max(radius * 5, .002));
                     // Earth-source visibility gates all optical artifacts: a sun
                     // behind the planet cannot paint a halo around its far limb.
                     // Diffraction spikes and a wider HDR shoulder are camera
                     // effects; the photosphere itself retains its true angular radius.
                     float theta = atan2(separation.y, separation.x);
-                    float spikes = pow(abs(cos(theta * 4)), 40) * exp(-angular / max(radius * 22, .008));
-                    float shoulder = exp(-angular / max(radius * 9, .003));
+                    // Keep the eight rays inside the soft glare, with no long tails.
+                    float spikeEnvelope = 1 - smoothstep(radius * 16, radius * 30, angular);
+                    float spikes = pow(abs(cos(theta * 4)), 40) * exp(-angular / max(radius * 7, .003)) * spikeEnvelope;
+                    float shoulder = exp(-angular / max(radius * 16, .005));
                     color += float3(1, .93, .80) * _SolarOptics.x *
-                        (halo * 2.2 + coreBloom * 4.0 + shoulder * .26 + streak * .32 + spikes * 1.8);
+                        (halo * 2.2 + coreBloom * 4.0 + shoulder * .40 + streak * .32 + spikes * 1.8);
                 }
                 // Lens ghosts lie on the line through the optical center and
                 // the light source. Keep them in this background layer so opaque
@@ -81,17 +96,60 @@ Shader "ESP/Star Field"
                         dot(_SunSky.xyz, _UpSky.xyz) / (sunForward * _ViewParams.x) * _ProjectionParams.x);
                     float2 screen = float2(input.screen.x * _ViewParams.y, input.screen.y);
                     float edge = 1 - smoothstep(.82, 1.22, max(abs(sunScreen.x / _ViewParams.y), abs(sunScreen.y)));
-                    float2 g1 = screen + sunScreen * .32;
-                    float2 g2 = screen + sunScreen * .68;
-                    float2 g3 = screen + sunScreen * 1.08;
-                    float r1=length(g1), r2=length(g2), r3=length(g3);
-                    // HLSL pow with a negative base can produce NaN even for exponent 2.
-                    float ringOffset = (r2 - .12) / .015;
-                    float ring = exp(-ringOffset * ringOffset);
-                    float3 ghosts = float3(.20,.55,.40) * exp(-r1*r1/.003)
-                        + float3(.55,.24,.12) * exp(-r2*r2/.008)
-                        + float3(.12,.28,.60) * exp(-r3*r3/.012)
-                        + float3(.22,.12,.30) * ring * .35;
+                    float2 axis = sunScreen / max(length(sunScreen), .0001);
+                    float2 normal = float2(-axis.y, axis.x);
+                    float2 fromSun = screen - sunScreen;
+                    float along = dot(fromSun, axis);
+                    float across = dot(fromSun, normal);
+                    // Reference-inspired layered warm-white veiling glare. Broad
+                    // low-opacity gradients preserve the underlying star detail.
+                    float3 ghosts = float3(.11,.08,.058) *
+                        exp(-dot(fromSun, fromSun) / .48);
+                    ghosts += float3(.045,.032,.025) *
+                        exp(-(along * along / .85 + across * across / .18));
+                    // The dominant near-source ghost has separated orange, yellow
+                    // and green/blue shoulders rather than a flat colored disc.
+                    float2 warm = screen - sunScreen * .67;
+                    ghosts += OpticalGhost(warm, .11, float3(.85,.18,.015));
+                    ghosts += OpticalGhost(warm + axis * .018, .062, float3(.58,.58,.025));
+                    ghosts += OpticalGhost(warm - normal * .055 - axis * .025,
+                        .052, float3(.025,.16,.12));
+                    ghosts += OpticalGhost(screen - sunScreen * .43 + normal * .006,
+                        .043, float3(.18,.065,.018));
+                    ghosts += OpticalGhost(screen - sunScreen * .26,
+                        .032, float3(.16,.035,.025));
+                    ghosts += OpticalGhost(screen - sunScreen * .07 - normal * .008,
+                        .065, float3(.10,.012,.045));
+                    ghosts += OpticalGhost(screen + sunScreen * .31,
+                        .052, float3(.07,.012,.065));
+                    ghosts += OpticalGhost(screen + sunScreen * .71 + normal * .012,
+                        .12, float3(.075,.008,.04));
+                    ghosts += OpticalGhost(screen + sunScreen * 1.03,
+                        .19, float3(.06,.004,.025));
+                    // Fine, irregular pinpoints and halos between the larger ghosts.
+                    [unroll] for (int g = 0; g < 7; g++)
+                    {
+                        float t = .12 + g * .137 + (g % 2) * .027;
+                        float2 p = screen - sunScreen * (1 - t * 1.8)
+                            + normal * ((g % 3) - 1) * .008;
+                        float size = .003 + (g % 3) * .0018;
+                        float d = dot(p, p) / (size * size);
+                        float3 tint = lerp(float3(.34,.12,.025),
+                            float3(.20,.08,.32), t);
+                        ghosts += tint * (exp(-d * 2) * .65 + exp(-d * .12) * .10);
+                    }
+                    // Several blue-violet threads fan from the source. Each has
+                    // a narrow core and a much softer surrounding gradient.
+                    float window = exp(-along * along / 2.5);
+                    float thread1 = across + along * .19;
+                    float thread2 = across - along * .23;
+                    float thread3 = across + along * .15;
+                    ghosts += float3(.055,.075,.24) * window *
+                        (exp(-abs(thread1) / .003) * .55 + exp(-abs(thread1) / .018) * .20);
+                    ghosts += float3(.085,.035,.18) * window *
+                        (exp(-abs(thread2) / .0025) * .5 + exp(-abs(thread2) / .014) * .18);
+                    ghosts += float3(.04,.065,.16) * window *
+                        exp(-abs(thread3) / .002) * .22;
                     color += ghosts * edge * _SolarOptics.x;
                 }
                 return half4(color, 1);

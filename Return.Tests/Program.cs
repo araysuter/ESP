@@ -73,12 +73,23 @@ internal static class Program
             if((sim.ThrustDirectionInertial-sim.ReturnAttitudeDirection).Magnitude()>1e-12)throw new Exception("Return displayed thrust axis differs from actual return axis");
             if((sim.State.Position-initial.Position).Magnitude()!=0||(sim.State.Velocity-initial.Velocity).Magnitude()!=0)throw new Exception("Return activation changed translational state");
             int ticks=0;bool ignitedWhileTurning=false;double flipStart=double.NaN,flipAltitude=double.NaN,uprightTime=double.NaN;
+            Vector3d inboundEcef=default;double ignitionRange=double.NaN, ignitionHorizontalSpeed=0,maxOvershoot=double.NegativeInfinity;
+            var catchEcef=EarthFrames.GeodeticToEcef(25.997*Math.PI/180,-97.156*Math.PI/180,100);
             while(!sim.State.IsComplete&&ticks++<1600000)
             {
                 controller.Update(sim);
                 var beforeStep=sim.State;var axisBefore=sim.ReturnAttitudeDirection;
                 double upDot=(axisBefore.X*beforeStep.Position.X+axisBefore.Y*beforeStep.Position.Y+axisBefore.Z*beforeStep.Position.Z)/beforeStep.Position.Magnitude();
-                if(controller.Phase==StarshipReturnPhase.LandingFlip&&double.IsNaN(flipStart)){flipStart=beforeStep.MissionTime;flipAltitude=beforeStep.AltitudeMeters;}
+                if(controller.Phase==StarshipReturnPhase.LandingFlip&&double.IsNaN(flipStart)){
+                    flipStart=beforeStep.MissionTime;flipAltitude=beforeStep.AltitudeMeters;
+                    var up=beforeStep.Position.Normalize();
+                    var groundVelocity=beforeStep.Velocity-Aerodynamics.CorotatingAirVelocity(beforeStep.Position,Vector3d.Zero);
+                    double radial=groundVelocity.X*up.X+groundVelocity.Y*up.Y+groundVelocity.Z*up.Z;
+                    var horizontal=groundVelocity-up*radial;ignitionHorizontalSpeed=horizontal.Magnitude();
+                    inboundEcef=EarthFrames.InertialToEcef(horizontal.Normalize(),Aerodynamics.EarthAngularVelocityRadiansPerSecond*flipStart);
+                    var delta=catchEcef-EarthFrames.InertialToEcef(beforeStep.Position,Aerodynamics.EarthAngularVelocityRadiansPerSecond*flipStart);
+                    ignitionRange=delta.X*inboundEcef.X+delta.Y*inboundEcef.Y+delta.Z*inboundEcef.Z;
+                }
                 if(!double.IsNaN(flipStart)&&double.IsNaN(uprightTime)&&upDot>.99)uprightTime=beforeStep.MissionTime;
                 if(!forceDepletion&&controller.Phase==StarshipReturnPhase.LandingFlip&&sim.Throttle>0&&sim.Physics.ThrustNewtons>0&&upDot<Math.Cos(Math.PI/4))ignitedWhileTurning=true;
                 if(forceDepletion&&!injected&&controller.Phase==StarshipReturnPhase.LandingFlip) {tank.SetValue(sim,0d);injected=true;Console.WriteLine("Fault fixture: all remaining propellant lost at landing flip; continue ordinary physics.");}
@@ -88,6 +99,10 @@ internal static class Program
                 if(Math.Acos(axisDot)>45*Math.PI/180*step+1e-7)throw new Exception("Return attitude exceeded finite 45 degree/s rate limit");
                 if(s.PropellantKg>fuel+1e-8||s.PropellantKg<0)throw new Exception("Return created fuel");
                 fuel=s.PropellantKg;
+                if(!double.IsNaN(flipStart)) {
+                    var delta=EarthFrames.InertialToEcef(s.Position,Aerodynamics.EarthAngularVelocityRadiansPerSecond*s.MissionTime)-catchEcef;
+                    maxOvershoot=Math.Max(maxOvershoot,delta.X*inboundEcef.X+delta.Y*inboundEcef.Y+delta.Z*inboundEcef.Z);
+                }
                 if((controller.Phase==StarshipReturnPhase.PoweredLanding||controller.Phase==StarshipReturnPhase.LandingFlip)&&ticks%1000==0)Console.WriteLine($"LAND t={s.MissionTime:F1} alt={s.AltitudeMeters:F1} dist={controller.TargetDistanceMeters:F1} v={s.SpeedRelativeGround:F1} fuel={fuel:F0} throttle={sim.Throttle:F3}");
                 if(ticks%50000==0)Console.WriteLine($"t={s.MissionTime:F1} phase={controller.Phase} altitude={s.AltitudeMeters:F0} fuel={fuel:F0} miss={controller.PredictedMissMeters:F0}");
             }
@@ -96,6 +111,12 @@ internal static class Program
             Console.WriteLine($"Return outcome={controller.Phase}, impact={sim.ImpactSpeedMetersPerSecond:F2}m/s, targetDistance={controller.TargetDistanceMeters:F1}m, predictedMiss={controller.PredictedMissMeters:F1}m, fuel={fuel:F1}kg peakHeat={controller.PeakHeatFluxWattsPerSquareMeter:F0}W/m2");
             Console.WriteLine($"Powered flip: ignitionWhileTurning={ignitedWhileTurning} startAltitude={flipAltitude:F2}m tiltBelow8degAfter={uprightTime-flipStart:F3}s");
             if(!forceDepletion&&sim.IsCaught&&(!ignitedWhileTurning||!(uprightTime>flipStart)))throw new Exception("Catch did not originate from finite powered belly flip");
+            Console.WriteLine($"APPROACH ignitionRange={ignitionRange:F3}m horizontalSpeed={ignitionHorizontalSpeed:F3}m/s maxOvershoot={maxOvershoot:F3}m duration={sim.State.MissionTime-flipStart:F3}s");
+            if(!forceDepletion&&Array.IndexOf(Environment.GetCommandLineArgs(),"--require-catch")>=0) {
+                if(double.IsNaN(ignitionRange)||ignitionRange<Math.Max(5,ignitionHorizontalSpeed))
+                    throw new Exception("Landing ignition did not precede tower with stopping lead");
+                if(maxOvershoot>5)throw new Exception("Powered approach overshot tower by more than 5 m");
+            }
             Console.WriteLine($"Lug miss={controller.CatchLugDistanceMeters:F4}m heightError={controller.CatchLugAltitudeErrorMeters:F4}m speed={controller.CatchLugSpeedMetersPerSecond:F4}m/s arms={controller.CatchArmClosure01:F3}");
             if(sim.IsCaught&&(controller.CatchLugSpeedMetersPerSecond>=3||controller.CatchLugDistanceMeters>=.35||Math.Abs(controller.CatchLugAltitudeErrorMeters)>=.5||controller.CatchArmClosure01<.99))throw new Exception("Catch bypassed physical envelope");
             if(forceDepletion&&(!injected||sim.IsCaught||!sim.State.IsComplete))throw new Exception("Depleted-fuel approach produced a false catch or failed to terminate");

@@ -32,20 +32,28 @@ accelerated coast steps. They check for an actual bound lunar orbit or a lunar
 flyby returning to an Earth periapsis above the modeled atmosphere. They are
 not a substitute for a full interactive playthrough on each target platform.
 
-## Handoff: SLS finite-burn targeting
+## Low-thrust departure and safety
 
-The current predictor treats departure and correction maneuvers as impulses.
-SLS's low-thrust upper stage has a much longer finite departure burn, and its
-infinite-fuel low Earth orbit fixture currently aborts with "Course correction
-could not be calculated" rather than reaching lunar orbit. Free return has not
-been verified for SLS. Do not mark SLS lunar guidance complete or merge this
-draft without resolving the mismatch and verifying both missions.
+Long burns first raise the parking orbit with a finite prograde burn, coast to
+apogee, and search departure opportunities at least 15,000 km from Earth's
+center. This avoids aiming a long SLS burn inward across a low parking orbit.
+The planner refines the departure against a cloned vehicle simulation with
+actual thrust, propellant mass flow and attitude slew. Live flight executes
+those same controls; no authoritative position or velocity is assigned by the
+planner. Progress and cancellation remain available during the background search.
 
-To reproduce the SLS fixture, set `ESP_TEST_SLS_LUNAR=1` and run the
-`FlightCore.Tests` project. Improve the departure and correction predictor to
-account for finite thrust, slew and propellant (or select/reject candidates
-using a finite-burn simulation), then rerun the 20 ms burn fixtures for both
-SLS and Starship variants. Verify sufficient-fuel and exhaustion paths, the
-existing Starship deorbit autopilot, time warp, cancellation, and an interactive
-Unity player on each supported platform. Review this branch against current
-`main`, preserving any later work when integrating.
+Free-return candidates reserve at least 500 km of predicted Earth clearance,
+target approximately 1,000 km, and must pass an additional atmospheric-clearance
+check on the actual return. Prediction takes smaller steps near the Moon's
+sphere-of-influence boundary. Lunar capture slows to real time early enough for
+the selected vehicle's burn duration.
+
+SLS is included in the default finite-burn regression matrix, alongside the
+existing Starship/Super Starship fixtures. The SLS mission fixtures use infinite
+fuel: the current modeled ICPS propellant budget is insufficient for the tested
+complete missions without it. Ordinary limited-fuel missions must still pass
+planning affordability checks; a separate test verifies that insufficient SLS
+fuel is rejected without advancing or consuming the live vehicle's state.
+Cancellation, mid-burn fuel exhaustion, changed gravity and missed encounters
+must cut throttle and restore manual control. These tests do not qualify every
+parking orbit, every launch date, or real SLS mission performance.
