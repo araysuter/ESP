@@ -118,6 +118,7 @@ public static class BuildMission
         var surface = manager.AddComponent<LocalSurfaceTiles>();
         surface.driver = flight; surface.director = director; surface.surfaceSun = sun;
         surface.surfaceShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/LocalSurface.shader");
+        ESP.Presentation.Editor.NightLightsAssets.Configure(earthMaterial, sunlight, surface);
         if (!surface.surfaceShader || !backdrop.atmosphereShader) throw new Exception("Missing continuous Earth shaders");
         director.picker = picker; director.pointWeather = pointWeather; director.regional = regional;
         director.events = events; director.spaceWeather = spaceWeather;
