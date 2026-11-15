@@ -519,8 +519,14 @@ namespace ESP.Presentation
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
             var localSurface = director.GetComponent<LocalSurfaceTiles>();
             string surfaceInfo = localSurface != null ? "\n\n" + LocalSurfaceTiles.Attribution + "\n" + localSurface.Status : "";
-            if (director.SelectedSiteIndex == 1 && director.siteStructurePrefabs != null && director.siteStructurePrefabs.Length > 1 && director.siteStructurePrefabs[1] != null)
-                surfaceInfo += "\nHistorical LC-39 gantry: NASA / Michael D. Carbajal. Approximate scale and placement; not the current facility layout.";
+            if (director.SelectedSiteIndex == 1 && director.siteStructurePrefabs != null && director.siteStructurePrefabs.Length > 1)
+            {
+                var structure = director.siteStructurePrefabs[1];
+                if (LaunchEnvironment.IsModernLauncher(structure))
+                    surfaceInfo += "\nApproximate LC-39B mobile launcher: NASA / Samuel H. Neblett. Simplified visual, not a surveyed reconstruction.";
+                else if (structure != null)
+                    surfaceInfo += "\nHistorical LC-39 gantry: NASA / Michael D. Carbajal. Approximate scale and placement; not the current facility layout.";
+            }
             surfaceInfo += "\nExhaust textures: Waterfall / Chris Adderley (Nertea) and contributors, CC BY-NC-SA 4.0; converted to PNG. SRB emission scheduling: SmokeScreen / Sarbian, BSD-2-Clause. Full notices accompany the game.";
             string flightInfo = (director.FlightStatus ?? "READY") + "\n\n" +
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
