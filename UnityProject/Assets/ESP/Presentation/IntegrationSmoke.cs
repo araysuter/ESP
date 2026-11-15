@@ -98,6 +98,25 @@ namespace ESP.Presentation
             camera.transform.LookAt(director.RocketVisual.position + tangent * 600000 - up * 200000, up);
             yield return new WaitForSecondsRealtime(1);
             yield return Shot("orbit-oblique-detail");
+            var lighting = director.GetComponent<MissionSunlight>();
+            var lightingDriver = lighting.driver;
+            var oldReview = lighting.ReviewUtc;
+            var geo = FlightCore.EarthFrames.EcefToGeodetic(ecef);
+            DateTime best = lighting.CurrentUtc;
+            double bestElevation = -90;
+            for (int hour = 0; hour < 24; hour++)
+            {
+                var utc = lighting.CurrentUtc.Date.AddHours(hour);
+                double elevation = FlightCore.SolarLighting.ElevationDegrees(FlightCore.SolarLighting.DirectionEcef(utc), geo.LatitudeRadians, geo.LongitudeRadians);
+                if (elevation > bestElevation) { bestElevation = elevation; best = utc; }
+            }
+            // Lighting-only diagnostic override, explicitly named in capture/log;
+            // authoritative flight, atmosphere and orbital state remain unchanged.
+            lighting.driver = null; lighting.ReviewUtc = best; lighting.Apply();
+            yield return new WaitForSecondsRealtime(1);
+            Debug.Log("ESP_INTEGRATION_LIGHTING_REVIEW daytime override " + best.ToString("O"));
+            yield return Shot("orbit-oblique-daylight-review");
+            lighting.driver = lightingDriver; lighting.ReviewUtc = oldReview; lighting.Apply();
             tiles.networkEnabled = false;
             tiles.ClearTiles();
             yield return new WaitForSecondsRealtime(1);
