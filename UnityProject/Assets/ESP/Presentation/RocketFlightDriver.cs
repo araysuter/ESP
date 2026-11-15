@@ -17,13 +17,16 @@ namespace ESP.Presentation
         private LaunchSite launchSite;
         private double accumulator, orbitSeconds;
         public bool OrbitVerified { get; private set; }
+        public bool IsPaused { get; set; }
+        public void DisableAssistance() { AssistanceEnabled = false; }
+        public void InvalidateOrbitVerification() { orbitSeconds = 0; OrbitVerified = false; }
         private bool started;
         private AssistedAscent guidance;
         private UIDocument missionDocument;
         private float pendingThrottle = 1f;
         public bool AssistanceEnabled { get; private set; } = true;
         public int TimeRate { get; private set; } = 1;
-        public void ToggleAssistance() { AssistanceEnabled = !AssistanceEnabled; }
+        public void ToggleAssistance() { if (IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
         public void SetTimeRate(int rate)
         {
             if (rate != 1 && rate != 5 && rate != 20) throw new ArgumentOutOfRangeException(nameof(rate));
@@ -58,7 +61,7 @@ namespace ESP.Presentation
         }
         public void Launch(LaunchSite site, WeatherSnapshot weather)
         {
-            if (started || site == null) return;
+            if (IsPaused || started || site == null) return;
             DateTime now = DateTime.UtcNow;
             WeatherProfile profile = null;
             TimeSpan maxAge = TimeSpan.FromHours(12);
@@ -86,6 +89,8 @@ namespace ESP.Presentation
             launchSite = site;
             simulation = new RocketSimulation(StepSeconds, (director.VehicleIndex == 1 ? RealVehiclePresets.BuildStarshipStages() : director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsStages() : StageDefinition.DemoStages()), atmosphere,
                 site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsBoosterParameters() : null);
+            MissionSession.Instance?.ConfigureSimulation(simulation);
+            if (simulation.GravityMultiplier != 1) AssistanceEnabled = false;
             guidance = new AssistedAscent(director.VehicleIndex == 1 ? 220000 : director.VehicleIndex == 2 ? 120000 : 160000, director.VehicleIndex == 2 ? 3 : 2);
             simulation.Throttle = pendingThrottle;
             simulation.Launch();
@@ -109,12 +114,12 @@ namespace ESP.Presentation
                 if (view != null) { view.SetThrottle(0); if (view.booster != null) view.booster.gameObject.SetActive(true); }
             }
         }
-        public void Stage() { if (simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
-        public void SetThrottle(float value) { AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
+        public void Stage() { if (IsPaused || simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
+        public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
 
         private void Update()
         {
-            if (simulation == null) return;
+            if (simulation == null || IsPaused || MissionSession.BlocksInput) return;
             Keyboard keyboard = Keyboard.current;
             var focused = missionDocument?.rootVisualElement?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
@@ -144,6 +149,7 @@ namespace ESP.Presentation
         }
         private void UpdateOrbitVerification()
         {
+            if (simulation.HasUsedCheats || (MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight)) { InvalidateOrbitVerification(); return; }
             var state = simulation.State;
             bool unpowered = !simulation.BoosterBurning && (simulation.Throttle <= 0 || state.PropellantKg <= 0);
             const double mu = 3.986004418e14;

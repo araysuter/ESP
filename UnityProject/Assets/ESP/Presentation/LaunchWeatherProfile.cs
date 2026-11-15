@@ -86,7 +86,17 @@ namespace ESP.Presentation
             foreach (int p in Levels)
             {
                 string suffix = "_" + p + "hPa";
-                try { double altitude = NumberAt(h, "geopotential_height" + suffix, index); if (altitude > elevation) Add(values, altitude, NumberAt(h, "temperature" + suffix, index), p * 100, NumberAt(h, "wind_speed" + suffix, index), NumberAt(h, "wind_direction" + suffix, index)); }
+                try
+                {
+                    // Open-Meteo supplies geopotential metres above mean sea level. Match the
+                    // NASA profile's spherical conversion; MSL is only an approximation to
+                    // the simulation's WGS84 ellipsoidal height (geoid separation is omitted).
+                    double geopotential = NumberAt(h, "geopotential_height" + suffix, index);
+                    const double radius = 6371000.0;
+                    if (geopotential >= radius) throw new FormatException("Invalid geopotential height");
+                    double altitude = radius * geopotential / (radius - geopotential);
+                    if (altitude > elevation) Add(values, altitude, NumberAt(h, "temperature" + suffix, index), p * 100, NumberAt(h, "wind_speed" + suffix, index), NumberAt(h, "wind_direction" + suffix, index));
+                }
                 catch (FormatException) { /* Missing level is omitted, never substituted with zero. */ }
             }
             values.Sort((a, b) => a.AltitudeMSL.CompareTo(b.AltitudeMSL));

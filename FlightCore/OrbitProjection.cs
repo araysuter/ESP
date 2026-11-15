@@ -35,8 +35,9 @@ namespace FlightCore
     /// <summary>
     /// Gravity-only instantaneous osculating conic. ECI input is SI; ALL output points
     /// use the supplied CURRENT Earth angle (an orbit curve, never a future ground track).
-    /// No dynamics are advanced. Open conics stop at 20 Earth radii or just beyond the
-    /// current radius if already farther out. Radial degenerate states return unavailable.
+    /// The optional gravitational parameter (m^3/s^2) matches active simulation gravity.
+    /// Zero/negative/nonfinite gravity has no Kepler projection. No dynamics are advanced.
+    /// Open conics stop at 20 Earth radii or just beyond the current radius if already farther out. Radial degenerate states return unavailable.
     /// Conic basis: JPL NAIF oscelt, https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/oscelt_c.html
     /// </summary>
     public static class OrbitProjection
@@ -46,9 +47,17 @@ namespace FlightCore
         private const double A = EarthFrames.SemiMajorAxisMeters;
         private const double B = A * (1 - EarthFrames.Flattening);
 
-        public static OrbitProjectionResult Build(Vector3d position, Vector3d velocity, double currentEarthAngle, int maxSamples = MaximumSamples)
+        public static OrbitProjectionResult Build(Vector3d position, Vector3d velocity, double currentEarthAngle,
+            int maxSamples = MaximumSamples, double gravitationalParameter = Gravity.EarthGravitationalParameter)
         {
             var result = new OrbitProjectionResult();
+            if (!Finite(gravitationalParameter) || gravitationalParameter <= 0)
+            {
+                result.Status = gravitationalParameter == 0
+                    ? "Zero gravity — no Kepler coast projection"
+                    : "Invalid gravitational parameter — positive finite gravity required";
+                return result;
+            }
             if (!Finite(currentEarthAngle)) return result;
             maxSamples = Math.Max(16, Math.Min(MaximumSamples, maxSamples));
             try
@@ -59,7 +68,7 @@ namespace FlightCore
                 Vector3d h = Cross(position, velocity);
                 double hm = h.Magnitude();
                 if (hm < r * Math.Max(1, v) * 1e-9) { result.Status = "Radial coast — no orbital plane"; return result; }
-                double mu = Gravity.EarthGravitationalParameter, p = hm * hm / mu;
+                double mu = gravitationalParameter, p = hm * hm / mu;
                 var ev = Cross(velocity, h) * (1 / mu) - position * (1 / r);
                 double e = ev.Magnitude();
                 Vector3d x = e > 1e-8 ? ev * (1 / e) : position * (1 / r);

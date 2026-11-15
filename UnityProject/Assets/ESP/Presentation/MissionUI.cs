@@ -303,7 +303,7 @@ namespace ESP.Presentation
         {
             var focused = root?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
-            if (!editingText && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
+            if (!MissionSession.BlocksInput && !editingText && Application.isFocused && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
                 ToggleView();
             if (subscribedDirector != director)
             {
@@ -342,7 +342,7 @@ namespace ESP.Presentation
 
         private void ToggleView()
         {
-            if (director == null) return;
+            if (director == null || MissionSession.BlocksInput) return;
             if (director.IsMapView) director.GoToLaunch(director.SelectedSiteIndex);
             else director.ShowMap();
             Refresh();

@@ -37,7 +37,7 @@ namespace ESP.Presentation
                 center = Vector3.Lerp(center, bounds.center, 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime));
             }
             Mouse mouse = Mouse.current;
-            if (mouse == null || !Application.isFocused) dragging = false;
+            if (MissionSession.BlocksInput || mouse == null || !Application.isFocused) dragging = false;
             else
             {
                 Vector2 pointer = mouse.position.ReadValue();
