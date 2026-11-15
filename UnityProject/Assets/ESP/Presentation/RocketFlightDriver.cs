@@ -31,7 +31,8 @@ namespace ESP.Presentation
         public double ActualTimeRate => IsPaused || MissionSession.BlocksInput || simulation == null || simulation.State.IsLanded ? 0 : actualTimeRate;
         // Higher rates are only offered after the normal mission has verified
         // a sustained, unpowered orbit. Integration remains at the fixed step.
-        public bool CanHighWarp => OrbitVerified && simulation != null && !simulation.State.IsLanded &&
+        public bool CanHighWarp => simulation != null && (simulation.Primary != CelestialPrimary.Earth || OrbitVerified) &&
+            simulation.State.AltitudeMeters > 120000 && !simulation.State.IsLanded &&
             simulation.State.IsLaunched && !simulation.BoosterBurning && simulation.Throttle <= 0 &&
             !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight);
         public void ToggleAssistance() { if (IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
@@ -85,7 +86,7 @@ namespace ESP.Presentation
         // (no weather available, or an offline launch forced the standard atmosphere).
         public bool LaunchUsesWeather { get; private set; }
         public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • WASD or arrows to steer • " + TimeRate + "× selected" :
-            string.Format("{0} • pitch {1:F0}° • {2}× • {3}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (SimulationCatchingUp ? " • rate limited" : "");
+            string.Format("{0} • pitch {1:F0}° • {2}× • {3} SOI • {4}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, TimeRate, simulation.Primary, weatherSource) + (simulation.Celestial != null && !simulation.Celestial.HasReferenceData(simulation.State.MissionTime) ? " • approximate ephemeris" : "") + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (SimulationCatchingUp ? " • rate limited" : "");
         public RocketSimulation Simulation => simulation;
         public bool HasPosition => simulation != null;
         public DateTime LaunchUtc { get; private set; }
@@ -93,13 +94,14 @@ namespace ESP.Presentation
         {
             if (double.IsNaN(pitchDegrees) || double.IsInfinity(pitchDegrees)) throw new ArgumentOutOfRangeException(nameof(pitchDegrees));
             AssistanceEnabled = false;
-            if (simulation != null) simulation.PitchDegrees = Math.Max(0, Math.Min(90, pitchDegrees));
+            if (simulation != null) simulation.PitchDegrees = Math.Max(-90, Math.Min(90, pitchDegrees));
         }
         public double LatitudeDegrees { get; private set; }
         public double LongitudeDegrees { get; private set; }
 
         private void Awake()
         {
+            CelestialAssets.EnsureLoaded();
             if (director != null) director.FlightDriver = this;
             missionDocument = FindFirstObjectByType<UIDocument>();
             gameObject.AddComponent<MissionAudio>();
@@ -143,7 +145,7 @@ namespace ESP.Presentation
             launchSite = site;
             var preset = SelectedPreset;
             simulation = new RocketSimulation(StepSeconds, preset.Stages, atmosphere,
-                site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, preset.Boosters);
+                site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, preset.Boosters, now);
             MissionSession.Instance?.ConfigureSimulation(simulation);
             director.GetComponent<RocketExplosion>()?.Arm(simulation);
             director.GetComponent<RocketSmokeTrail>()?.Arm(simulation);
@@ -196,7 +198,7 @@ namespace ESP.Presentation
                 if (pitchInput != 0 || headingInput != 0)
                 {
                     AssistanceEnabled = false;
-                    simulation.PitchDegrees = Math.Max(0, Math.Min(90, simulation.PitchDegrees + pitchInput * 20 * Time.unscaledDeltaTime));
+                    simulation.PitchDegrees = Math.Max(-90, Math.Min(90, simulation.PitchDegrees + pitchInput * 20 * Time.unscaledDeltaTime));
                     simulation.HeadingDegrees = (simulation.HeadingDegrees + headingInput * 20 * Time.unscaledDeltaTime + 360) % 360;
                 }
                 float throttleInput = (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed ? 1 : 0) -
@@ -240,7 +242,7 @@ namespace ESP.Presentation
             if (simulation.HasUsedCheats || (MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight)) { InvalidateOrbitVerification(); return; }
             var state = simulation.State;
             bool unpowered = !simulation.BoosterBurning && (simulation.Throttle <= 0 || state.PropellantKg <= 0);
-            if (!state.IsLaunched || state.IsLanded || !unpowered)
+            if (simulation.Primary != CelestialPrimary.Earth || !state.IsLaunched || state.IsLanded || !unpowered)
             {
                 InvalidateOrbitVerification();
                 return;
@@ -265,7 +267,7 @@ namespace ESP.Presentation
             if (director.RocketVisual != null)
             {
                 director.RocketVisual.position = Vector3.up * director.RocketBaseHeightMeters;
-                float pressure = launchAtmosphere == null ? 101325 : (float)launchAtmosphere.Sample(Math.Max(-500, state.AltitudeMeters)).PressurePascals;
+                float pressure = (float)simulation.Physics.PressurePascals;
                 foreach (var plume in director.RocketVisual.GetComponentsInChildren<RocketPlume>(true))
                     plume.SetFlow(!state.IsLanded && (plume.solidBooster ? simulation.BoosterBurning : plume.stageIndex == state.StageIndex && state.IsLaunched && state.PropellantKg > 0) ? (plume.solidBooster ? 1 : (float)simulation.Throttle) : 0, pressure);
                 foreach (string name in new[] { "LeftSRB", "RightSRB" }) { var solid = director.RocketVisual.Find(name); if (solid != null) solid.gameObject.SetActive(simulation.BoosterAttached); }
@@ -275,16 +277,11 @@ namespace ESP.Presentation
                     if (view.booster != null) view.booster.gameObject.SetActive(state.StageIndex == 0);
                     view.SetThrottle(state.IsLaunched && !state.IsLanded && state.PropellantKg > 0 ? (float)simulation.Throttle : 0);
                 }
-                // Actual attitude is defined in ENU at the vehicle, not at the pad.
-                double pitch = simulation.ActualPitchDegrees * Math.PI / 180;
-                double heading = simulation.ActualHeadingDegrees * Math.PI / 180;
-                double vlat = geodetic.LatitudeRadians, vlon = geodetic.LongitudeRadians;
-                double east = Math.Cos(pitch) * Math.Sin(heading);
-                double north = Math.Cos(pitch) * Math.Cos(heading);
-                double up = Math.Sin(pitch);
-                double x = -Math.Sin(vlon) * east - Math.Sin(vlat) * Math.Cos(vlon) * north + Math.Cos(vlat) * Math.Cos(vlon) * up;
-                double y = Math.Cos(vlon) * east - Math.Sin(vlat) * Math.Sin(vlon) * north + Math.Cos(vlat) * Math.Sin(vlon) * up;
-                double z = Math.Cos(vlat) * north + Math.Sin(vlat) * up;
+                // Render the same thrust axis used by the force model, expressed
+                // in the Earth-fixed pad frame used by the camera-relative scene.
+                var axis = EarthFrames.InertialToEcef(simulation.ThrustDirectionInertial,
+                    Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+                double x = axis.X, y = axis.Y, z = axis.Z;
                 double localEast = -Math.Sin(lon) * x + Math.Cos(lon) * y;
                 double localNorth = -Math.Sin(lat) * Math.Cos(lon) * x - Math.Sin(lat) * Math.Sin(lon) * y + Math.Cos(lat) * z;
                 double localUp = Math.Cos(lat) * Math.Cos(lon) * x + Math.Cos(lat) * Math.Sin(lon) * y + Math.Sin(lat) * z;

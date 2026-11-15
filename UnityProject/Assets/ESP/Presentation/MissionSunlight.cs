@@ -67,16 +67,24 @@ namespace ESP.Presentation
             Shader.SetGlobalFloat("_EspNightLightsStrength", nightLights != null ? nightLightsStrength : 0);
             var site = LaunchSites.All[director.SelectedSiteIndex];
             double lat = site.Latitude * Math.PI / 180, lon = site.Longitude * Math.PI / 180;
-            LocalSunDirection = CameraRelativeCoordinates.FromEcef(SunEcef.X, SunEcef.Y, SunEcef.Z, 0, 0, 0, lat, lon).normalized;
+            Vector3d vesselSun = SunEcef;
             var position = EarthFrames.GeodeticToEcef(lat, lon, Math.Max(0, site.ElevationMeters));
             if (driver != null && driver.HasPosition)
             {
                 var state = driver.Simulation.State;
-                position = EarthFrames.InertialToEcef(state.Position, Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+                double earthAngle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime;
+                position = EarthFrames.InertialToEcef(state.Position, earthAngle);
+                var ephemeris=driver.Simulation.Celestial;
+                if(ephemeris != null)
+                {
+                    var relative=ephemeris.SunPosition(state.MissionTime)-state.Position;
+                    if(relative.Magnitude()>1) vesselSun=EarthFrames.InertialToEcef(relative,earthAngle).Normalize();
+                }
             }
+            LocalSunDirection = CameraRelativeCoordinates.FromEcef(vesselSun.X, vesselSun.Y, vesselSun.Z, 0, 0, 0, lat, lon).normalized;
             var location = EarthFrames.EcefToGeodetic(position);
             SolarElevationDegrees = SolarLighting.ElevationDegrees(SunEcef, location.LatitudeRadians, location.LongitudeRadians);
-            InEarthShadow = SolarLighting.IsOccluded(position, SunEcef);
+            InEarthShadow = SolarLighting.IsOccluded(position, vesselSun);
             // Both coordinate spaces are rendered in the same frame. Keep separate,
             // layer-isolated lights rather than rotating a shared Sun for the main view.
             if (mapSun == null)
