@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.InputSystem;
@@ -19,6 +20,9 @@ namespace ESP.Presentation
         private Label previewCaption, previewMarker;
         private Label throttleValue, vehicleNote, mapVehicleNote;
         private Label stageFuel, boosterFuel;
+        private VisualElement stagingPanel, compactFuel;
+        private readonly List<StagingFuelRow> stageRows = new List<StagingFuelRow>();
+        private StagingFuelRow boosterRow;
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
         private Label rocketMarker, mapMission;
         private readonly Label[] orbitMarkers = new Label[3];
@@ -203,6 +207,16 @@ namespace ESP.Presentation
             flightDetails.Add(informationBody);
             root.Add(flightDetails);
 
+            stagingPanel = Panel();
+            stagingPanel.name = "staging-stack";
+            stagingPanel.pickingMode = PickingMode.Ignore;
+            stagingPanel.style.width = 220;
+            Absolute(stagingPanel, 18, null, null, 288);
+            stagingPanel.Add(Label("STAGING", 10, Cyan, FontStyle.Bold));
+            boosterRow = new StagingFuelRow("solid-booster-stage");
+            stagingPanel.Add(boosterRow);
+            root.Add(stagingPanel);
+
             var dock = new VisualElement(); dock.name = "cockpit-bottom-strip";
             dock.pickingMode = PickingMode.Ignore;
             dock.style.height = 268;
@@ -219,7 +233,7 @@ namespace ESP.Presentation
             altitudeGauge.tooltip = "Altitude above the WGS84 ellipsoid";
             telemetry.Add(speedGauge); telemetry.Add(altitudeGauge);
             dock.Add(telemetry);
-            var fuel = Row(); fuel.name = "fuel-readout";
+            var fuel = Row(); compactFuel = fuel; fuel.name = "fuel-readout";
             fuel.pickingMode = PickingMode.Ignore;
             Absolute(fuel, 8, null, null, 0);
             stageFuel = Label("", 9, Text, FontStyle.Normal); stageFuel.name = "stage-fuel-readout";
@@ -354,6 +368,9 @@ namespace ESP.Presentation
             flightDetails.style.bottom = detailsBottom;
             flightDetails.style.maxHeight = Mathf.Max(80, height - detailsBottom - 24);
             flightDetails.style.width = Mathf.Min(400, Mathf.Max(160, width - 36));
+            stagingPanel.style.width = width < 760 ? 184 : 220;
+            stagingPanel.style.top = height < 460 ? new StyleLength(56) : new StyleLength(StyleKeyword.Auto);
+            stagingPanel.style.bottom = height < 460 ? new StyleLength(StyleKeyword.Auto) : new StyleLength(288);
             bool compact = width < 1050;
             bool narrow = width < 760;
             float gaugeSize = narrow ? 100 : compact ? 130 : 160;
@@ -477,6 +494,9 @@ namespace ESP.Presentation
             mapVehicleGroup.style.display = DisplayStyle.None;
             mapDetailsToggle.style.display = DisplayStyle.None;
             flightDetails.style.display = detailsOpen ? DisplayStyle.Flex : DisplayStyle.None;
+            bool showStaging = !isMap && !detailsOpen && flight != null;
+            stagingPanel.style.display = showStaging ? DisplayStyle.Flex : DisplayStyle.None;
+            compactFuel.style.display = showStaging ? DisplayStyle.None : DisplayStyle.Flex;
             weatherDetails.style.display = isMap && weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
             weatherDetails.style.bottom = 292;
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
@@ -556,6 +576,7 @@ namespace ESP.Presentation
             if (flight != null)
             {
                 var fuel = flight.FuelTelemetry;
+                if (showStaging) RefreshStaging(flight, fuel);
                 stageFuel.text = $"FUEL  S{fuel.StageNumber}  {fuel.StageKg:N0} kg";
                 boosterFuel.style.display = fuel.BoosterKg.HasValue ? DisplayStyle.Flex : DisplayStyle.None;
                 if (fuel.BoosterKg.HasValue)
@@ -588,6 +609,89 @@ namespace ESP.Presentation
             button.style.backgroundColor = selected ? new Color(.07f, .17f, .20f, .98f) : Raised;
             Border(button, selected ? new Color(.22f, .49f, .53f) : Edge);
         }
+        private void RefreshStaging(RocketFlightDriver flight, (int StageNumber, double StageKg, double? BoosterKg) fuel)
+        {
+            int stageCount = flight.StageCount;
+            while (stageRows.Count < stageCount)
+            {
+                var row = new StagingFuelRow($"staging-stage-{stageRows.Count + 1}");
+                stageRows.Add(row);
+                stagingPanel.Insert(stagingPanel.childCount - 1, row);
+            }
+
+            for (int i = 0; i < stageRows.Count; i++)
+            {
+                var row = stageRows[i];
+                row.style.display = i < stageCount ? DisplayStyle.Flex : DisplayStyle.None;
+                if (i >= stageCount) continue;
+                int stage = i + 1;
+                bool active = stage == fuel.StageNumber;
+                bool separated = stage < fuel.StageNumber;
+                double capacity = flight.StagePropellantCapacityKg(i);
+                double remaining = active ? fuel.StageKg : capacity;
+                string state = separated ? "SEPARATED" : !active ? "QUEUED" : remaining <= 0 ? "EMPTY" : "ACTIVE";
+                row.UpdateFuel($"STAGE {stage}", state, separated ? (double?)null : remaining, capacity, active);
+            }
+
+            double? boosterCapacity = flight.BoosterPropellantCapacityKg;
+            boosterRow.style.display = boosterCapacity.HasValue ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!boosterCapacity.HasValue) return;
+            bool burning = flight.Simulation?.BoosterBurning == true;
+            string boosterState = !fuel.BoosterKg.HasValue ? "SEPARATED" : fuel.BoosterKg.Value <= 0 ? "SPENT" : burning ? "BURNING" : "ATTACHED";
+            boosterRow.UpdateFuel("SOLID BOOSTERS", boosterState, fuel.BoosterKg, boosterCapacity.Value, burning);
+        }
+
+        private sealed class StagingFuelRow : VisualElement
+        {
+            private readonly Label title, status, readout;
+            private readonly VisualElement fill;
+
+            public StagingFuelRow(string name)
+            {
+                this.name = name;
+                pickingMode = PickingMode.Ignore;
+                style.marginTop = 5;
+                style.paddingLeft = style.paddingRight = 6;
+                style.paddingTop = style.paddingBottom = 3;
+                style.backgroundColor = Raised;
+                Radius(this, 3);
+                var heading = Row();
+                heading.pickingMode = PickingMode.Ignore;
+                heading.style.justifyContent = Justify.SpaceBetween;
+                title = Label("", 9, Text, FontStyle.Bold);
+                status = Label("", 8, Muted, FontStyle.Bold);
+                heading.Add(title);
+                heading.Add(status);
+                Add(heading);
+
+                var track = new VisualElement { pickingMode = PickingMode.Ignore };
+                track.style.height = 4;
+                track.style.backgroundColor = Edge;
+                track.style.overflow = Overflow.Hidden;
+                Radius(track, 2);
+                fill = new VisualElement { pickingMode = PickingMode.Ignore };
+                fill.style.height = Length.Percent(100);
+                track.Add(fill);
+                Add(track);
+                readout = Label("", 9, Muted, FontStyle.Normal);
+                Add(readout);
+            }
+
+            public void UpdateFuel(string label, string state, double? remaining, double capacity, bool active)
+            {
+                float fraction = remaining.HasValue && capacity > 0
+                    ? Mathf.Clamp01((float)(remaining.Value / capacity)) : 0f;
+                title.text = label;
+                title.style.color = remaining.HasValue ? Text : Muted;
+                status.text = state;
+                status.style.color = active ? Amber : Muted;
+                fill.style.backgroundColor = active ? Cyan : Muted;
+                fill.style.width = Length.Percent(100 * fraction);
+                readout.text = remaining.HasValue ? $"{remaining.Value:N0} kg  ·  {fraction:P0}" : "—";
+                Border(this, active ? Amber : Edge);
+            }
+        }
+
         private static Label Label(string text, int size, Color color, FontStyle weight)
         {
             var label = new Label(text);
