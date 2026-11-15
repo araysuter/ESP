@@ -49,6 +49,7 @@ Shader "ESP/Continuous Atmosphere"
                 float3 origin = _CameraPlanet.xyz;
                 float3 ray = normalize(_ForwardPlanet.xyz +
                     input.screen.x * _ViewParams.x * _ViewParams.y * _RightPlanet.xyz +
+                    // Match the GPU projection flip when URP renders to a Metal target.
                     input.screen.y * _ProjectionParams.x * _ViewParams.x * _UpPlanet.xyz);
                 float2 outer = IntersectEllipsoid(origin, ray, EarthRadii + .1);
                 float begin = max(0, outer.x), end = outer.y;
@@ -86,6 +87,9 @@ Shader "ESP/Continuous Atmosphere"
                 float scatter = (1 - exp(-opticalDepth.b * 2.5)) * litFraction * phase;
                 float3 color = float3(.26, .48, .90) * scatter;
                 float alpha = 1 - exp(-dot(opticalDepth, float3(.21, .72, .07)));
+                // Keep geographic imagery readable beneath this artistic air layer.
+                // Sky rays retain full extinction; this is not calibrated radiometry.
+                if (hitsGround) { color *= .45; alpha *= .6; }
                 if (!hitsGround)
                 {
                     float height = max(0, (length(origin / EarthRadii) - 1) * 6.371);

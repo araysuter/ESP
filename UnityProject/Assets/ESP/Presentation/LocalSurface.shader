@@ -49,13 +49,25 @@ Shader "ESP/Local Surface Imagery"
                 float edge = min(min(patchUv.x, patchUv.y), min(1 - patchUv.x, 1 - patchUv.y));
                 half alpha = imagery.a * _Opacity * smoothstep(0, .08, edge);
                 clip(alpha - .002);
-                float sun = dot(normalize(input.normalWS), normalize(_SunDirection.xyz));
+                float3 normal = normalize(input.normalWS);
+                float sun = dot(normal, normalize(_SunDirection.xyz));
                 half daylight = smoothstep(-.08, .15, sun);
                 half3 color = imagery.rgb * (.015 + _SunColor.rgb * max(0, sun));
                 // Presentation-only aerial perspective, not sampled visibility/weather.
-                float distanceMeters = distance(input.positionWS, _WorldSpaceCameraPos);
-                half haze = min(.65, daylight * (1 - exp(-distanceMeters / 60000)) * exp(-max(_CameraAltitude, 0) / 18000));
-                color = lerp(color, half3(.16, .32, .52), haze);
+                // The overlay runs after Base-camera atmosphere, so its distant
+                // ground must receive its own dense, low-angle air path. Keep it
+                // opaque: fading alpha would expose the same aliased globe below.
+                float3 towardCamera = _WorldSpaceCameraPos - input.positionWS;
+                float distanceMeters = length(towardCamera);
+                float airDensity = exp(-max(_CameraAltitude, 0) / 18000);
+                float baseHaze = (1 - exp(-distanceMeters / 60000)) * airDensity;
+                float viewElevation = saturate(dot(normal, towardCamera / max(distanceMeters, .001)));
+                float grazing = 1 - smoothstep(.015, .12, viewElevation);
+                // No added horizon haze inside 400 m. It becomes strong only
+                // beyond the detailed pad footprint and near the visual horizon.
+                float horizonHaze = grazing * smoothstep(400, 3500, distanceMeters) * airDensity;
+                half haze = daylight * min(.985, 1 - (1 - baseHaze) * (1 - horizonHaze));
+                color = lerp(color, half3(.26, .48, .90), haze);
                 return half4(color, alpha);
             }
             ENDHLSL
