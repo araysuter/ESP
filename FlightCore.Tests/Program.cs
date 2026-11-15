@@ -24,6 +24,8 @@ namespace FlightCore.Tests
             SolarLightingTests.Run();
             CelestialFramesTests.Run();
             TestAtEarthSurface();
+            TestAt100KmAltitude();
+            TestSignedAxes();
             TestOffAxisPosition();
             TestDistanceDoubling();
             TestInvalidInputs();
@@ -50,21 +52,10 @@ namespace FlightCore.Tests
             const double expectedX = -9.79828548;
             const double tolerance = 1e-8; // Tolerance for numerical precision
             
-            if (Math.Abs(acceleration.X - expectedX) > tolerance)
-            {
-                throw new InvalidOperationException($"Expected X acceleration of {expectedX}, but got {acceleration.X}");
-            }
-            
-            if (Math.Abs(acceleration.Y) > tolerance)
-            {
-                throw new InvalidOperationException($"Expected Y acceleration to be near zero, but got {acceleration.Y}");
-            }
-            
-            if (Math.Abs(acceleration.Z) > tolerance)
-            {
-                throw new InvalidOperationException($"Expected Z acceleration to be near zero, but got {acceleration.Z}");
-            }
-            
+            AssertNear(acceleration.X, expectedX, tolerance, "Surface X");
+            AssertNear(acceleration.Y, 0.0, tolerance, "Surface Y");
+            AssertNear(acceleration.Z, 0.0, tolerance, "Surface Z");
+
             Console.WriteLine($"  ✓ At Earth surface: acceleration = {acceleration}");
         }
 
@@ -86,7 +77,7 @@ namespace FlightCore.Tests
             
             // Check that acceleration points in the opposite direction of position
             double dotProduct = acceleration.X * position.X + acceleration.Y * position.Y + acceleration.Z * position.Z;
-            if (dotProduct > 0)
+            if (double.IsNaN(dotProduct) || double.IsInfinity(dotProduct) || dotProduct >= 0)
             {
                 throw new InvalidOperationException($"Acceleration and position vectors should point in opposite directions. Dot product: {dotProduct}");
             }
@@ -95,11 +86,8 @@ namespace FlightCore.Tests
             double expectedMagnitude = Gravity.EarthGravitationalParameter / (positionMagnitude * positionMagnitude);
             double tolerance = 1e-10; // Tolerance for numerical precision
             
-            if (Math.Abs(accelerationMagnitude - expectedMagnitude) > tolerance)
-            {
-                throw new InvalidOperationException($"Acceleration magnitude {accelerationMagnitude} does not match expected {expectedMagnitude}");
-            }
-            
+            AssertNear(accelerationMagnitude, expectedMagnitude, tolerance, "Off-axis magnitude");
+
             // Strengthen test: Compare normalized vectors
             // The normalized acceleration vector should be the negative of the normalized position vector
             var normalizedPosition = position * (1.0 / positionMagnitude);
@@ -108,21 +96,10 @@ namespace FlightCore.Tests
             // Check that normalized acceleration equals -normalized position within tolerance
             double normalizationTolerance = 1e-12; // Very strict tolerance for normalization
             
-            if (Math.Abs(normalizedAcceleration.X + normalizedPosition.X) > normalizationTolerance)
-            {
-                throw new InvalidOperationException($"Normalized acceleration X component does not match -normalized position X: {normalizedAcceleration.X} vs {-normalizedPosition.X}");
-            }
-            
-            if (Math.Abs(normalizedAcceleration.Y + normalizedPosition.Y) > normalizationTolerance)
-            {
-                throw new InvalidOperationException($"Normalized acceleration Y component does not match -normalized position Y: {normalizedAcceleration.Y} vs {-normalizedPosition.Y}");
-            }
-            
-            if (Math.Abs(normalizedAcceleration.Z + normalizedPosition.Z) > normalizationTolerance)
-            {
-                throw new InvalidOperationException($"Normalized acceleration Z component does not match -normalized position Z: {normalizedAcceleration.Z} vs {-normalizedPosition.Z}");
-            }
-            
+            AssertNear(normalizedAcceleration.X, -normalizedPosition.X, normalizationTolerance, "Off-axis direction X");
+            AssertNear(normalizedAcceleration.Y, -normalizedPosition.Y, normalizationTolerance, "Off-axis direction Y");
+            AssertNear(normalizedAcceleration.Z, -normalizedPosition.Z, normalizationTolerance, "Off-axis direction Z");
+
             Console.WriteLine($"  ✓ Off-axis position: acceleration = {acceleration}, magnitude = {accelerationMagnitude:F10}");
         }
 
@@ -149,61 +126,70 @@ namespace FlightCore.Tests
             double actualRatio = acceleration2.X / acceleration1.X;
             double tolerance = 1e-12;
             
-            if (Math.Abs(actualRatio - expectedRatio) > tolerance)
-            {
-                throw new InvalidOperationException($"Expected acceleration ratio of {expectedRatio}, but got {actualRatio}");
-            }
-            
+            AssertNear(actualRatio, expectedRatio, tolerance, "Distance-doubling ratio");
+
             Console.WriteLine($"  ✓ Distance-doubling test: ratio = {actualRatio:F12} (expected ~0.25)");
         }
 
-        /// <summary>
-        /// Test case: Invalid inputs should throw exceptions.
-        /// </summary>
+        static void TestAt100KmAltitude()
+        {
+            var acceleration = Gravity.Acceleration(new Vector3d(6478137.0, 0.0, 0.0));
+            // Independent numeric reference for the documented point-mass example.
+            AssertNear(acceleration.X, -9.498117091820768, 1e-12, "100 km X");
+            AssertNear(acceleration.Y, 0.0, 1e-12, "100 km Y");
+            AssertNear(acceleration.Z, 0.0, 1e-12, "100 km Z");
+        }
+
+        static void TestSignedAxes()
+        {
+            const double radius = 6378137.0;
+            const double expectedMagnitude = 9.7982854791873;
+            for (int axis = 0; axis < 3; axis++)
+            {
+                foreach (double sign in new[] { -1.0, 1.0 })
+                {
+                    var position = new Vector3d(axis == 0 ? sign * radius : 0.0,
+                        axis == 1 ? sign * radius : 0.0, axis == 2 ? sign * radius : 0.0);
+                    var acceleration = Gravity.Acceleration(position);
+                    AssertNear(acceleration.X, axis == 0 ? -sign * expectedMagnitude : 0.0, 1e-12, "Signed axis X");
+                    AssertNear(acceleration.Y, axis == 1 ? -sign * expectedMagnitude : 0.0, 1e-12, "Signed axis Y");
+                    AssertNear(acceleration.Z, axis == 2 ? -sign * expectedMagnitude : 0.0, 1e-12, "Signed axis Z");
+                }
+            }
+        }
+
+        static void AssertNear(double actual, double expected, double tolerance, string label)
+        {
+            if (double.IsNaN(actual) || double.IsInfinity(actual) || Math.Abs(actual - expected) > tolerance)
+                throw new InvalidOperationException($"{label}: expected {expected}, got {actual}");
+        }
+
+        static void AssertArgumentException(Action action, string label)
+        {
+            try
+            {
+                action();
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+            throw new InvalidOperationException($"{label}: expected ArgumentException");
+        }
+
         static void TestInvalidInputs()
         {
-            Console.WriteLine("Testing invalid inputs...");
-            
-            // Test with zero vector
-            try
+            // Finite zero vectors are valid vectors, but undefined positions for gravity.
+            AssertArgumentException(() => Gravity.Acceleration(Vector3d.Zero), "Gravity zero position");
+            AssertArgumentException(() => Gravity.Acceleration(default(Vector3d)), "Gravity default position");
+
+            // Nonfinite components are rejected by construction, before gravity is called.
+            foreach (double invalid in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity })
             {
-                var zeroPosition = new Vector3d(0.0, 0.0, 0.0);
-                var acceleration = Gravity.Acceleration(zeroPosition);
-                throw new InvalidOperationException("Should have thrown exception for zero vector input");
+                AssertArgumentException(() => new Vector3d(invalid, 1.0, 1.0), "Vector X");
+                AssertArgumentException(() => new Vector3d(1.0, invalid, 1.0), "Vector Y");
+                AssertArgumentException(() => new Vector3d(1.0, 1.0, invalid), "Vector Z");
             }
-            catch (ArgumentException)
-            {
-                // This is expected
-                Console.WriteLine("  ✓ Zero vector correctly rejected");
-            }
-            
-            // Test with NaN values
-            try
-            {
-                var nanPosition = new Vector3d(double.NaN, 1.0, 1.0);
-                var acceleration = Gravity.Acceleration(nanPosition);
-                throw new InvalidOperationException("Should have thrown exception for NaN input");
-            }
-            catch (ArgumentException)
-            {
-                // This is expected
-                Console.WriteLine("  ✓ NaN vector correctly rejected");
-            }
-            
-            // Test with infinity values
-            try
-            {
-                var infPosition = new Vector3d(double.PositiveInfinity, 1.0, 1.0);
-                var acceleration = Gravity.Acceleration(infPosition);
-                throw new InvalidOperationException("Should have thrown exception for infinity input");
-            }
-            catch (ArgumentException)
-            {
-                // This is expected
-                Console.WriteLine("  ✓ Infinity vector correctly rejected");
-            }
-            
-            Console.WriteLine("  ✓ Invalid inputs properly handled");
         }
 
         static void TestCircularOrbit()
