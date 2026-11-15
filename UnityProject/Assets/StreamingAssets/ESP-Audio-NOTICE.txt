@@ -1,0 +1,7 @@
+ESP mission audio
+
+Magic Space by CodeManu
+https://opengameart.org/content/magic-space
+Dedicated to the public domain under CC0 1.0 Universal.
+https://creativecommons.org/publicdomain/zero/1.0/
+ESP uses a trimmed and crossfaded loop encoded as Ogg Vorbis.
