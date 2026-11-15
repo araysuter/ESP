@@ -20,6 +20,7 @@ public static class BuildMission
             buildPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../..", buildPath));
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
+        ESP.Presentation.Editor.NasaImageryTimeChecks.Validate();
         WeatherHeightChecks.Validate();
         ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;

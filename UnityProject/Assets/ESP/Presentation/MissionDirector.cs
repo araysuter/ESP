@@ -89,7 +89,7 @@ namespace ESP.Presentation
                 picked ? picker.Longitude : site.Longitude, forceRefresh);
         }
         public Texture RegionalImage => regional != null ? regional.Image : null;
-        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedDescription + " • " + mapLayers.Status : "NASA Blue Marble";
+        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedDescription + " • " + mapLayers.Freshness + " • " + mapLayers.Status : "NASA Blue Marble";
         public string NasaStatus => "NASA EONET: " + (events != null ? events.Status : "unavailable") + "\nNASA DONKI: " + (spaceWeather != null ? spaceWeather.Status : "unavailable");
         public double AltitudeMeters => FlightDriver?.AltitudeMeters ?? 0;
         public double SpeedMetersPerSecond => FlightDriver?.SpeedMetersPerSecond ?? 0;

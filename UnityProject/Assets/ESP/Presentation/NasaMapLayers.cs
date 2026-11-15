@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 using UnityEngine;
@@ -26,11 +27,29 @@ namespace ESP.Presentation
         UnityWebRequest activeRequest;
         string status="Loading NASA layer availability…", shown="Offline Blue Marble composite";
         string requestedDate="";
-        int selected=-1, displayed=-1, generation;
+        int selected=1, displayed=-1, generation; // Start with the latest observed clouds; Blue Marble remains the offline fallback.
         Texture2D downloaded, cloudDownloaded;
+        sealed class CachedLayer
+        {
+            public Texture2D Texture;
+            public DateTime RequestedDay, First, Last;
+            public string LayerId, Description, Status;
+        }
+        CachedLayer[] cachedLayers;
+        int loadingIndex=-1;
         bool available;
+        DateTime observationFirst, observationLast;
         public string Status=>status;
+        // Compute against the wall clock so retained observations age even when a refresh fails.
+        public string Freshness => displayed < 0 ? "Offline historical surface" :
+            NasaImageryTime.Describe(observationFirst, observationLast, DateTime.UtcNow);
         public int SelectedIndex=>selected;
+        public int DisplayedIndex=>displayed;
+        public bool IsLoading=>loadingIndex>=0 || (metadataLoading && selected>=0);
+        static string ModeName(int index)=>index<0?"SURFACE":index==0?"SATELLITE":"CLOUDS";
+        public string SelectionStatus=>selected!=displayed
+            ? "Showing "+ModeName(displayed)+" • "+(IsLoading?"loading ":"requested ")+ModeName(selected)
+            : IsLoading?"Refreshing "+ModeName(selected)+"…":"";
         public string DisplayedDescription=>shown;
         public string DisplayedLayerId { get; private set; }="BlueMarble_ShadedRelief_Bathymetry";
         public string DisplayedDate { get; private set; }="";
@@ -43,11 +62,18 @@ namespace ESP.Presentation
             Shader.SetGlobalFloat("_EspObservedCloudsEnabled", CloudsVisible ? 1 : 0);
         }
         void OnDisable() { Shader.SetGlobalFloat("_EspObservedCloudsEnabled", 0); }
-        IEnumerator Start(){defaults=new string[layerIds.Length];timeDomains=new string[layerIds.Length];yield return StartCoroutine(Availability());StartCoroutine(AutoRefresh());}
+        IEnumerator Start(){defaults=new string[layerIds.Length];timeDomains=new string[layerIds.Length];cachedLayers=new CachedLayer[layerIds.Length];yield return StartCoroutine(Availability());StartCoroutine(AutoRefresh());}
 
+        public void RefreshLatest()
+        {
+            requestedDate="";
+            if(!metadataLoading && defaults!=null) StartCoroutine(Availability());
+        }
         IEnumerator Availability()
         {
+            if(metadataLoading)yield break;
             metadataLoading=true;
+            bool parsedMetadata=false;
             using(var req=UnityWebRequest.Get("https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities"))
             {
                 req.timeout=20;yield return req.SendWebRequest();
@@ -59,37 +85,60 @@ namespace ESP.Presentation
                         var layer=doc.Descendants().FirstOrDefault(e=>e.Name.LocalName=="Layer"&&e.Elements().Any(n=>n.Name.LocalName=="Name"&&n.Value==layerIds[i]));
                         var dim=layer?.Elements().FirstOrDefault(e=>e.Name.LocalName=="Dimension"&&(string)e.Attribute("name")=="time");
                         timeDomains[i]=dim?.Value;
-                        defaults[i]=(string)dim?.Attribute("default");
-                        if(TryDay(defaults[i],out var day)&&day>DateTime.UtcNow.Date)defaults[i]=DateTime.UtcNow.ToString("yyyy-MM-dd");
+                        // The default is advisory. Select the newest explicitly advertised day
+                        // at/before UTC today, respecting gaps and interval cadence.
+                        var latest=NasaImageryTime.LatestDay(timeDomains[i],DateTime.UtcNow);
+                        defaults[i]=latest.HasValue?NasaImageryTime.FormatDay(latest.Value):null;
                     }
-                    available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'");
+                    parsedMetadata=true;available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'",CultureInfo.InvariantCulture);
                     Debug.Log("ESP_NASA_CAPABILITIES_OK "+string.Join(",",defaults));
                 }catch(Exception){status="NASA metadata could not be read — previous map retained";}
             }
-            if(selected>=0&&available)Select(selected);
-            else if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0&&available)Select(0);
+            if(!parsedMetadata)yield break;
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0&&available)Select(0);
+            else if(selected>=0&&available)Select(selected,true);
         }
         static bool TryDay(string value,out DateTime date)=>DateTime.TryParseExact(value,"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out date);
         bool Advertised(int index,DateTime day)
         {
-            if(string.IsNullOrEmpty(timeDomains[index]))return false;
-            foreach(var span in timeDomains[index].Split(',')){
-                var parts=span.Trim().Split('/');
-                if(parts.Length==1&&TryDay(parts[0],out var exact)&&exact==day)return true;
-                if(parts.Length>=2&&TryDay(parts[0],out var first)&&TryDay(parts[1],out var last)&&day>=first&&day<=last)return true;
-            }
-            return false;
+            return NasaImageryTime.Contains(timeDomains[index],day);
         }
-        public void Select(int index)
+        public void Select(int index, bool forceReload=false)
         {
             if(index < -1 || index>=layerIds.Length)return;
+            // Repeated clicks on a loading mode must not starve its request.
+            if(!forceReload && selected==index && loadingIndex==index)return;
             generation++;selected=index;
-            activeRequest?.Abort();
-            if(index<0){if(clouds)clouds.Hide();displayed=-1;earth.material.mainTexture=offlineTexture;if(downloaded)Destroy(downloaded);downloaded=null;shown="Offline Blue Marble composite — historical fallback, not current observations";status="Bundled fallback — not current weather";DisplayedLayerId="BlueMarble_ShadedRelief_Bathymetry";DisplayedDate="";LayerChanged?.Invoke();return;}
+            activeRequest?.Abort();activeRequest=null;loadingIndex=-1;
+            if(index<0){if(clouds)clouds.Hide();displayed=-1;earth.material.mainTexture=offlineTexture;shown="Offline Blue Marble composite — historical fallback, not current observations";status="Bundled fallback — not current weather";DisplayedLayerId="BlueMarble_ShadedRelief_Bathymetry";DisplayedDate="";LayerChanged?.Invoke();return;}
+            var cached=cachedLayers!=null?cachedLayers[index]:null;
+            // Keep texture, dates and provenance together. A cached cloud view can
+            // reappear immediately after Surface without depending on the network.
+            bool restored=cached!=null && cached.LayerId==layerIds[index] && Display(index,cached,true);
+            if(restored)LayerChanged?.Invoke();
             if(!available){status="Waiting for NASA availability…";if(!metadataLoading&&defaults!=null)StartCoroutine(Availability());return;}
             string date=string.IsNullOrWhiteSpace(requestedDate)?defaults[index]:requestedDate.Trim();
-            if(!TryDay(date,out var parsed)||parsed>DateTime.UtcNow.Date||!Advertised(index,parsed)){status="No verified date: use an advertised YYYY-MM-DD, no future dates";return;}
+            if(!TryDay(date,out var parsed)||parsed>DateTime.UtcNow.Date||!Advertised(index,parsed)){status="No verified date — previous map retained; use an advertised YYYY-MM-DD, no future dates";return;}
+            if(restored && !forceReload && cached.RequestedDay==parsed)return;
+            loadingIndex=index;
             StartCoroutine(Load(index,parsed,generation));
+        }
+        bool Display(int index,CachedLayer layer,bool fromCache)
+        {
+            if(index==1){
+                if(!clouds)clouds=earth.GetComponent<CloudShell>();
+                if(!clouds)clouds=earth.gameObject.AddComponent<CloudShell>();
+                if(!clouds.Show(layer.Texture,CloudShader))return false;
+                earth.material.mainTexture=offlineTexture;
+                cloudDownloaded=layer.Texture;
+            }else{
+                if(clouds)clouds.Hide();
+                earth.material.mainTexture=layer.Texture;downloaded=layer.Texture;
+            }
+            observationFirst=layer.First;observationLast=layer.Last;
+            DisplayedLayerId=layer.LayerId;DisplayedDate=NasaImageryTime.FormatDay(layer.Last);displayed=index;
+            shown=layer.Description;status=layer.Status+(fromCache?" • cached observations":"");
+            return true;
         }
         Texture2D OfflineCopy()
         {
@@ -104,27 +153,28 @@ namespace ESP.Presentation
         IEnumerator Load(int index,DateTime newest,int id)
         {
             bool cloudLayer=index==1;
+            int width=cloudLayer?4096:2048,height=width/2;
             // Satellite gaps retain Blue Marble; cloud gaps stay transparent above that base.
             // Cloud scalar values are decoded before any spatial interpolation.
-            var result=cloudLayer?new Texture2D(2048,1024,TextureFormat.RGBA32,true,true):OfflineCopy();
-            var pixels=cloudLayer?new Color32[2048*1024]:result.GetPixels32();
+            var result=cloudLayer?new Texture2D(width,height,TextureFormat.RGBA32,true,true):OfflineCopy();
+            var pixels=cloudLayer?new Color32[width*height]:result.GetPixels32();
             var covered=new bool[pixels.Length];
-            var cloudBlend=cloudLayer?new CloudShell.ObservationBlend(2048,1024):null;
+            var cloudBlend=cloudLayer?new CloudShell.ObservationBlend(width,height):null;
             DateTime first=DateTime.MaxValue,last=DateTime.MinValue;int successes=0,validPixels=0,unknownPixels=0;
             try{
                 int days=3;
                 for(int offset=0;offset<days;offset++){
                     var day=newest.AddDays(-offset);if(!Advertised(index,day))continue;
-                    string date=day.ToString("yyyy-MM-dd");
+                    string date=NasaImageryTime.FormatDay(day);
                     status="Loading NASA "+layerNames[index]+" "+date+" ("+(offset+1)+"/"+days+")…";
-                    string url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+UnityWebRequest.EscapeURL(layerIds[index])+"&STYLES=&CRS=EPSG%3A4326&BBOX=-90%2C-180%2C90%2C180&WIDTH=2048&HEIGHT=1024&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME="+date;
+                    string url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+UnityWebRequest.EscapeURL(layerIds[index])+"&STYLES=&CRS=EPSG%3A4326&BBOX=-90%2C-180%2C90%2C180&WIDTH="+width+"&HEIGHT="+height+"&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME="+date;
                     using(var req=UnityWebRequestTexture.GetTexture(url)){
                         activeRequest=req;req.timeout=20;yield return req.SendWebRequest();
                         if(activeRequest==req)activeRequest=null;
                         if(id!=generation)yield break;
                         if(req.result!=UnityWebRequest.Result.Success)continue;
                         var texture=DownloadHandlerTexture.GetContent(req);
-                        if(texture.width!=2048||texture.height!=1024){Destroy(texture);continue;}
+                        if(texture.width!=width||texture.height!=height){Destroy(texture);continue;}
                         var source=texture.GetPixels32();Destroy(texture);
                         Color32[] mask=null;
                         if(index==0){
@@ -137,7 +187,7 @@ namespace ESP.Presentation
                                 if(id!=generation)yield break;
                                 if(maskRequest.result!=UnityWebRequest.Result.Success)continue;
                                 var maskTexture=DownloadHandlerTexture.GetContent(maskRequest);
-                                if(maskTexture.width==2048&&maskTexture.height==1024)mask=maskTexture.GetPixels32();
+                                if(maskTexture.width==width&&maskTexture.height==height)mask=maskTexture.GetPixels32();
                                 Destroy(maskTexture);if(mask==null)continue;
                             }
                         }
@@ -162,28 +212,22 @@ namespace ESP.Presentation
                 result.SetPixels32(pixels);result.Apply(cloudLayer,false);
                 result.wrapModeU=TextureWrapMode.Repeat;result.wrapModeV=TextureWrapMode.Clamp;
                 result.filterMode=cloudLayer?FilterMode.Trilinear:FilterMode.Bilinear;
-                if(cloudLayer){
-                    if(!clouds)clouds=earth.GetComponent<CloudShell>();
-                    if(!clouds)clouds=earth.gameObject.AddComponent<CloudShell>();
-                    if(!clouds.Show(result,CloudShader)){status="Cloud renderer unavailable — previous map retained";yield break;}
-                    // True-color satellite imagery already contains clouds and day-swath
-                    // boundaries. Never double it beneath the independently decoded shell.
-                    earth.material.mainTexture=offlineTexture;
-                    if(downloaded)Destroy(downloaded);downloaded=null;
-                    if(cloudDownloaded)Destroy(cloudDownloaded);cloudDownloaded=result;result=null;
-                }else{
-                    if(clouds)clouds.Hide();
-                    earth.material.mainTexture=result;if(downloaded)Destroy(downloaded);downloaded=result;result=null;
-                }
-                DisplayedLayerId=layerIds[index];DisplayedDate=last.ToString("yyyy-MM-dd");displayed=index;
-                string dateRange=first.ToString("yyyy-MM-dd")+(first!=last?" to "+last.ToString("yyyy-MM-dd"):"");
-                shown=(cloudLayer?"Smoothed cloud observation blend":"Satellite true-color temporal mosaic")+" "+dateRange+" UTC • "+(cloudLayer?"Blue Marble ground; transparent unsampled areas; 10 km display height":"Blue Marble fills no-data")+"; not instantaneous";
-                double coverage=AreaCoverage(covered,2048,1024);
-                status="NASA GIBS • "+dateRange+" UTC • "+coverage.ToString("F1")+"% area observed / "+(100-coverage).ToString("F1")+"% missing • fetched "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'")+" • "+(cloudLayer?"smoothed dated cloud blend":"historical fallback in gaps");
-                LayerChanged?.Invoke();Debug.Log("ESP_NASA_LAYER_OK "+layerIds[index]+" "+DisplayedDate);
-                if(cloudLayer)Debug.Log("ESP_CLOUD_SHELL_OK valid="+validPixels+" missing="+(pixels.Length-validPixels)+" observedAreaPercent="+coverage.ToString("F3")+" unknown="+unknownPixels+" days="+successes+" range="+dateRange+" composite=normalized-observation-blend base=BlueMarble");
+                string dateRange=NasaImageryTime.FormatDay(first)+(first!=last?" to "+NasaImageryTime.FormatDay(last):"");
+                double coverage=AreaCoverage(covered,width,height);
+                var next=new CachedLayer {
+                    Texture=result,RequestedDay=newest,First=first,Last=last,LayerId=layerIds[index],
+                    Description=(cloudLayer?"Newest-valid daily cloud composite":"Satellite true-color temporal mosaic")+" "+dateRange+" UTC • "+(cloudLayer?"Blue Marble ground; transparent unsampled areas; 10 km display height":"Blue Marble fills no-data")+"; not instantaneous",
+                    Status="NASA GIBS • "+dateRange+" UTC • "+coverage.ToString("F1")+"% area observed / "+(100-coverage).ToString("F1")+"% missing • fetched "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'",CultureInfo.InvariantCulture)+" • "+(cloudLayer?"dated cloud observations; newest valid pixel":"historical fallback in gaps")
+                };
+                if(!Display(index,next,false)){status="Cloud renderer unavailable — previous map retained";yield break;}
+                var previous=cachedLayers[index];cachedLayers[index]=next;result=null;
+                if(previous!=null && previous.Texture)Destroy(previous.Texture);
+                loadingIndex=-1;
+                LayerChanged?.Invoke();
+                Debug.Log("ESP_NASA_LAYER_OK "+layerIds[index]+" "+DisplayedDate);
+                if(cloudLayer)Debug.Log("ESP_CLOUD_SHELL_OK valid="+validPixels+" missing="+(pixels.Length-validPixels)+" observedAreaPercent="+coverage.ToString("F3")+" unknown="+unknownPixels+" days="+successes+" range="+dateRange+" composite=newest-valid-daily base=BlueMarble");
                 if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0)StartCoroutine(CaptureTest(index));
-            }finally{if(result)Destroy(result);}
+            }finally{if(result)Destroy(result);if(id==generation)loadingIndex=-1;}
         }
         static double AreaCoverage(bool[] covered,int width,int height)
         {
@@ -198,15 +242,15 @@ namespace ESP.Presentation
         {
             if (!showLegacyUI) return;
             float y=Screen.height-170;GUI.Box(new Rect(16,y,Screen.width-32,154),GUIContent.none);
-            GUI.Label(new Rect(30,y+8,Screen.width-60,22),shown);
+            GUI.Label(new Rect(30,y+8,Screen.width-60,22),shown+" • "+Freshness);
             if(GUI.Button(new Rect(30,y+35,130,28),"Offline globe"))Select(-1);
             GUI.enabled=true;
             for(int i=0;i<layerNames.Length;i++)if(GUI.Button(new Rect(170+i*185,y+35,175,28),layerNames[i]))Select(i);
             GUI.enabled=true;
             GUI.Label(new Rect(30,y+70,110,22),"Date (optional)");requestedDate=GUI.TextField(new Rect(140,y+70,120,24),requestedDate,10);
-            if(GUI.Button(new Rect(270,y+70,140,24),"Latest date")){requestedDate="";if(selected>=0)Select(selected);}
+            if(GUI.Button(new Rect(270,y+70,140,24),"Refresh latest"))RefreshLatest();
             if(GUI.Button(new Rect(420,y+70,90,24),"Load date")&&selected>=0)Select(selected);
-            if(displayed==1)GUI.Label(new Rect(560,y+35,330,65),"White = smoothed dated cloud fractions\nTransparent = clear or unsampled areas\nRepresentative display height: 10 km");
+            if(displayed==1)GUI.Label(new Rect(560,y+35,330,65),"White = dated observed cloud fractions\nTransparent = clear or unsampled areas\nRepresentative display height: 10 km");
             autoRefresh=GUI.Toggle(new Rect(900,y+40,240,25),autoRefresh,"Refresh latest imagery every 15 min");
             GUI.Label(new Rect(30,y+100,Screen.width-60,22),status);
             GUI.Label(new Rect(30,y+125,Screen.width-60,22),"Drag to orbit • Scroll to zoom • Satellite composites are not live wind/forecast data; no flight forces applied.");
@@ -219,6 +263,6 @@ namespace ESP.Presentation
             if(index==0)Select(1);
             else { Select(-1);Debug.Log("ESP_NASA_OFFLINE_RESTORE_OK"); }
         }
-        void OnDestroy(){activeRequest?.Abort();StopAllCoroutines();if(downloaded)Destroy(downloaded);if(cloudDownloaded)Destroy(cloudDownloaded);}
+        void OnDestroy(){activeRequest?.Abort();StopAllCoroutines();if(cachedLayers!=null)foreach(var cached in cachedLayers)if(cached!=null && cached.Texture)Destroy(cached.Texture);}
     }
 }
