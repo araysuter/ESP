@@ -32,7 +32,8 @@ namespace ESP.Presentation
             mesh.uv = new[] { new Vector2(0.5f-uHalf, 0.5f-vHalf), new Vector2(0.5f-uHalf, 0.5f+vHalf),
                 new Vector2(0.5f+uHalf, 0.5f+vHalf), new Vector2(0.5f+uHalf, 0.5f-vHalf) };
             mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-            mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            // URP Lit needs a tangent basis; missing tangents rendered the sunlit imagery black.
+            mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();
             owned.GroundMesh = mesh;
             var plane = new GameObject("Visual ground (2 km)");
             plane.transform.SetParent(root.transform, false);

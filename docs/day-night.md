@@ -19,7 +19,7 @@ a forward-ray WGS84 intersection suppresses direct light on an eclipsed vehicle.
 The analytic shadow includes altitude: a vehicle above the night-side limb may
 still receive sunlight. Low ambient fill preserves readability at night; sky
 color blends through approximate twilight and fades to space with altitude.
-Ground imagery now uses a lit runtime material; the orbit-line template stays unlit.
+Ground imagery uses a fresh lit runtime material and generated mesh tangents; the orbit-line template stays unlit.
 Cloud fraction remains observational data and is not changed by the lighting.
 
 Numerical checks are part of `dotnet run --project FlightCore.Tests -c Release`:
@@ -42,3 +42,8 @@ mission UTC, pause freezing and reset to live UTC. Its lighting-only timestamp
 overrides are visibly labeled; they are not historical flight checkpoints.
 Windows and Intel player validation remain unperformed. The VM's UI clipping at
 1440x900 is tracked separately from lighting; review captures also use 3000x1800.
+
+Rendered review confirmed day/night agreement on the map, both pads and the
+Earth/vehicle view at 151–154 km. The packaged rehearsal logged
+`ESP_DAY_NIGHT_OK`. Adding ground-mesh tangents corrected a black daylight
+surface found during the review.
