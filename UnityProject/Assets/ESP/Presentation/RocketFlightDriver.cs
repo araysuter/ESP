@@ -34,6 +34,31 @@ namespace ESP.Presentation
         }
         private string weatherSource = "Standard atmosphere (no launch yet)";
         private const double StepSeconds = .02;
+        private static readonly (StageDefinition[] Stages, SolidBoosterDefinition Boosters)[] VehiclePresets =
+        {
+            (StageDefinition.DemoStages(), null),
+            (RealVehiclePresets.BuildStarshipStages(), null),
+            (RealVehiclePresets.BuildSlsStages(), RealVehiclePresets.BuildSlsBoosterParameters())
+        };
+        private (StageDefinition[] Stages, SolidBoosterDefinition Boosters) SelectedPreset =>
+            VehiclePresets[director != null ? director.VehicleIndex : 0];
+
+        public (int StageNumber, double StageKg, double? BoosterKg) FuelTelemetry
+        {
+            get
+            {
+                if (simulation == null)
+                {
+                    var preset = SelectedPreset;
+                    return (1, preset.Stages[0].PropellantKg, preset.Boosters?.PropellantKg);
+                }
+
+                var state = simulation.State;
+                return (state.StageIndex + 1, state.PropellantKg,
+                    simulation.BoosterAttached ? simulation.BoosterPropellantKg : (double?)null);
+            }
+        }
+
         public bool CanLaunch => !started;
         public string Status => simulation != null ? (OrbitVerified ? "Orbit verified (60 s unpowered)" : simulation.State.Status) : "Ready — " + (AssistanceEnabled ? "assisted" : "manual") + " • " + TimeRate + "× selected";
         public double AltitudeMeters => simulation != null ? simulation.State.AltitudeMeters : 0;
@@ -42,7 +67,7 @@ namespace ESP.Presentation
         public float Throttle => simulation != null ? (float)simulation.Throttle : pendingThrottle;
         public string WeatherSourceLabel => weatherSource;
         public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • WASD or arrows to steer • " + TimeRate + "× selected" :
-            string.Format("{0} • pitch {1:F0}° • Stage {2} • Fuel {3:N0} kg • {4}× • {5}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, simulation.State.StageIndex + 1, simulation.State.PropellantKg, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (accumulator >= StepSeconds ? " • simulation catching up" : "");
+            string.Format("{0} • pitch {1:F0}° • {2}× • {3}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (accumulator >= StepSeconds ? " • simulation catching up" : "");
         public RocketSimulation Simulation => simulation;
         public bool HasPosition => simulation != null;
         public DateTime LaunchUtc { get; private set; }
@@ -89,8 +114,9 @@ namespace ESP.Presentation
             launchAtmosphere = atmosphere;
             weatherSource = atmosphere.SourceDescription;
             launchSite = site;
-            simulation = new RocketSimulation(StepSeconds, (director.VehicleIndex == 1 ? RealVehiclePresets.BuildStarshipStages() : director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsStages() : StageDefinition.DemoStages()), atmosphere,
-                site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsBoosterParameters() : null);
+            var preset = SelectedPreset;
+            simulation = new RocketSimulation(StepSeconds, preset.Stages, atmosphere,
+                site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, preset.Boosters);
             MissionSession.Instance?.ConfigureSimulation(simulation);
             if (simulation.GravityMultiplier != 1) AssistanceEnabled = false;
             guidance = new AssistedAscent(director.VehicleIndex == 1 ? 220000 : director.VehicleIndex == 2 ? 120000 : 160000, director.VehicleIndex == 2 ? 3 : 2);
