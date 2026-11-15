@@ -37,6 +37,12 @@ namespace ESP.Presentation
         public event Action LayerChanged;
         bool autoRefresh=true;
         IEnumerator AutoRefresh(){while(true){yield return new WaitForSecondsRealtime(900);if(!autoRefresh)continue;yield return StartCoroutine(Availability());}}
+        void LateUpdate()
+        {
+            Shader.SetGlobalTexture("_EspObservedClouds", cloudDownloaded ? cloudDownloaded : Texture2D.blackTexture);
+            Shader.SetGlobalFloat("_EspObservedCloudsEnabled", CloudsVisible ? 1 : 0);
+        }
+        void OnDisable() { Shader.SetGlobalFloat("_EspObservedCloudsEnabled", 0); }
         IEnumerator Start(){defaults=new string[layerIds.Length];timeDomains=new string[layerIds.Length];yield return StartCoroutine(Availability());StartCoroutine(AutoRefresh());}
 
         IEnumerator Availability()

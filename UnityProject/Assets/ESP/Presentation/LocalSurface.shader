@@ -71,6 +71,8 @@ Shader "ESP/Local Surface Imagery"
                 half haze = daylight * min(.985, 1 - (1 - baseHaze) * (1 - horizonHaze));
                 color = lerp(color, half3(.26, .48, .90), haze);
                 color += EspNightEmission(input.geographicUv);
+                half4 clouds = EspLocalCloudLayer(input.geographicUv, _CameraAltitude);
+                color = lerp(color, clouds.rgb, clouds.a);
                 return half4(color, alpha);
             }
             ENDHLSL
