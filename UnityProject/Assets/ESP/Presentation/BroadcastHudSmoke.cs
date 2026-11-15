@@ -63,7 +63,7 @@ namespace ESP.Presentation
             yield return Resolution(1440, 900);
             if (failed) yield break;
             Capture("broadcast-start-1440x900.png");
-            session.NewMission();
+            session.NewMission(false);
             yield return Preview(false, "new mission / flight inset");
             if (failed) yield break;
             if (!Check(!driver.IsPaused && !MissionSession.BlocksInput && director.IsMapView, "new mission state") || !HudLayout("new mission")) yield break;

@@ -34,7 +34,7 @@ namespace ESP.Presentation
             if (!Check(director != null && driver != null && session != null, "missing mission components")) yield break;
             daylightReview = Array.IndexOf(Environment.GetCommandLineArgs(), "-espDaylightReview") >= 0;
             if (daylightReview) director.GetComponent<MissionSunlight>().ReviewUtc = DateTime.UtcNow.Date.AddHours(18);
-            session.NewMission();
+            session.NewMission(false);
             initialClearFlags = director.launchCamera.clearFlags;
             initialCullingMask = director.launchCamera.cullingMask;
             director.GoToLaunch(0);

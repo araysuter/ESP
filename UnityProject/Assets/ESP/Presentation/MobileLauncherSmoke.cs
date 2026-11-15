@@ -20,7 +20,7 @@ namespace ESP.Presentation
             yield return null;
             var director = FindFirstObjectByType<MissionDirector>();
             if (!director) { Fail("Missing mission director"); yield break; }
-            MissionSession.Instance.NewMission();
+            MissionSession.Instance.NewMission(false);
             var sunlight = director.GetComponent<MissionSunlight>();
             if (sunlight) sunlight.ReviewUtc = DateTime.UtcNow.Date.AddHours(18); // Explicit daylight review only.
             director.GoToLaunch(1);

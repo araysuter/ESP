@@ -43,7 +43,7 @@ namespace ESP.Presentation
                 { Fail("missing vehicle mesh"); yield break; }
             for (int vehicle = 0; vehicle < 3; vehicle++)
             {
-                MissionSession.Instance.NewMission();
+                MissionSession.Instance.NewMission(false);
                 director.SelectVehicle(vehicle); director.GoToLaunch(0); director.Launch();
                 driver.SetTimeRate(20);
                 float deadline = Time.realtimeSinceStartup + 30;

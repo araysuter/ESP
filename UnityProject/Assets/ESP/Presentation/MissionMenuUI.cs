@@ -197,7 +197,7 @@ namespace ESP.Presentation
             card.Add(Label(eyebrow, 10, Cyan, true));
             string title = session.Page == MissionMenuPage.Start ? "ESP" :
                 session.Page == MissionMenuPage.Pause ? "Pause" :
-                session.Page == MissionMenuPage.Settings ? "Settings" : "Cheats";
+                session.Page == MissionMenuPage.Settings ? "Settings" : session.Page == MissionMenuPage.Tutorial ? "Quick tutorial" : "Cheats";
             var titleLabel = Label(title, session.Page == MissionMenuPage.Start ? 48 : 31, Text, true);
             titleLabel.style.marginTop = 4; titleLabel.style.marginBottom = 17;
             card.Add(titleLabel);
@@ -212,6 +212,7 @@ namespace ESP.Presentation
                 case MissionMenuPage.Pause: BuildPause(session); break;
                 case MissionMenuPage.Settings: BuildSettings(session); break;
                 case MissionMenuPage.Cheats: BuildCheats(session); break;
+                case MissionMenuPage.Tutorial: BuildTutorial(session); break;
             }
             Resize();
         }
@@ -238,6 +239,7 @@ namespace ESP.Presentation
 
         private void BuildSettings(MissionSession session)
         {
+            AddAction("Open tutorial", "open-tutorial", session.OpenTutorial);
             nerdToggle = Switch("Stats for nerds", "nerd-stats-toggle", value => {
                 nerdVisible = value;
                 PlayerPrefs.SetInt("ESP.NerdStats", value ? 1 : 0);
@@ -317,6 +319,19 @@ namespace ESP.Presentation
             slider.RegisterCallback<PointerUpEvent>(_ => PlayerPrefs.Save());
             slider.RegisterCallback<FocusOutEvent>(_ => PlayerPrefs.Save());
             menuScroll.Add(slider);
+        }
+
+        private void BuildTutorial(MissionSession session)
+        {
+            var introduction = Note("Welcome to ESP. Choose a launch site on the Earth map, then use the flight view to launch and steer your vehicle.");
+            introduction.style.marginBottom = 14;
+            menuScroll.Add(introduction);
+            var controls = Note("M — switch between map and flight\nLAUNCH — start the mission\nW / S — pitch down / up\nA / D — turn left / right\nShift / Ctrl — increase / decrease throttle\nSpace — stage\nEsc — pause or go back\n\nYou can reopen this tutorial from Settings.");
+            controls.name = "tutorial-controls";
+            controls.style.marginBottom = 16;
+            menuScroll.Add(controls);
+            AddAction("Got it", "tutorial-done", session.CloseTutorial, true);
+            AddAction("Skip tutorial", "tutorial-skip", session.CloseTutorial);
         }
 
         private void BuildCheats(MissionSession session)

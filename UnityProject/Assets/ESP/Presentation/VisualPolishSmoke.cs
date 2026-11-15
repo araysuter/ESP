@@ -57,7 +57,7 @@ namespace ESP.Presentation
             directory = Path.Combine(Application.persistentDataPath, "VisualPolishReview");
             Directory.CreateDirectory(directory);
             deadline = Time.realtimeSinceStartup + 240;
-            session.NewMission(); session.ResumeMission(); director.SelectVehicle(2); director.GoToLaunch(1);
+            session.NewMission(false); session.ResumeMission(); director.SelectVehicle(2); director.GoToLaunch(1);
             yield return null; yield return null;
             if (!Check(director.VehicleIndex == 2 && director.SelectedSiteIndex == 1 && director.RocketVisual, "SLS at Kennedy")) { Finish(); yield break; }
             lighting.ReviewUtc = new DateTime(2026, 3, 20, 18, 0, 0, DateTimeKind.Utc); lighting.Apply();

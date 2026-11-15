@@ -22,7 +22,7 @@ namespace ESP.Presentation
             var director = GetComponent<MissionDirector>();
             var driver = GetComponent<RocketFlightDriver>();
             var lighting = GetComponent<MissionSunlight>();
-            MissionSession.Instance.NewMission();
+            MissionSession.Instance.NewMission(false);
             director.SelectVehicle(0);
             // Equinox afternoon/midnight over the US sites, clearly labeled in telemetry.
             foreach (int hour in new[] { 18, 6 })
