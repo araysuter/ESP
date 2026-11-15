@@ -1,3 +1,5 @@
+using System;
+using FlightCore;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,6 +14,14 @@ namespace ESP.Presentation
         private Vector3 center;
         private float yaw, pitch, distance;
         private bool dragging;
+
+        public void ResetFraming()
+        {
+            trackedVehicle = null;
+            center = Vector3.zero;
+            yaw = pitch = distance = 0;
+            dragging = false;
+        }
 
         private void LateUpdate()
         {
@@ -56,8 +66,35 @@ namespace ESP.Presentation
             distance = Mathf.Clamp(distance, minDistance, maxDistance);
             float y = yaw * Mathf.Deg2Rad, p = pitch * Mathf.Deg2Rad;
             Vector3 direction = new Vector3(Mathf.Cos(p) * Mathf.Sin(y), Mathf.Sin(p), Mathf.Cos(p) * Mathf.Cos(y));
-            transform.position = center + direction * distance;
+            transform.position = KeepAboveSurface(center + direction * distance);
             transform.LookAt(center, Vector3.up);
+        }
+
+        private Vector3 KeepAboveSurface(Vector3 cameraPosition)
+        {
+            // Render coordinates are fixed-pad ENU (Unity east,up,north), based at
+            // the current vehicle ECEF position in flight and at the pad otherwise.
+            // Only move the camera; authoritative spacecraft state is untouched.
+            var site = LaunchSites.All[director.SelectedSiteIndex];
+            double lat = site.Latitude * Math.PI / 180, lon = site.Longitude * Math.PI / 180;
+            var origin = EarthFrames.GeodeticToEcef(lat, lon, site.ElevationMeters);
+            if (director.FlightDriver is RocketFlightDriver flight && flight.HasPosition)
+            {
+                var state = flight.Simulation.State;
+                origin = EarthFrames.InertialToEcef(state.Position,
+                    Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+            }
+            double east = cameraPosition.x, north = cameraPosition.z, up = cameraPosition.y;
+            var point = origin + new Vector3d(
+                -Math.Sin(lon) * east - Math.Sin(lat) * Math.Cos(lon) * north + Math.Cos(lat) * Math.Cos(lon) * up,
+                 Math.Cos(lon) * east - Math.Sin(lat) * Math.Sin(lon) * north + Math.Cos(lat) * Math.Sin(lon) * up,
+                 Math.Cos(lat) * north + Math.Sin(lat) * up);
+            var geodetic = EarthFrames.EcefToGeodetic(point);
+            // The current collision approximation uses the launch site's elevation.
+            double minimumAltitude = site.ElevationMeters + 1;
+            if (geodetic.AltitudeMeters >= minimumAltitude) return cameraPosition;
+            var safe = EarthFrames.GeodeticToEcef(geodetic.LatitudeRadians, geodetic.LongitudeRadians, minimumAltitude);
+            return CameraRelativeCoordinates.FromEcef(safe.X, safe.Y, safe.Z, origin.X, origin.Y, origin.Z, lat, lon);
         }
 
         private static bool TryVisibleBounds(Transform vehicle, out Bounds bounds)

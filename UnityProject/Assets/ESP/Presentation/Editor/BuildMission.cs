@@ -4,6 +4,7 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.Rendering.Universal;
 using ESP.Presentation;
 
 public static class BuildMission
@@ -46,7 +47,8 @@ public static class BuildMission
         var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader;
         var launch = new GameObject("Launch camera").AddComponent<Camera>();
         launch.transform.position = new Vector3(75, 38, -90); launch.transform.LookAt(new Vector3(0, 18, 0));
-        launch.nearClipPlane = .1f; launch.farClipPlane = 4000; launch.fieldOfView = 45;
+        launch.nearClipPlane = .1f; launch.farClipPlane = 300000; launch.fieldOfView = 45;
+        if (!launch.GetUniversalAdditionalCameraData().clearDepth) throw new Exception("Flight overlay must clear its depth buffer");
         launch.clearFlags = CameraClearFlags.SolidColor; launch.backgroundColor = new Color(.11f, .20f, .29f);
         var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.5f;
         sun.cullingMask = ~(1 << 31);
@@ -69,12 +71,22 @@ public static class BuildMission
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
         manager.AddComponent<MissionFlightSmoke>();
         var flight = manager.AddComponent<RocketFlightDriver>(); flight.director = director; flight.nasaWeather = nasaWeather;
+        var explosion = manager.AddComponent<RocketExplosion>();
+        explosion.driver = flight; explosion.director = director;
+        explosion.effectShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketExplosion.shader");
+        if (!explosion.effectShader) throw new Exception("Missing impact effect shader");
+        manager.AddComponent<RocketExplosionSmoke>();
         var backdrop = manager.AddComponent<FlightEarthBackdrop>();
         backdrop.driver = flight; backdrop.director = director; backdrop.globeMesh = mesh; backdrop.globeMaterial = earthMaterial;
+        backdrop.atmosphereShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/ContinuousAtmosphere.shader");
         backdrop.starShader = starShader; backdrop.earthSun = sun;
         var sunlight = manager.AddComponent<MissionSunlight>();
         sunlight.director = director; sunlight.driver = flight; sunlight.sun = sun;
         backdrop.sunlight = sunlight;
+        var surface = manager.AddComponent<LocalSurfaceTiles>();
+        surface.driver = flight; surface.director = director; surface.surfaceSun = sun;
+        surface.surfaceShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/LocalSurface.shader");
+        if (!surface.surfaceShader || !backdrop.atmosphereShader) throw new Exception("Missing continuous Earth shaders");
         director.picker = picker; director.pointWeather = pointWeather; director.regional = regional;
         director.events = events; director.spaceWeather = spaceWeather;
         var groundPath = "Assets/ESP/Art/Sites/Ground.mat";

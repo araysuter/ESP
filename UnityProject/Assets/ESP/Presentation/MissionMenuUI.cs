@@ -13,7 +13,7 @@ namespace ESP.Presentation
         private VisualElement root, gameplay, overlayRoot, modal, card, physicsPanel, modifiedBadge;
         private ScrollView menuScroll, physicsScroll;
         private Label physicsText, physicsState, gravityValue, settingsNote, cheatState, modifiedText, impactText;
-        private Button menuButton, resumeButton, collapsePhysics;
+        private Button menuButton, resumeButton, collapsePhysics, impactRestart;
         private Slider gravitySlider;
         private Toggle infiniteFuel, crashDestruction, vSync, physicsVisible;
         private readonly List<Button> capButtons = new List<Button>();
@@ -106,6 +106,10 @@ namespace ESP.Presentation
             modifiedText.name = "active-flight-overrides";
             modifiedText.style.unityTextAlign = TextAnchor.MiddleCenter;
             modifiedBadge.Add(impactText); modifiedBadge.Add(modifiedText);
+            impactRestart = Button("RESTART MISSION", "impact-restart-mission", () => MissionSession.Instance?.RestartMission());
+            impactRestart.style.height = 28; impactRestart.style.marginTop = 6;
+            impactRestart.style.fontSize = 10;
+            modifiedBadge.Add(impactRestart);
             badgeAnchor.Add(modifiedBadge); overlayRoot.Add(badgeAnchor);
 
             physicsPanel = new VisualElement { name = "live-physics-panel" };
@@ -299,6 +303,7 @@ namespace ESP.Presentation
             modifiedText.text = modified;
             modifiedText.style.display = session.ModifiedFlight ? DisplayStyle.Flex : DisplayStyle.None;
             impactText.style.display = session.FlightDestroyed ? DisplayStyle.Flex : DisplayStyle.None;
+            impactRestart.style.display = session.FlightDestroyed ? DisplayStyle.Flex : DisplayStyle.None;
             modifiedBadge.tooltip = (session.FlightDestroyed ? "Vehicle destroyed by ground impact.\n" : "") +
                 "Gravity multiplier: " + session.GravityMultiplier.ToString("F2") + "×\n" +
                 "Infinite propellant: " + (session.InfiniteFuel ? "enabled" : "disabled") + "\n" +
