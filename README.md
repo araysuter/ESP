@@ -2,6 +2,21 @@
 
 ESP is an original Earth-scale rocket sandbox built for Hack The Nest with Unity and a pure C# flight core. Explore a WGS84 globe, choose a representative launch site at Starbase or Kennedy LC-39B, then fly an assisted or manual mission. The three vehicle options are the fictional ESP Demo Rocket, a Starship/Super Heavy preset, and an SLS Block 1 preset with parallel solid boosters. The representative vehicles use estimated game parameters.
 
+## Download ESP
+
+Download packages from [GitHub Releases](https://github.com/araysuter/ESP/releases). For a release such as `v0.1.0`, choose the package for your operating system:
+
+- **ESP-0.1.0-macOS.dmg** — Open the disk image and copy `ESP.app` to Applications. The workflow builds and checks for both Apple Silicon and Intel architectures.
+- **ESP-0.1.0-Windows-Setup.exe** — Run the Windows 64-bit installer, which installs the executable and its required data files.
+- **ESP-0.1.0-Windows.zip** — Portable Windows package; extract the entire ZIP before running `ESP.exe`.
+- **SHA256SUMS.txt** — SHA-256 checksums for the downloadable packages.
+
+The [downloadable builds workflow](.github/workflows/download-builds.yml) uses standard GitHub-hosted runners. To publish, open Actions → Downloadable app builds → Run workflow, select `main`, set `version` to `0.1.0`, and enable `publish`. With `publish` disabled, the run is a rehearsal that produces Actions artifacts only. Publishing a GitHub Release tagged `vMAJOR.MINOR.PATCH` also triggers a build of that revision and attaches its packages after checks pass. Filenames use the selected version; releases are not created on every push to `main`. See [downloadable builds setup](docs/download-builds.md) for authentication and packaging details.
+
+Packages are not Apple Developer ID signed/notarized or Windows Authenticode signed, so your operating system may warn before launching. Windows installation and headless player checks do not verify interactive graphics or gameplay on a Windows PC. Check the release notes and [mission acceptance checklist](docs/mission-acceptance.md) for verification status; a configured workflow alone is not proof that a package runs successfully.
+
+> If your installer is unavailable on GitHub Releases, use the build-from-source instructions below.
+
 ## Run the mission
 
 Use **Unity 6000.6.9f1** with **URP 17.6.0**. Open the repository's `UnityProject/` in Unity Hub. Keep `FlightCore/` and `UnityProject/` as siblings. The package manifest loads the pure C# core through `file:../../FlightCore`; opening a standalone copy of the Unity folder leaves that dependency unresolved.
