@@ -132,6 +132,9 @@ namespace ESP.Presentation
             properties.SetFloat("_MachStrength", style == PlumeStyle.Solid ? .08f : .8f);
             properties.SetFloat("_Density", style == PlumeStyle.Solid ? 1.1f : .65f);
             float length = Mathf.Max(.01f, plumeLength) * (.28f + .72f * Mathf.Sqrt(throttle)) * Mathf.Lerp(1f, 2.2f, vacuum);
+            // Longer coherent launch flame, tapering the extra length toward vacuum.
+            // Existing pressure expansion and mesh bounds use this final length.
+            length *= Mathf.Lerp(2.3f, 1.2f, vacuum);
             float radius = Mathf.Max(.01f, nozzleRadius);
             // Approximately 26 degrees of far-field half-angle at full vacuum.
             // This is an art parameter, not an inferred nozzle exit pressure.

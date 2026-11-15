@@ -34,6 +34,7 @@ public static class BuildMission
         ESP.Presentation.Editor.KeyboardCameraChecks.Validate();
         WeatherHeightChecks.Validate();
         ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
+        ESP.Presentation.Editor.LaunchGroundEffectsChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
         var starbaseTower = ImportStarbaseTower.Build();
@@ -120,6 +121,8 @@ public static class BuildMission
         smoke.driver = flight; smoke.director = director;
         smoke.smokeShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketSmokeTrail.shader");
         if (!smoke.smokeShader) throw new Exception("Missing SRB smoke shader");
+        var groundCloud = manager.AddComponent<LaunchGroundEffects>();
+        groundCloud.driver = flight; groundCloud.director = director; groundCloud.smokeShader = smoke.smokeShader;
         var backdrop = manager.AddComponent<FlightEarthBackdrop>();
         backdrop.driver = flight; backdrop.director = director; backdrop.globeMesh = mesh; backdrop.globeMaterial = earthMaterial;
         backdrop.atmosphereShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/ContinuousAtmosphere.shader");
