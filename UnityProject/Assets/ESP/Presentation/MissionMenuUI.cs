@@ -244,6 +244,25 @@ namespace ESP.Presentation
         private void BuildSettings(MissionSession session)
         {
             AddAction("Open tutorial", "open-tutorial", session.OpenTutorial);
+            var lighting = FindFirstObjectByType<MissionSunlight>();
+            if (lighting != null)
+            {
+                menuScroll.Add(Label("DAY / NIGHT", 10, Muted, true));
+                var timeLabel = Label("Visual time offset: " + lighting.LightingOffsetHours.ToString("+0.0;-0.0;0.0") + " h", 11, Text);
+                menuScroll.Add(timeLabel);
+                var timeSlider = new Slider(-12, 12) { name = "lighting-time-offset" };
+                timeSlider.SetValueWithoutNotify(lighting.LightingOffsetHours);
+                timeSlider.RegisterValueChangedCallback(evt => {
+                    float hours = Mathf.Round(evt.newValue * 2) / 2;
+                    lighting.SetLightingOffset(hours);
+                    timeSlider.SetValueWithoutNotify(hours);
+                    timeLabel.text = "Visual time offset: " + hours.ToString("+0.0;-0.0;0.0") + " h";
+                });
+                menuScroll.Add(timeSlider);
+                var lightingNote = Note("Changes the sky and lighting; flight time and physics stay unchanged. Set to 0 for actual time.");
+                lightingNote.style.marginBottom = 10;
+                menuScroll.Add(lightingNote);
+            }
             nerdToggle = Switch("Stats for nerds", "nerd-stats-toggle", value => {
                 nerdVisible = value;
                 PlayerPrefs.SetInt("ESP.NerdStats", value ? 1 : 0);
