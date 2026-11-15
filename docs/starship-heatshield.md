@@ -19,7 +19,12 @@ must be reapplied after regenerating the original atlases.
 The five-part conversion completed in the macOS VM with Blender 5.2.3. It checked
 that non-tile pixels were unchanged before PNG encoding. Input/output hashes and
 face/pixel counts are in `AssetsSource/heatshield-correction.json`. Unity explicitly
-uses the packed map alpha for smoothness. Packaged visual review is pending.
+uses the packed map alpha for smoothness. The macOS VM package compiled without
+shader errors. Its temporary review fixture verified five material bindings and
+captured four matched camera angles before and after correction. Reviewed captures
+confirm the windward hull and flap tiles are dark while leeward steel remains silver.
+The captures explicitly use daylight and camera-facing review light; they are
+material comparisons, not a lighting or flight-physics benchmark.
 
 Original model: [SpaceX Starship Block 3 by Clarence365](https://sketchfab.com/3d-models/spacex-starship-block-3-6f6c6f88a3eb4b4d822fdca66733fbb2),
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). This material adaptation
