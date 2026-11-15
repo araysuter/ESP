@@ -14,7 +14,7 @@ namespace ESP.Presentation
         private Material material;
         private Renderer shellRenderer;
 
-        public bool Show(Texture density, Shader shader, float displayOpacity = .68f)
+        public bool Show(Texture density, Shader shader, float displayOpacity = .22f)
         {
             if (!density) { if (shell) shell.SetActive(false); return true; }
             if (!shell)
@@ -92,122 +92,115 @@ namespace ESP.Presentation
         }
 
         /// <summary>
-        /// Bounded, display-only reconstruction of dated observations. RG stores
-        /// fraction * support, support; even mipmaps must keep missing != clear.
-        /// The original observation mask is counted separately by the caller.
+        /// Display-only newest-valid dated observation per pixel. RG stores
+        /// fraction * support, support, so filtered missing pixels stay distinct
+        /// from observed clear pixels. Callers retain the original coverage mask.
         /// </summary>
         public sealed class ObservationBlend
         {
+            readonly Vector2[] field, fallback;
+            readonly int[] ages, fallbackAges;
             readonly int width, height;
-            readonly Vector2[] accumulated, samples, scratch;
-            readonly float[] support;
 
             public ObservationBlend(int width, int height)
             {
                 this.width = width; this.height = height;
-                accumulated = new Vector2[width * height];
-                samples = new Vector2[accumulated.Length];
-                scratch = new Vector2[accumulated.Length];
-                support = new float[accumulated.Length];
+                field = new Vector2[width * height];
+                ages = new int[field.Length];
+                fallback = new Vector2[field.Length];
+                fallbackAges = new int[field.Length];
+                for (int i = 0; i < ages.Length; i++) ages[i] = fallbackAges[i] = int.MaxValue;
             }
 
             public int Add(Color32[] source, int daysOld, bool[] observed, out int unknown)
             {
-                unknown = 0; int valid = 0;
+                unknown = 0; int selected = 0;
                 for (int i = 0; i < source.Length; i++)
                 {
-                    samples[i] = Vector2.zero;
                     if (TryCloudFraction(source[i], out byte percent))
                     {
-                        float weight = source[i].a / 255f;
-                        samples[i] = new Vector2(percent * .01f * weight, weight);
-                        observed[i] = true; valid++;
+                        observed[i] = true;
+                        // A valid zero is an observation and wins in the interior;
+                        // boundary crossfades are display-only. Equal-age ties retain
+                        // the first observation; no implied sub-day ordering.
+                        float support = source[i].a / 255f;
+                        var sample = new Vector2(percent * .01f * support, support);
+                        if (daysOld < ages[i])
+                        {
+                            fallback[i] = field[i]; fallbackAges[i] = ages[i];
+                            field[i] = sample; ages[i] = daysOld; selected++;
+                        }
+                        else if (daysOld > ages[i] && daysOld < fallbackAges[i])
+                        {
+                            fallback[i] = sample; fallbackAges[i] = daysOld;
+                        }
                     }
                     else if (source[i].a > 0 &&
                         !(source[i].r == 192 && source[i].g == 192 && source[i].b == 192)) unknown++;
                 }
-                if (valid == 0) return 0;
-                // Two small box filters approximate a tent kernel. Each source day
-                // feathers to zero support at its swath edges, rather than abruptly
-                // replacing a different day's weather. No large missing region is filled.
-                for (int pass = 0; pass < 2; pass++)
+                return selected;
+            }
+
+            const int FeatherRadius = 32;
+
+            // Latitude reflection continues over the pole on the opposite meridian.
+            int Index(int x, int y)
+            {
+                while (y < 0 || y >= height)
                 {
-                    SmoothLongitude(samples, scratch);
-                    SmoothLatitude(scratch, samples);
+                    if (y < 0) y = -y - 1;
+                    else y = 2 * height - y - 1;
+                    x += width / 2;
                 }
-                float recency = Mathf.Pow(.65f, daysOld);
-                for (int i = 0; i < samples.Length; i++)
-                {
-                    accumulated[i] += samples[i] * recency;
-                    support[i] = Mathf.Max(support[i], samples[i].y);
-                }
-                return valid;
+                return y * width + (x % width + width) % width;
             }
 
             public Color32[] Finish()
             {
-                var field = new Vector2[accumulated.Length];
-                for (int i = 0; i < field.Length; i++)
-                {
-                    float fraction = accumulated[i].y > 0 ? accumulated[i].x / accumulated[i].y : 0;
-                    field[i] = new Vector2(fraction * support[i], support[i]);
-                }
-                // All longitudes meet at each pole. A single validity-weighted ring
-                // value prevents the UV fan's wedges from meeting with different colors.
-                CollapsePolarRing(field, 0);
-                CollapsePolarRing(field, height - 1);
-                var pixels = new Color32[field.Length];
-                for (int i = 0; i < pixels.Length; i++)
-                    pixels[i] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(field[i].x) * 255),
-                        (byte)Mathf.RoundToInt(Mathf.Clamp01(field[i].y) * 255), 0, 255);
-                return pixels;
-            }
-
-            void SmoothLongitude(Vector2[] input, Vector2[] output)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    float latitude = ((y + .5f) / height - .5f) * Mathf.PI;
-                    // Constant angular footprint on the sphere, not stretched polar
-                    // scan lines. Running sums keep polar filtering O(pixel count).
-                    int radius = Mathf.Min(width / 2 - 1,
-                        Mathf.CeilToInt(2 / Mathf.Max(.001f, Mathf.Cos(latitude))));
-                    Vector2 sum = Vector2.zero;
-                    for (int dx = -radius; dx <= radius; dx++) sum += input[y * width + Wrap(dx)];
-                    for (int x = 0; x < width; x++)
-                    {
-                        output[y * width + x] = sum / (2 * radius + 1);
-                        sum += input[y * width + Wrap(x + radius + 1)] - input[y * width + Wrap(x - radius)];
-                    }
-                }
-            }
-
-            void SmoothLatitude(Vector2[] input, Vector2[] output)
-            {
+                // Seed the newer side only where its next-older overlapping sample
+                // matches the date selected on the adjacent side. Expand within the
+                // same date pair; no missing or unrelated date is synthesized.
+                var distance = new byte[field.Length];
+                var queue = new int[field.Length];
+                for (int i = 0; i < distance.Length; i++) distance[i] = byte.MaxValue;
+                int head = 0, tail = 0;
                 for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                 {
-                    Vector2 sum = Vector2.zero;
-                    for (int dy = -2; dy <= 2; dy++)
+                    int i = y * width + x, older = fallbackAges[i];
+                    if (older == int.MaxValue) continue;
+                    if (ages[Index(x - 1, y)] == older || ages[Index(x + 1, y)] == older ||
+                        ages[Index(x, y - 1)] == older || ages[Index(x, y + 1)] == older)
                     {
-                        int sy = y + dy, sx = x;
-                        // Crossing a pole continues on the opposite meridian.
-                        if (sy < 0) { sy = -sy - 1; sx = Wrap(x + width / 2); }
-                        else if (sy >= height) { sy = 2 * height - sy - 1; sx = Wrap(x + width / 2); }
-                        sum += input[sy * width + sx];
+                        distance[i] = 0; queue[tail++] = i;
                     }
-                    output[y * width + x] = sum / 5;
                 }
+                while (head < tail)
+                {
+                    int i = queue[head++], d = distance[i];
+                    if (d >= FeatherRadius) continue;
+                    int x = i % width, y = i / width;
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int j = Index(x + (direction == 0 ? -1 : direction == 1 ? 1 : 0),
+                            y + (direction == 2 ? -1 : direction == 3 ? 1 : 0));
+                        if (distance[j] != byte.MaxValue || ages[j] != ages[i] ||
+                            fallbackAges[j] != fallbackAges[i]) continue;
+                        distance[j] = (byte)(d + 1); queue[tail++] = j;
+                    }
+                }
+                var pixels = new Color32[field.Length];
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    float t = distance[i] == byte.MaxValue ? 0 : 1f - distance[i] / (float)FeatherRadius;
+                    t = t * t * (3f - 2f * t);
+                    Vector2 value = Vector2.Lerp(field[i], fallback[i], t);
+                    pixels[i] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(value.x) * 255),
+                        (byte)Mathf.RoundToInt(Mathf.Clamp01(value.y) * 255), 0, 255);
+                }
+                return pixels;
             }
 
-            int Wrap(int x) => (x % width + width) % width;
-            void CollapsePolarRing(Vector2[] field, int y)
-            {
-                Vector2 mean = Vector2.zero;
-                for (int x = 0; x < width; x++) mean += field[y * width + x];
-                mean /= width;
-                for (int x = 0; x < width; x++) field[y * width + x] = mean;
-            }
         }
         private void OnDestroy()
         {
