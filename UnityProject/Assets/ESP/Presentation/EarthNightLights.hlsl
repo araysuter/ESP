@@ -48,8 +48,9 @@ half3 EspNightEmission(float2 geographicUv)
     half night = EspNightFactor(geographicUv);
     half light = SAMPLE_TEXTURE2D(_EspNightLights, sampler_EspNightLights, geographicUv).r;
     // Warm display tint is illustrative, not measured lamp spectra. No base glow.
-    half transmission = EspNightCloudTransmission(EspObservedCloudCoverage(geographicUv));
-    return light * night * transmission * _EspNightLightsStrength * half3(1, .68, .38);
+    // The observed shell composites over this emission and owns transmission.
+    // Applying it here too would square the attenuation in partly cloudy areas.
+    return light * night * _EspNightLightsStrength * half3(1, .68, .38);
 }
 // The real-metre tile camera renders after the scaled cloud backdrop. Composite
 // the same observed layer onto tiles above the cloud height so their opaque
