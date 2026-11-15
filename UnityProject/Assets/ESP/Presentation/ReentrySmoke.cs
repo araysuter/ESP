@@ -18,7 +18,8 @@ namespace ESP.Presentation
         static void Bootstrap()
         {
             if (Debug.isDebugBuild && (Array.IndexOf(Environment.GetCommandLineArgs(), "-espReentrySmoke") >= 0 ||
-                Array.IndexOf(Environment.GetCommandLineArgs(), "-espReentryReady") >= 0))
+                Array.IndexOf(Environment.GetCommandLineArgs(), "-espReentryReady") >= 0 ||
+                Array.IndexOf(Environment.GetCommandLineArgs(), "-espTowerReview") >= 0))
                 new GameObject("Physical Starship return review").AddComponent<ReentrySmoke>();
         }
         [Serializable] sealed class ReturnFixture
@@ -93,6 +94,42 @@ namespace ESP.Presentation
             yield return null;
             flight.SetTimeRate(previous);
         }
+        // Development-only pose inspection; never changes authoritative flight state.
+        IEnumerator ReviewTower(MissionDirector director, Transform towerRoot, TowerCatchAnimator tower)
+        {
+            var camera = director.launchCamera;
+            var controls = camera.GetComponent<FlightCameraControls>();
+            controls.enabled = false;
+            var look = towerRoot.TransformPoint(new Vector3(0, 116, -10));
+            camera.transform.position = look + towerRoot.up * 135;
+            camera.transform.LookAt(look, towerRoot.forward);
+            camera.fieldOfView = 45;
+            yield return new WaitForSeconds(1);
+            yield return Shot("tower-overhead-open");
+            tower.SetSimulationPose(.5f, 50);
+            yield return Shot("tower-overhead-half");
+            tower.SetSimulationPose(1, 50);
+            yield return Shot("tower-overhead-closed");
+            tower.ResetWaitingPose();
+            yield return Shot("tower-overhead-reset");
+            Debug.Log("ESP_TOWER_REVIEW_OK high=" + tower.AtCatchHeight + " open=" + tower.IsOpen);
+            controls.enabled = true;
+            controls.ResetFraming();
+            director.ShowMap();
+            director.mapCamera.GetComponent<GlobeCameraControls>().ShowSystem();
+            yield return new WaitForSeconds(2);
+            var solar = director.GetComponent<SolarSystemMap>();
+            var photo = Resources.Load<Texture2D>("Starman");
+            var point = solar.RoadsterPosition;
+            Debug.Log("ESP_ROADSTER_REVIEW photo=" + (photo ? photo.width.ToString() : "null") +
+                " blocked=" + MissionSession.BlocksInput + " position=" + point +
+                " screen=" + (point.HasValue ? director.mapCamera.WorldToScreenPoint(point.Value).ToString() : "null") +
+                " pixelRect=" + director.mapCamera.pixelRect);
+            yield return Shot("roadster-system-review");
+            director.GoToLaunch(0);
+            Debug.Log("ESP_TOWER_REVIEW_READY controls released on pad");
+        }
+
         IEnumerator Start()
         {
             yield return null;
@@ -107,6 +144,11 @@ namespace ESP.Presentation
             var tower = towerRoot ? towerRoot.GetComponent<TowerCatchAnimator>() : null;
             if (!tower || !tower.IsBound || !tower.AtCatchHeight || !tower.IsOpen)
             { Fail("tower is not bound, high and open before launch"); yield break; }
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-espTowerReview") >= 0)
+            {
+                yield return ReviewTower(director, towerRoot, tower);
+                yield break;
+            }
             yield return Shot("00-tower-waiting");
             director.Launch(); flight.SetTimeRate(20);
             float deadline = Time.realtimeSinceStartup + 240;
