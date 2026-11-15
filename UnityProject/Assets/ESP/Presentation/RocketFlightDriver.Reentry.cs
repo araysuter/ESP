@@ -91,7 +91,7 @@ namespace ESP.Presentation
             returnPlanningCancellation?.Dispose();
             returnPlanningCancellation = null; returnPlanning = null; returnPlanningError = null;
         }
-        void OnDestroy() => CancelReturnPlanning();
+        void OnDestroy() { CancelReturnPlanning(); ClearSeparatedStages(); }
         Vector3 InertialDirectionToRender(Vector3d direction, double lat, double lon)
         {
             var e = EarthFrames.InertialToEcef(direction,

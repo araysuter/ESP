@@ -166,6 +166,7 @@ namespace ESP.Presentation
         private static bool Fresh(DateTime time, DateTime now, TimeSpan age) => time.Kind == DateTimeKind.Utc && time <= now && now - time <= age;
         public void ResetMission()
         {
+            ClearSeparatedStages();
             if (director != null) director.GetComponent<RocketSmokeTrail>()?.Clear();
             ClearReentry();
             simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
@@ -192,6 +193,7 @@ namespace ESP.Presentation
         private void Update()
         {
             if (simulation == null || IsPaused || MissionSession.BlocksInput) return;
+            DetectSeparatedStages();
             if (simulation.State.IsLanded) { returnController?.Update(simulation); accumulator = 0; RenderState(); return; }
             if (AdvanceReturnPlanning()) { accumulator = 0; actualTimeRate = 0; RenderState(); return; }
             Keyboard keyboard = Keyboard.current;
@@ -226,7 +228,10 @@ namespace ESP.Presentation
             {
                 if (ReentryActive) returnController.Update(simulation);
                 else if (AssistanceEnabled && guidance != null) guidance.Update(simulation);
+                DetectSeparatedStages();
+                AdvanceSeparatedStages(StepSeconds);
                 simulation.Step();
+                DetectSeparatedStages();
                 if (simulation.State.IsComplete) returnController?.Update(simulation);
                 UpdateOrbitVerification(); accumulator -= StepSeconds; steps++;
                 if (simulation.State.IsLanded)
@@ -277,6 +282,7 @@ namespace ESP.Presentation
             double lat = launchSite.Latitude * Math.PI / 180, lon = launchSite.Longitude * Math.PI / 180;
             var pad = EarthFrames.GeodeticToEcef(lat, lon, launchSite.ElevationMeters);
             director.EnvironmentRoot.position = CameraRelativeCoordinates.FromEcef(pad.X, pad.Y, pad.Z, ecef.X, ecef.Y, ecef.Z, lat, lon);
+            RenderSeparatedStages(ecef, lat, lon, state.MissionTime);
             if (director.RocketVisual != null)
             {
                 director.RocketVisual.position = Vector3.up * director.RocketBaseHeightMeters;
