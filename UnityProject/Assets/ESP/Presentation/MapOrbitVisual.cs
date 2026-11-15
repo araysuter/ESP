@@ -6,17 +6,17 @@ using UnityEngine.UIElements;
 
 namespace ESP.Presentation
 {
-    /// <summary>Actual flown trajectory plus map-only coast conic; parent UI owns marker labels.</summary>
+    /// <summary>Smooth coast orbit; parent UI owns marker labels. Flight history is recorded without a visible overlay.</summary>
     public sealed class MapOrbitVisual : MonoBehaviour
     {
         [Tooltip("Serialized URP/Unlit material; keeps the depth-tested shader in packaged builds.")]
         public Material orbitMaterial;
         public OrbitProjectionResult Projection { get; private set; }
         private MissionDirector director;
-        private LineRenderer line, trailLine;
+        private LineRenderer line;
         private FlightTrailRecorder recorder;
         public FlightTrail FlownTrail => recorder != null ? recorder.History : null;
-        private Material runtimeMaterial, trailMaterial;
+        private Material runtimeMaterial;
         private float nextRefresh;
         private UIDocument missionDocument;
         private readonly Vector3[] vertices = new Vector3[OrbitProjection.MaximumSamples];
@@ -51,17 +51,10 @@ namespace ESP.Presentation
             { Clear(); return; }
             if (director == null || director.MapRenderCamera == null || simulation == null || orbitMaterial == null)
             { Clear(); return; }
-            if (line == null) CreateLines();
+            if (line == null)
+                line = CreateLine("Instantaneous coast orbit", new Color(.18f, .86f, .96f, 1), out runtimeMaterial);
             var state = simulation.State;
             double earthAngle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime;
-            var history = FlownTrail;
-            trailLine.enabled = history != null && history.Count >= 2;
-            if (trailLine.enabled)
-            {
-                trailLine.positionCount = history.Count;
-                for (int i = 0; i < history.Count; i++)
-                    trailLine.SetPosition(i, ToMap(history.EcefPosition(i, earthAngle)));
-            }
             if (!state.IsLaunched || state.IsLanded)
             {
                 line.enabled = false;
@@ -84,7 +77,6 @@ namespace ESP.Presentation
             }
             float width = LogicalPixelWidth(ToMap(EarthFrames.InertialToEcef(state.Position, earthAngle)));
             line.widthMultiplier = width * 1.7f;
-            trailLine.widthMultiplier = width * 1.4f;
         }
 
         private float LogicalPixelWidth(Vector3 anchor)
@@ -101,12 +93,6 @@ namespace ESP.Presentation
             if (float.IsNaN(logicalHeight) || logicalHeight <= 0) logicalHeight = 800;
             if (!director.IsMapView) logicalHeight = 216;
             return height / logicalHeight;
-        }
-
-        private void CreateLines()
-        {
-            line = CreateLine("Instantaneous coast orbit", new Color(.18f, .86f, .96f, 1), out runtimeMaterial);
-            trailLine = CreateLine("Actual flown trajectory", new Color(.27f, .48f, .62f, 1), out trailMaterial);
         }
 
         private LineRenderer CreateLine(string label, Color color, out Material material)
@@ -167,11 +153,10 @@ namespace ESP.Presentation
         private void Clear()
         {
             if (line != null) line.enabled = false;
-            if (trailLine != null) trailLine.enabled = false;
             Projection = null;
             nextRefresh = 0;
         }
         private void OnDisable() { Clear(); }
-        private void OnDestroy() { if (runtimeMaterial != null) Destroy(runtimeMaterial); if (trailMaterial != null) Destroy(trailMaterial); }
+        private void OnDestroy() { if (runtimeMaterial != null) Destroy(runtimeMaterial); }
     }
 }
