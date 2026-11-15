@@ -82,35 +82,52 @@ public static class ImportDetailedVehicles
         if (float.IsNaN(expected) || float.IsInfinity(expected) || expected <= 0) throw new Exception("Invalid manifest height");
         if (lowerCount == 0 || upperCount == 0 || (!starship && (leftCount == 0 || rightCount == 0)) || first || Mathf.Abs(bounds.size.y - expected) > 3f)
             throw new Exception("Model grouping or bounds invalid: " + source + " " + bounds.size + " groups " + lowerCount + "/" + upperCount);
-        CombineStage(booster, starship ? "Starship-booster" : "SLS-booster");
-        CombineStage(upper, starship ? "Starship-upper" : "SLS-upper");
+        // The printable SLS source puts the orange launch vehicle stage adapter
+        // in the same mesh as the upper stage. NASA specifies that it stays
+        // with the core at separation; route its material submesh accordingly.
+        CombineStage(booster, starship ? "Starship-booster" : "SLS-booster", starship ? null : upper);
+        CombineStage(upper, starship ? "Starship-upper" : "SLS-upper", excludeSlsAdapter: !starship);
         if (!starship) { CombineStage(leftSrb, "SLS-left-srb"); CombineStage(rightSrb, "SLS-right-srb"); }
         else { UnityEngine.Object.DestroyImmediate(leftSrb.gameObject); UnityEngine.Object.DestroyImmediate(rightSrb.gameObject); }
         var view = root.AddComponent<RocketPresentation>(); view.vehicle = root.transform; view.booster = booster;
         if (starship) { StarshipPlumes(booster, upper, shader); }
-        else { SlsPlumes(booster, upper, leftSrb, rightSrb, shader); }
+        else { BuildApproximateIcps(upper); SlsPlumes(booster, upper, leftSrb, rightSrb, shader); }
         string path = DirectoryPath + "/" + destination;
         if (!PrefabUtility.SaveAsPrefabAsset(root, path)) throw new Exception("Could not save " + path);
         UnityEngine.Object.DestroyImmediate(root);
         Debug.Log("ESP_VEHICLE_IMPORT_OK " + path + " " + bounds.size);
     }
-    private static void CombineStage(Transform stage, string assetPrefix)
+    private static void CombineStage(Transform stage, string assetPrefix, Transform slsAdapterSource = null, bool excludeSlsAdapter = false)
     {
         var grouped = new Dictionary<Material, List<CombineInstance>>();
         var oldObjects = new List<GameObject>();
-        foreach (var filter in stage.GetComponentsInChildren<MeshFilter>())
+        int adapterParts = 0;
+        void Collect(Transform source, bool adapterOnly)
         {
-            var renderer = filter.GetComponent<MeshRenderer>();
-            if (!renderer || !filter.sharedMesh) continue;
-            var materials = renderer.sharedMaterials;
-            for (int sub = 0; sub < filter.sharedMesh.subMeshCount && sub < materials.Length; sub++)
+            foreach (var filter in source.GetComponentsInChildren<MeshFilter>())
             {
-                var material = materials[sub];
-                if (!material) throw new Exception("Missing mapped material on " + filter.name);
-                if (!grouped.TryGetValue(material, out var list)) grouped[material] = list = new List<CombineInstance>();
-                list.Add(new CombineInstance { mesh = filter.sharedMesh, subMeshIndex = sub, transform = stage.worldToLocalMatrix * filter.transform.localToWorldMatrix });
+                var renderer = filter.GetComponent<MeshRenderer>();
+                if (!renderer || !filter.sharedMesh) continue;
+                var materials = renderer.sharedMaterials;
+                for (int sub = 0; sub < filter.sharedMesh.subMeshCount && sub < materials.Length; sub++)
+                {
+                    var material = materials[sub];
+                    if (!material) throw new Exception("Missing mapped material on " + filter.name);
+                    bool adapter = filter.name.StartsWith("UpperAssembly__NASA_03", StringComparison.Ordinal) &&
+                        AssetDatabase.GetAssetPath(material).Equals(DirectoryPath + "/SLS-source-Core_foam_orange.mat", StringComparison.OrdinalIgnoreCase);
+                    if (adapterOnly && !adapter || excludeSlsAdapter && adapter) continue;
+                    if (adapterOnly) adapterParts++;
+                    if (!grouped.TryGetValue(material, out var list)) grouped[material] = list = new List<CombineInstance>();
+                    list.Add(new CombineInstance { mesh = filter.sharedMesh, subMeshIndex = sub, transform = stage.worldToLocalMatrix * filter.transform.localToWorldMatrix });
+                }
+                if (!adapterOnly) oldObjects.Add(filter.gameObject);
             }
-            oldObjects.Add(filter.gameObject);
+        }
+        Collect(stage, false);
+        if (slsAdapterSource != null)
+        {
+            Collect(slsAdapterSource, true);
+            if (adapterParts == 0) throw new Exception("SLS launch vehicle stage adapter submesh not found");
         }
         int index = 0;
         foreach (var entry in grouped)
@@ -257,6 +274,47 @@ public static class ImportDetailedVehicles
         }
         if (lowerCount == 0 || topCount == 0) throw new Exception("Missing Starship nozzle anchors " + lowerCount + "/" + topCount);
     }
+    // The supplied printable mesh omits the ICPS inside the LVSA. This simple
+    // cylinder and bell are presentation approximations, not NASA flight geometry.
+    // Their outer envelope stays inside the adapter on the pad; top meets the
+    // source upper stack at y=72.29 m and the bell lip is y=65.5 m.
+    private static void BuildApproximateIcps(Transform upper)
+    {
+        var white = AssetDatabase.LoadAssetAtPath<Material>(DirectoryPath + "/SLS-source-Booster_ceramic_white.mat");
+        var graphite = AssetDatabase.LoadAssetAtPath<Material>(DirectoryPath + "/SLS-source-Engine_graphite.mat");
+        if (!white || !graphite) throw new Exception("Missing SLS ICPS approximation materials");
+        var body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        body.name = "ICPS approximate body";
+        UnityEngine.Object.DestroyImmediate(body.GetComponent<Collider>());
+        body.transform.SetParent(upper, false);
+        body.transform.localPosition = new Vector3(0, 69.895f, 0);
+        body.transform.localScale = new Vector3(4.8f, 2.395f, 4.8f);
+        body.GetComponent<MeshRenderer>().sharedMaterial = white;
+
+        const int segments = 48;
+        var vertices = new Vector3[segments * 2];
+        var triangles = new int[segments * 6];
+        for (int i = 0; i < segments; i++)
+        {
+            float a = 2 * Mathf.PI * i / segments;
+            float x = Mathf.Cos(a), z = Mathf.Sin(a);
+            vertices[i * 2] = new Vector3(x * 1.1f, 65.5f, z * 1.1f);
+            vertices[i * 2 + 1] = new Vector3(x * .55f, 67.5f, z * .55f);
+            int n = (i + 1) % segments, t = i * 6;
+            triangles[t] = i * 2; triangles[t + 1] = i * 2 + 1; triangles[t + 2] = n * 2 + 1;
+            triangles[t + 3] = i * 2; triangles[t + 4] = n * 2 + 1; triangles[t + 5] = n * 2;
+        }
+        var bell = new Mesh { name = "SLS approximate ICPS bell" };
+        bell.vertices = vertices; bell.triangles = triangles; bell.RecalculateNormals(); bell.RecalculateBounds();
+        string path = DirectoryPath + "/SLS-ICPS-approximate-bell.asset";
+        var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        if (existing) { EditorUtility.CopySerialized(bell, existing); UnityEngine.Object.DestroyImmediate(bell); bell = existing; EditorUtility.SetDirty(existing); }
+        else AssetDatabase.CreateAsset(bell, path);
+        var nozzle = new GameObject("ICPS approximate engine bell");
+        nozzle.transform.SetParent(upper, false);
+        nozzle.AddComponent<MeshFilter>().sharedMesh = bell;
+        nozzle.AddComponent<MeshRenderer>().sharedMaterial = graphite;
+    }
     private static void SlsPlumes(Transform booster, Transform upper, Transform left, Transform right, Shader shader)
     {
         var core = new List<Transform> {
@@ -266,7 +324,7 @@ public static class ImportDetailedVehicles
         var leftPlume = AddPlume(left,shader,0,RocketPlume.PlumeStyle.Solid,new List<Transform> { Nozzle(left,"Left SRB nozzle",-6.995f,.0178f,.1754f) },1.45f,18);
         var rightPlume = AddPlume(right,shader,0,RocketPlume.PlumeStyle.Solid,new List<Transform> { Nozzle(right,"Right SRB nozzle",6.995f,.0178f,.1754f) },1.45f,18);
         leftPlume.solidBooster = true; rightPlume.solidBooster = true;
-        // Source lacks an upper nozzle; this is a provisional cosmetic anchor.
-        AddPlume(upper,shader,1,RocketPlume.PlumeStyle.Hydrolox,new List<Transform> { Nozzle(upper,"Upper provisional nozzle",0,64.996f,0) },.7f,10);
+        // Plume starts at the lip of the explicitly approximate bell above.
+        AddPlume(upper,shader,1,RocketPlume.PlumeStyle.Hydrolox,new List<Transform> { Nozzle(upper,"ICPS approximate nozzle",0,65.5f,0) },1.1f,10);
     }
 }
