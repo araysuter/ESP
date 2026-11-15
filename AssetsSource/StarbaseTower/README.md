@@ -1,12 +1,10 @@
 # Starbase launch tower: provisional model handoff
 
-This directory contains a **full-scale, approximate static visual** for review,
-not a complete or survey-accurate reconstruction. It is not wired into the
-game. The components are Wavefront OBJ with adjacent MTL files; Blender uses
-metres and Z-up, and the OBJ exports use metre-sized units, Y-up and -Z forward.
-The launch mount's horizontal center at ground level is the common origin.
-The geometry is outside Unity's Assets directory until the integration owner
-checks it and imports it with matching `.meta` files.
+This directory contains a **full-scale, approximate static visual**. The
+mission builder imports these OBJ and MTL modules into Unity's generated
+assets and selects the assembled prefab at Starbase. Blender uses metres and
+Z-up. The OBJ exports use metre-sized units, Y-up and -Z forward. The launch
+mount's horizontal center at ground level is the common origin.
 
 ## Provenance and adaptations
 
@@ -40,14 +38,11 @@ and vehicle are not supplied. Total assembled geometry is approximately
 
 ## Integration and review remaining
 
-1. Assign an owner to the Unity project/editor and import modules into a
-   separate test project or an owned checkout; generate and retain `.meta`
-   files. Assign URP materials and inspect normals and shading.
-2. Build a prefab or procedural assembly from the modules, sharing the level
-   mesh where possible. Replace the generated tower and mount in
-   `LaunchEnvironment.Build` for Starbase, not the ground imagery. The existing
-   optional `importedStructure` branch is for a historical Kennedy gantry and
-   uses a separate offset; do not reuse it unchanged for this Starbase assembly.
+1. Run `BuildMission.Build` in an owned Unity checkout. Inspect the generated
+   prefab's normals and shading. The builder shares one mesh across the
+   23 tower levels and assigns URP materials.
+2. Select Starbase to verify the imported tower and mount replace the procedural
+   versions. Switch to Kennedy and back to check site selection and reset.
 3. Align the current vehicle's base and the mount top; verify launch clearance,
    arm placement, scale and site orientation. Existing rocket-base height is a
    placeholder. Keep this asset visual-only and camera-relative: do not use it
