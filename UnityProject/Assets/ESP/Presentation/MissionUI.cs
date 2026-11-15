@@ -29,6 +29,9 @@ namespace ESP.Presentation
         private readonly Label[] orbitMarkers = new Label[3];
         private readonly Label[] transitionMarkers = new Label[6];
         private MissionDirector subscribedDirector;
+        private Button roadsterMarker;
+        private VisualElement roadsterCard;
+        private bool roadsterOpen;
         private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
         private Button cameraToggle;
         private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
@@ -147,8 +150,58 @@ namespace ESP.Presentation
             }
             BuildMapControls();
             BuildFlightControls();
+            BuildRoadsterDiscovery();
             Resize();
             Refresh();
+        }
+
+        private void BuildRoadsterDiscovery()
+        {
+            var photo = Resources.Load<Texture2D>("Starman");
+            if (photo == null) return;
+
+            roadsterMarker = Button("◇", () =>
+            {
+                if (!MissionSession.BlocksInput) roadsterOpen = !roadsterOpen;
+            }, false, "roadster-marker");
+            Absolute(roadsterMarker, 0, 0, null, null);
+            roadsterMarker.style.width = 26;
+            roadsterMarker.style.height = 26;
+            roadsterMarker.style.fontSize = 14;
+            roadsterMarker.style.color = Amber;
+            roadsterMarker.style.backgroundColor = Color.clear;
+            roadsterMarker.style.paddingLeft = 0;
+            roadsterMarker.style.paddingRight = 0;
+            roadsterMarker.style.marginTop = 0;
+            Border(roadsterMarker, Color.clear);
+            roadsterMarker.tooltip = "Unidentified object";
+            roadsterMarker.style.display = DisplayStyle.None;
+            root.Add(roadsterMarker);
+
+            roadsterCard = Panel();
+            roadsterCard.name = "roadster-discovery";
+            Absolute(roadsterCard, null, 56, 18, null);
+            roadsterCard.style.width = 330;
+            roadsterCard.style.maxWidth = Length.Percent(88);
+            var header = Row();
+            header.style.justifyContent = Justify.SpaceBetween;
+            header.style.alignItems = Align.Center;
+            header.Add(Label("STARMAN", 13, Cyan, FontStyle.Bold));
+            header.Add(Button("CLOSE", () => { roadsterOpen = false; }, false, "close-roadster-discovery"));
+            roadsterCard.Add(header);
+            var image = new Image { image = photo, scaleMode = ScaleMode.ScaleToFit };
+            image.style.height = 174;
+            image.style.width = Length.Percent(100);
+            roadsterCard.Add(image);
+            var detail = Label("A Tesla Roadster sent around the Sun on Falcon Heavy’s first flight, February 6, 2018.", 11, Text, FontStyle.Normal);
+            detail.style.whiteSpace = WhiteSpace.Normal;
+            roadsterCard.Add(detail);
+            var credit = Label("SpaceX photo · CC0\nMap position uses an approximate solar orbit.", 9, Muted, FontStyle.Normal);
+            credit.style.whiteSpace = WhiteSpace.Normal;
+            credit.style.marginTop = 6;
+            roadsterCard.Add(credit);
+            roadsterCard.style.display = DisplayStyle.None;
+            root.Add(roadsterCard);
         }
 
         private void BuildMapControls()
@@ -500,6 +553,7 @@ namespace ESP.Presentation
             PlaceSystemLabel(systemVehicle, camera, controls != null ? controls.FocusPosition : Vector3.zero, systemView, 4);
             var solarMap = director != null ? director.GetComponent<SolarSystemMap>() : null;
             PlaceSystemLabel(systemSun, camera, solarMap != null ? solarMap.SunPosition : Vector3.zero, systemView && solarMap != null);
+            RefreshRoadster(camera, solarMap?.RoadsterPosition, systemView);
             PlaceSystemLabel(systemMoon, camera, solarMap != null ? solarMap.MoonPosition : Vector3.zero,
                 director != null && director.IsMapView && solarMap != null);
             for (int i = 0; i < orbitMarkers.Length; i++)
@@ -547,6 +601,22 @@ namespace ESP.Presentation
                 markers[i].style.left = point.x - 18; markers[i].style.top = point.y - 16;
                 markers[i].text = "●  " + (i == 0 ? "STARBASE" : "LC-39B");
             }
+        }
+
+        private void RefreshRoadster(Camera camera, Vector3? position, bool systemView)
+        {
+            if (roadsterMarker == null) return;
+            if (!systemView) roadsterOpen = false;
+            bool canInteract = systemView && !MissionSession.BlocksInput;
+            roadsterCard.style.display = canInteract && roadsterOpen ? DisplayStyle.Flex : DisplayStyle.None;
+            bool visible = canInteract && !roadsterOpen && camera != null && position.HasValue;
+            Vector3 screen = visible ? camera.WorldToScreenPoint(position.Value) : Vector3.zero;
+            visible = visible && screen.z > 0 && camera.pixelRect.Contains(new Vector2(screen.x, screen.y));
+            roadsterMarker.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible) return;
+            Vector2 point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
+            roadsterMarker.style.left = point.x - 13;
+            roadsterMarker.style.top = point.y - 13;
         }
 
         private void PlaceSystemLabel(Label label, Camera camera, Vector3 position, bool visible, float yOffset = -18)
