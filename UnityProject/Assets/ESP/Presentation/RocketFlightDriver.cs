@@ -140,7 +140,7 @@ namespace ESP.Presentation
             if (director != null && director.EnvironmentRoot != null) director.EnvironmentRoot.position = Vector3.zero;
             if (director != null && director.RocketVisual != null)
             {
-                director.RocketVisual.localPosition = Vector3.up * LaunchEnvironment.RocketBaseHeightMeters;
+                director.RocketVisual.localPosition = Vector3.up * director.RocketBaseHeightMeters;
                 director.RocketVisual.localRotation = Quaternion.identity;
                 var view = director.RocketVisual.GetComponent<RocketPresentation>();
                 foreach (var plume in director.RocketVisual.GetComponentsInChildren<RocketPlume>(true)) plume.SetFlow(0, 101325);
@@ -223,7 +223,7 @@ namespace ESP.Presentation
             director.EnvironmentRoot.position = CameraRelativeCoordinates.FromEcef(pad.X, pad.Y, pad.Z, ecef.X, ecef.Y, ecef.Z, lat, lon);
             if (director.RocketVisual != null)
             {
-                director.RocketVisual.position = Vector3.up * LaunchEnvironment.RocketBaseHeightMeters;
+                director.RocketVisual.position = Vector3.up * director.RocketBaseHeightMeters;
                 float pressure = launchAtmosphere == null ? 101325 : (float)launchAtmosphere.Sample(Math.Max(-500, state.AltitudeMeters)).PressurePascals;
                 foreach (var plume in director.RocketVisual.GetComponentsInChildren<RocketPlume>(true))
                     plume.SetFlow(!state.IsLanded && (plume.solidBooster ? simulation.BoosterBurning : plume.stageIndex == state.StageIndex && state.IsLaunched && state.PropellantKg > 0) ? (plume.solidBooster ? 1 : (float)simulation.Throttle) : 0, pressure);

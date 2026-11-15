@@ -9,7 +9,7 @@ internal static class Program
         {
             InvalidGuidance();
             foreach (string vehicle in new[] { "Starship", "SLS" })
-            foreach (var site in new[] { ("LC39A", 28.608422, -80.604133), ("South Texas", 25.997, -97.156) })
+            foreach (var site in new[] { ("LC39A", 28.608422, -80.604133), ("LC39B", 28.627306, -80.620869), ("South Texas", 25.997, -97.156) })
             {
                 var a = Run(vehicle, site.Item1, site.Item2, site.Item3, .02);
                 var b = Run(vehicle, site.Item1, site.Item2, site.Item3, .01);

@@ -23,7 +23,9 @@ namespace ESP.Presentation
         public static readonly LaunchSite[] All =
         {
             new LaunchSite("starbase", "Starbase, Texas (approximate)", 25.997, -97.156, 0, 90),
-            new LaunchSite("kennedy", "Kennedy LC-39A (approximate)", 28.608422, -80.604133, 0, 90)
+            // NASA's published Apollo-era pad position uses the Fischer 1960 datum;
+            // this unconverted value is an approximate WGS84 placement, not a survey.
+            new LaunchSite("kennedy", "Kennedy LC-39B (approximate)", 28.627306, -80.620869, 0, 90)
         };
     }
 }
