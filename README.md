@@ -4,14 +4,14 @@ ESP is an original Earth-scale rocket sandbox built for Hack The Nest with Unity
 
 ## Download ESP
 
-The [downloadable builds workflow](.github/workflows/download-builds.yml) publishes an unverified **prerelease** for each successful `main` build to the repository's [GitHub Releases](https://github.com/araysuter/ESP/releases) page. Each release is tagged with its commit SHA, marked as a prerelease, and retains the earlier packages for rollback. Choose the package that matches your operating system:
+The [downloadable builds workflow](.github/workflows/download-builds.yml) publishes an unverified **prerelease** for each successful `main` build to the repository's [GitHub Releases](https://github.com/araysuter/ESP/releases) page. Each prerelease title includes the short commit SHA, and its tag uses `build-<run-id>-<attempt>`; releases retain the earlier packages for rollback. Choose the package that matches your operating system:
 
-- **ESP-macOS.dmg** — Apple silicon macOS players. Open the mounted disk image and copy `ESP.app` to `/Applications`.
+- **ESP-macOS.dmg** — The macOS package. Open the mounted disk image and copy `ESP.app` to `/Applications`. Its architecture remains unverified.
 - **ESP-Windows-Setup.exe** — Windows 64-bit players. Run the Inno Setup installer, which places the executable and its required data files.
 
 Packages are unsigned: Apple notarization and Windows code signing are not configured, so your operating system may warn before launching. Per the [mission acceptance checklist](docs/mission-acceptance.md), Windows and Intel macOS launches remain unverified. See [downloadable builds setup](docs/download-builds.md) for runner prerequisites.
 
-> **Status:** No release has been published yet, so these links do not resolve. A download becomes available only after the first successful `main` build produces a prerelease that contains **both** `ESP-macOS.dmg` and `ESP-Windows-Setup.exe`. Until then, use the build-from-source instructions below.
+> If your installer is unavailable on GitHub Releases, use the build-from-source instructions below.
 
 ## Run the mission
 
