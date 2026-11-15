@@ -157,6 +157,12 @@ namespace ESP.Presentation
                 layers[i] = Button(names[i], () => { selectedLayer = index; director?.SelectLayer(index); Refresh(); }, false, "map-layer-" + names[i].ToLowerInvariant());
                 layerRow.Add(layers[i]);
             }
+            var refreshImagery = Button("↻", () => { director?.mapLayers?.RefreshLatest(); Refresh(); }, false, "refresh-nasa-imagery");
+            refreshImagery.style.width = 29;
+            refreshImagery.style.minWidth = 29;
+            refreshImagery.style.paddingLeft = refreshImagery.style.paddingRight = 0;
+            refreshImagery.tooltip = "Fetch NASA availability and the latest advertised observations for the selected layer";
+            layerRow.Add(refreshImagery);
             layerGroup.Add(layerRow);
             mapBar.Add(layerGroup);
             weatherToggle = Button("WEATHER", () => { weatherOpen = !weatherOpen; if (weatherOpen) director?.RefreshPointWeather(); Refresh(); }, false, "point-weather-toggle");
@@ -498,7 +504,10 @@ namespace ESP.Presentation
             missionTime.text = clock; mapMission.text = clock;
             weather.text = director.WeatherSummary ?? "Weather unavailable";
             string imageryDate = director.mapLayers != null ? director.mapLayers.DisplayedDate : "";
-            mapCredit.text = string.IsNullOrEmpty(imageryDate) ? "NASA · Blue Marble" : "NASA · through " + imageryDate;
+            mapCredit.text = string.IsNullOrEmpty(imageryDate) ? "NASA · historical Blue Marble fallback" : "NASA · through " + imageryDate + " UTC\n" + director.mapLayers.Freshness;
+            mapCredit.tooltip = director.MapCredit;
+            if (director.mapLayers != null && (director.mapLayers.Status.Contains("retained") || director.mapLayers.Status.StartsWith("No verified")))
+                mapCredit.text += "\n" + director.mapLayers.Status;
             nasaStatus.text = director.NasaStatus;
             regionalImage.style.display = director.RegionalImage != null ? DisplayStyle.Flex : DisplayStyle.None;
             regionalImage.style.backgroundImage = director.RegionalImage != null ? new StyleBackground((Texture2D)director.RegionalImage) : new StyleBackground(StyleKeyword.None);

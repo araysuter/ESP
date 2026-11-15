@@ -40,3 +40,50 @@ Scene builders must serialize `NasaMapLayers.cloudShader` from `Assets/ESP/Art/C
 Historical VM validation on November 14, before the smoothing revision: Unity compilation and packaged shader inclusion passed. The player decoded 2,093,654 valid pixels with zero unknown palette colors across November 12–14, rendered the shell, and restored the offline map. A separate VM check matched all 101 encoded palette colors against NASA's live XML. These results do not validate the new blend or its visual appearance.
 
 VM qualification for this revision: Unity compiled and packaged the shader. CloudBlendChecks passed constant/clear fields, missing-data support, periodic longitude, polar-ring consistency and dated weighting. The player rendered a smooth blend from November 12–14 with 2,093,686 valid and 3,466 missing pixels, zero unknown palette colors, and 99.978% area-weighted observed coverage. Native map and close-flight captures were inspected. A same-angle Surface capture showed the expected ocean/bathymetry underneath; flight opacity is intentionally lower because linear alpha otherwise washes out close ground views. Failed-refresh injection and dedicated antimeridian/pole visual captures remain unperformed for this revision; those boundaries have numerical checks. All compilation/rendering/tests ran in the VM.
+
+## Latest observations and refresh policy
+
+The normal startup view now selects CLOUDS automatically. Blue Marble remains
+visible while data loads or if NASA is unreachable. Availability is fetched at
+startup and every 15 minutes of real time, independently of simulation time
+rate or pause. REFRESH fetches the current catalog and reloads the latest
+advertised day for the selected imagery layer; SURFACE explicitly selects the
+offline surface. Refreshing SURFACE does not silently enable clouds.
+
+Date selection uses the newest advertised day at or before UTC today, respects
+catalog gaps and whole-day interval cadence, and rejects unsupported time
+formats. An advertised current day may still contain no observations; only
+nonempty decoded days contribute to the displayed date range. The cloud field
+continues to blend at most three dated days. This improves access to the latest
+available imagery; it does not create an instantaneous global weather field.
+
+The visible map credit reports daily observation age; the full provenance and
+fetch/failure status are also available in its tooltip and mission information.
+Age is calculated from the wall clock on each UI refresh, including when the
+network fails. A newest contributing day more than two UTC calendar days old
+is marked STALE (an application policy, not a NASA guarantee). Daily raster
+metadata cannot establish the exact per-pixel acquisition time. A failed
+refresh retains the existing texture and its original observation dates, and
+reports that retention. Transparent missing data remains distinct from decoded
+clear sky in the data and coverage accounting.
+
+`NasaImageryTimeChecks.Validate` exercises gaps, future dates, cadence,
+unsupported/malformed domains and aging; release builds run it automatically.
+The development-only `-espNasaFreshnessSmoke` player check exercises automatic
+cloud startup, a manual latest refresh, a real invalid-layer WMS failure with
+texture/date retention, and offline restoration. It captures
+`nasa-freshness-latest.png` in the player's persistent data directory.
+
+Qualification for the latest-observation changes, November 15, 2026 UTC
+(November 14 EST): Unity 6000.6.9f1 compiled and packaged the macOS ARM player;
+the build's cloud-blend and imagery-time checks passed. The packaged freshness
+smoke passed automatic cloud loading, manual refresh, real invalid-layer WMS
+failure retention and offline restore. Both successful loads used November
+13–15 observations, 2,093,314 valid pixels, 3,838 missing pixels, 99.969%
+area-weighted coverage and zero unknown palette colors. The 1280×800 capture
+was inspected, including the refresh control and visible daily-age credit.
+The Python NASA profile tests also passed; a separate live GEOS-FP request
+returned 72/72 levels valid November 14 at 21:00 UTC. No instantaneous cloud
+field is claimed. This revision was not run on Windows; the full 15-minute
+automatic timer was not waited out, and metadata-network failure was not
+injected (the packaged failure check targets WMS imagery requests).

@@ -26,10 +26,14 @@ namespace ESP.Presentation
         UnityWebRequest activeRequest;
         string status="Loading NASA layer availability…", shown="Offline Blue Marble composite";
         string requestedDate="";
-        int selected=-1, displayed=-1, generation;
+        int selected=1, displayed=-1, generation; // Start with the latest observed clouds; Blue Marble remains the offline fallback.
         Texture2D downloaded, cloudDownloaded;
         bool available;
+        DateTime observationFirst, observationLast;
         public string Status=>status;
+        // Compute against the wall clock so retained observations age even when a refresh fails.
+        public string Freshness => displayed < 0 ? "Offline historical surface" :
+            NasaImageryTime.Describe(observationFirst, observationLast, DateTime.UtcNow);
         public int SelectedIndex=>selected;
         public string DisplayedDescription=>shown;
         public string DisplayedLayerId { get; private set; }="BlueMarble_ShadedRelief_Bathymetry";
@@ -45,9 +49,16 @@ namespace ESP.Presentation
         void OnDisable() { Shader.SetGlobalFloat("_EspObservedCloudsEnabled", 0); }
         IEnumerator Start(){defaults=new string[layerIds.Length];timeDomains=new string[layerIds.Length];yield return StartCoroutine(Availability());StartCoroutine(AutoRefresh());}
 
+        public void RefreshLatest()
+        {
+            requestedDate="";
+            if(!metadataLoading && defaults!=null) StartCoroutine(Availability());
+        }
         IEnumerator Availability()
         {
+            if(metadataLoading)yield break;
             metadataLoading=true;
+            bool parsedMetadata=false;
             using(var req=UnityWebRequest.Get("https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities"))
             {
                 req.timeout=20;yield return req.SendWebRequest();
@@ -59,26 +70,22 @@ namespace ESP.Presentation
                         var layer=doc.Descendants().FirstOrDefault(e=>e.Name.LocalName=="Layer"&&e.Elements().Any(n=>n.Name.LocalName=="Name"&&n.Value==layerIds[i]));
                         var dim=layer?.Elements().FirstOrDefault(e=>e.Name.LocalName=="Dimension"&&(string)e.Attribute("name")=="time");
                         timeDomains[i]=dim?.Value;
-                        defaults[i]=(string)dim?.Attribute("default");
-                        if(TryDay(defaults[i],out var day)&&day>DateTime.UtcNow.Date)defaults[i]=DateTime.UtcNow.ToString("yyyy-MM-dd");
+                        // The default is advisory. Select the newest explicitly advertised day
+                        // at/before UTC today, respecting gaps and interval cadence.
+                        defaults[i]=NasaImageryTime.LatestDay(timeDomains[i],DateTime.UtcNow)?.ToString("yyyy-MM-dd");
                     }
-                    available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'");
+                    parsedMetadata=true;available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'");
                     Debug.Log("ESP_NASA_CAPABILITIES_OK "+string.Join(",",defaults));
                 }catch(Exception){status="NASA metadata could not be read — previous map retained";}
             }
-            if(selected>=0&&available)Select(selected);
-            else if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0&&available)Select(0);
+            if(!parsedMetadata)yield break;
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0&&available)Select(0);
+            else if(selected>=0&&available)Select(selected);
         }
         static bool TryDay(string value,out DateTime date)=>DateTime.TryParseExact(value,"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out date);
         bool Advertised(int index,DateTime day)
         {
-            if(string.IsNullOrEmpty(timeDomains[index]))return false;
-            foreach(var span in timeDomains[index].Split(',')){
-                var parts=span.Trim().Split('/');
-                if(parts.Length==1&&TryDay(parts[0],out var exact)&&exact==day)return true;
-                if(parts.Length>=2&&TryDay(parts[0],out var first)&&TryDay(parts[1],out var last)&&day>=first&&day<=last)return true;
-            }
-            return false;
+            return NasaImageryTime.Contains(timeDomains[index],day);
         }
         public void Select(int index)
         {
@@ -175,6 +182,7 @@ namespace ESP.Presentation
                     if(clouds)clouds.Hide();
                     earth.material.mainTexture=result;if(downloaded)Destroy(downloaded);downloaded=result;result=null;
                 }
+                observationFirst=first;observationLast=last;
                 DisplayedLayerId=layerIds[index];DisplayedDate=last.ToString("yyyy-MM-dd");displayed=index;
                 string dateRange=first.ToString("yyyy-MM-dd")+(first!=last?" to "+last.ToString("yyyy-MM-dd"):"");
                 shown=(cloudLayer?"Smoothed cloud observation blend":"Satellite true-color temporal mosaic")+" "+dateRange+" UTC • "+(cloudLayer?"Blue Marble ground; transparent unsampled areas; 10 km display height":"Blue Marble fills no-data")+"; not instantaneous";
@@ -198,13 +206,13 @@ namespace ESP.Presentation
         {
             if (!showLegacyUI) return;
             float y=Screen.height-170;GUI.Box(new Rect(16,y,Screen.width-32,154),GUIContent.none);
-            GUI.Label(new Rect(30,y+8,Screen.width-60,22),shown);
+            GUI.Label(new Rect(30,y+8,Screen.width-60,22),shown+" • "+Freshness);
             if(GUI.Button(new Rect(30,y+35,130,28),"Offline globe"))Select(-1);
             GUI.enabled=true;
             for(int i=0;i<layerNames.Length;i++)if(GUI.Button(new Rect(170+i*185,y+35,175,28),layerNames[i]))Select(i);
             GUI.enabled=true;
             GUI.Label(new Rect(30,y+70,110,22),"Date (optional)");requestedDate=GUI.TextField(new Rect(140,y+70,120,24),requestedDate,10);
-            if(GUI.Button(new Rect(270,y+70,140,24),"Latest date")){requestedDate="";if(selected>=0)Select(selected);}
+            if(GUI.Button(new Rect(270,y+70,140,24),"Refresh latest"))RefreshLatest();
             if(GUI.Button(new Rect(420,y+70,90,24),"Load date")&&selected>=0)Select(selected);
             if(displayed==1)GUI.Label(new Rect(560,y+35,330,65),"White = smoothed dated cloud fractions\nTransparent = clear or unsampled areas\nRepresentative display height: 10 km");
             autoRefresh=GUI.Toggle(new Rect(900,y+40,240,25),autoRefresh,"Refresh latest imagery every 15 min");
