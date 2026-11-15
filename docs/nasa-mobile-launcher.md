@@ -43,5 +43,9 @@ On November 14, the macOS ARM VM's packaged development build imported the
 textured materials, liftoff, reset, and absence at Starbase. A daylight-override
 screenshot was reviewed after positioning the boosters over the model's opening.
 The source FBX importer uses a 0.01 scale, and checks model height and floor.
+An assisted SLS run from LC-39B at 1280×720 also reached verified orbit at
+mission time 1,109.78 s, rendered a closed orbit on the map, and reset after a
+site change. The run used the standard-atmosphere fallback because live weather
+was unavailable. Time acceleration used the game's fixed-step simulation.
 These checks are not evidence of survey accuracy. Other target systems remain
 untested until independently built and run.
