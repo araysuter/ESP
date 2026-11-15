@@ -4,17 +4,21 @@ CLOUDS renders a **dated NASA cloud-fraction composite**, choosing each pixel's
 newest valid observation from at most three advertised daily rasters. Clear-sky
 zero is a valid observation: it prevents an older cloudy pixel from showing
 through. Missing/fill pixels can use an older valid day within that bounded
-window. Regions with no valid observation remain missing. This is not
+window. Regions with no valid observation remain missing in the source coverage
+mask; only a narrow display feather may extend into adjacent missing pixels.
+This is not
 instantaneous global weather, a forecast, measured cloud-top geometry or a
 volumetric reconstruction. It does not affect flight forces.
 
 The newest-valid selector replaces the earlier weighted temporal blend and
 broad CPU smoothing, which could spread intermediate cloud fractions into a
-blanket. The combined implementation is pending the Integration owner's
-packaged/UI QA. Prior blend qualification below does not validate this revision.
-The original provider limits still apply: one daytime Terra sensor's daily
-swaths do not establish a simultaneous global weather field. Adjacent swaths
-can have different acquisition days, and source seams can remain visible.
+blanket. The current visual treatment preserves these newest-valid interiors
+and feathers only near date/missing-data boundaries. It does not reintroduce
+averaging across the full daily fields. The Integration owner is qualifying the
+combined border-feather revision; earlier passes are identified below.
+One daytime Terra sensor's daily swaths still do not establish a simultaneous
+global weather field. Adjacent swaths can have different acquisition days;
+feathering softens their presentation without making them simultaneous.
 
 ## Data, decoding and provenance
 
@@ -34,7 +38,7 @@ can have different acquisition days, and source seams can remain visible.
   cloud raster increases download/decoding/memory work; combined QA must check
   its actual provider response, timing and target-memory behavior.
 - The visible date range must describe contributing days. `ObservationBlend.Add`
-  must report newly contributing pixels for each day, rather than every valid
+  reports newly contributing pixels for each day, rather than every valid
   source pixel including those superseded by newer data. Logs report per-day
   validity/unknown colors and the final missing fraction. Coverage uses original
   observation support and cosine-of-latitude area weighting, not inferred data.
@@ -43,6 +47,28 @@ can have different acquisition days, and source seams can remain visible.
   samples cannot become measured clear sky. Display interpolation does not add
   observations. Transparent areas can mean clear sky or no observation; dates
   and missingness remain part of the provenance.
+
+## Bounded display feather
+
+After selecting the newest valid pixel, `ObservationBlend.Finish` detects
+boundaries where a pixel's selected observation day differs from a neighbor,
+including transitions to missing data. It filters fraction × support and
+support together using separable running sums with radius eight pixels
+(a 17×17 neighborhood). Boundary influence is calculated separately; pixels
+away from those boundaries keep their original newest-valid values. Longitude
+wraps across the antimeridian. Latitude sampling reflects over a pole and
+shifts longitude by 180°, rather than clamping to an unrelated row.
+
+This is local display interpolation across adjacent selected days or missing
+support, not a broad temporal average of three daily rasters. The shader divides
+the premultiplied fraction by filtered support after texture sampling. Missing
+data is not substituted with zero cloud fraction. The feather can extend narrow
+visual support into a neighboring no-data strip; broad gaps remain transparent.
+The original per-pixel observation mask, contributing dates and reported
+coverage remain unchanged. Feathered support is not counted as observed Earth
+area or presented as a new NASA measurement. At the 4096×2048 request scale the
+radius is approximately 0.70° in raster coordinates; its physical width varies
+with latitude and is a visual choice, not an uncertainty estimate.
 
 Cloud mode uses cloud-free Blue Marble underneath the shell. Satellite mode
 has its own dated true-color mosaic, which already includes clouds and uses a
@@ -92,7 +118,11 @@ credit tooltip and mission information expose fuller provenance/fetch status.
 ECEF X,Z,Y → Unity X,Y,Z axes. It offsets along the geodetic normal by 10,000 m
 at 1,000,000 m/unit. This is a representative visual altitude, not measured
 cloud-top height or a terrain/collision surface. Cloud fraction controls visual
-opacity, not measured optical depth. The shell has no procedural weather,
+opacity, not measured optical depth. Default map daytime opacity is 0.38,
+reduced from 0.68 so the surface remains more legible; close-flight uses its
+existing 0.35 opacity. The existing night opacity/illumination treatment is
+preserved. These opacity values are visual choices, not calibrated optical
+properties. The shell has no procedural weather,
 wind advection, ray marching or volumetric physics. Night transmission and
 illumination are visual approximations. Scene builders serialize the cloud
 shader so player stripping retains it; map and flight use the same texture.
@@ -120,8 +150,23 @@ clouds; Surface→Clouds immediate texture/date identity; a first Satellite load
 with repeated selections; eight cached Satellite→Clouds→Surface→Satellite
 cycles; forced latest refresh; real invalid-layer WMS failure retention; and
 offline restoration. It captures `nasa-freshness-latest.png` in the player's
-persistent data directory. The Integration owner holds the VM lease and will
-run combined compilation, smoke and actual button-click/capture QA. These new
-checks and the newest-valid data selector are not yet qualified by this chat.
+persistent data directory.
+
+The Integration owner reported combined source b0e8fe4 plus PR #56's 99d3c4a
+passed the Unity build, cloud checks and packaged freshness smoke: automatic
+4096×2048 cloud loading, twelve repeated loading selections, eight cached
+cycles, explicit replacement, failed-refresh texture/date retention and offline
+restoration. The 4K data had 8,372,683 valid pixels, 15,925 missing pixels,
+99.969% area-weighted coverage and no unknown palette colors, dated November
+13–15 UTC. The combined CloudNightSmoke also passed before the latest border
+revision. These passes validate the earlier newest-valid/cache combination,
+not the subsequent feather appearance.
+
+PR #56's 1e57aa6 adds the bounded border feather and lower default daytime
+opacity described above. The Integration owner reported build 4 and its
+CloudBlendChecks passed. The new night/map, both-pad captures and real-ascent
+run remain in progress at this documentation update; do not claim the latest
+rendered appearance has passed before inspecting those results. The Integration
+owner retains the VM lease and will record final visual/package evidence.
 Windows, the complete 15-minute refresh interval and injected metadata transport
 failure have not been exercised for this revision.
