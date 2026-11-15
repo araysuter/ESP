@@ -27,3 +27,18 @@ equinox noon/midnight, opposite longitude, both solstices, polar day/night, west
 solar motion and surface/orbital/oblate-Earth shadow cases. Run builds and Unity
 review on the shared compute machine, with an explicit editor lease. Review map,
 both pads, and the high-altitude backdrop, including reset and view switches.
+
+## Verification — November 14, 2026
+
+The Mac Studio's Apple Silicon macOS VM passed the solar and gravity/orbit suite
+using the Unity-bundled .NET 8 SDK (only the isolated test copy targeted net8;
+repository tests remain net9). All three GitHub numerical CI workflows passed the
+implementation commit. Unity 6000.6.9f1 built the macOS ARM development player.
+
+Run that player with `-espDayNightSmoke` to capture deterministic equinox day/night
+map and both-pad views, then fly the demo vehicle through the actual simulator to
+150 km and capture the high-altitude Earth view. The harness checks accelerated
+mission UTC, pause freezing and reset to live UTC. Its lighting-only timestamp
+overrides are visibly labeled; they are not historical flight checkpoints.
+Windows and Intel player validation remain unperformed. The VM's UI clipping at
+1440x900 is tracked separately from lighting; review captures also use 3000x1800.
