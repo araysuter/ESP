@@ -1,11 +1,12 @@
 """Create isolated derived meshes and paired review renders; never edit inputs.
 
-Usage: blender --factory-startup --disable-autoexec -b -t 2 --python qualify_blender.py -- INPUT OUTPUT
+Invoke through run_blender_trial.py for a bounded fresh Blender process.
 UNEXECUTED TRIAL: Blender API compatibility and output quality are unverified.
 The output is a review candidate, not an approved Unity/runtime asset.
 """
 import bpy
 import bmesh
+import hashlib
 import json
 import math
 import sys
@@ -14,16 +15,21 @@ from mathutils import Vector
 
 if not bpy.app.background or bpy.data.filepath:
     raise ValueError("Run in a fresh background Blender process without a loaded .blend file")
+if bpy.app.version != (5, 2, 3):
+    raise ValueError("This unqualified trial requires the pinned Blender 5.2.3 version")
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if len(args) != 2:
     raise ValueError("Expected source module directory and NEW output directory")
 source, output = (Path(value).resolve() for value in args)
 if source == output or source in output.parents:
     raise ValueError("Use a separate output directory outside the source modules")
+source_hashes = {}
 for name in ("TowerLevel", "TowerTop", "CatchArms", "QuickDisconnect", "LaunchMount", "Foundation"):
     for suffix in (".obj", ".mtl"):
-        if not (source / (name + suffix)).is_file():
+        path = source / (name + suffix)
+        if not path.is_file():
             raise ValueError(f"Missing source module {name}{suffix}")
+        source_hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
 output.mkdir(parents=True, exist_ok=False)
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
@@ -112,6 +118,8 @@ for name, shown, hidden in (("original", originals, candidates), ("planar-candid
     bpy.ops.render.render(write_still=True)
 bpy.ops.wm.save_as_mainfile(filepath=str(output / "Starbase-planar-review.blend"))
 result = dict(blender=bpy.app.version_string, dissolve_angle_degrees=.05, degenerate_edge_distance_m=1e-8,
+              input_sha256=source_hashes, camera_position=list(camera.location), camera_target=[0, 18, 68],
+              orthographic_scale_m=166, render_resolution=[1024, 1024], render_engine="BLENDER_WORKBENCH",
               modules=report, approved_for_runtime=False,
               assembled_input_triangles=sum(m["input_triangles"]*(23 if m["module"] == "TowerLevel" else 1) for m in report),
               assembled_output_triangles=sum(m["output_triangles"]*(23 if m["module"] == "TowerLevel" else 1) for m in report))
