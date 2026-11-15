@@ -243,6 +243,12 @@ namespace ESP.Presentation
             saturation.SetValueWithoutNotify(session.MilkyWaySaturation);
             saturation.RegisterValueChangedCallback(evt => { session.SetMilkyWaySaturation(Mathf.Round(evt.newValue)); saturationLabel.text = "Milky Way saturation: " + Mathf.RoundToInt(session.MilkyWaySaturation) + "%"; });
             menuScroll.Add(saturation);
+            menuScroll.Add(Label("GRAPHICS · AURORA", 10, Muted, true));
+            AddAuroraSlider("Simulated Kp index", "aurora-kp", session.AuroraKp, 0, 9, false, session.SetAuroraKp);
+            AddAuroraSlider("Color boost", "aurora-color-boost", session.AuroraColorBoost, 50, 500, true, session.SetAuroraColorBoost);
+            AddAuroraSlider("Intensity", "aurora-intensity", session.AuroraIntensity, 50, 500, true, session.SetAuroraIntensity);
+            var auroraHelp = Note("Simulated magnetic activity, not live space weather. Higher Kp widens the polar oval toward lower latitudes. Color boost expands saturation and violet/red tones; intensity increases brightness. Enhanced reference look: 150% color / 300% intensity. Best viewed on Earth's night side.");
+            auroraHelp.style.marginBottom = 16; menuScroll.Add(auroraHelp);
             menuScroll.Add(Label("FRAME RATE LIMIT", 10, Muted, true));
             var caps = Row(); caps.style.flexWrap = Wrap.Wrap;
             caps.style.marginTop = 7; caps.style.marginBottom = 12;
@@ -262,6 +268,20 @@ namespace ESP.Presentation
             settingsNote.style.marginTop = 5; settingsNote.style.marginBottom = 17;
             menuScroll.Add(settingsNote);
             AddAction("Back", "settings-back", session.Back);
+        }
+
+        private void AddAuroraSlider(string title, string name, float value, float low, float high, bool percent, Action<float> change)
+        {
+            var label = Label("", 11, Text); label.style.marginTop = 8;
+            Action<float> display = v => label.text = title + ": " + (percent ? Mathf.RoundToInt(v) + "%" : v.ToString("F1"));
+            display(value); menuScroll.Add(label);
+            var slider = new Slider(low, high) { name = name };
+            slider.style.height = 26;
+            slider.SetValueWithoutNotify(value);
+            slider.RegisterValueChangedCallback(evt => { float v = percent ? Mathf.Round(evt.newValue) : Mathf.Round(evt.newValue * 10) / 10; change(v); display(v); });
+            slider.RegisterCallback<PointerUpEvent>(_ => PlayerPrefs.Save());
+            slider.RegisterCallback<FocusOutEvent>(_ => PlayerPrefs.Save());
+            menuScroll.Add(slider);
         }
 
         private void BuildCheats(MissionSession session)

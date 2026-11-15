@@ -119,6 +119,7 @@ namespace ESP.Presentation
                 SelectVehicle(1);
             if (mapRoot != null)
             {
+                AuroraCurtains.Create(mapRoot.transform);
                 OrbitVisual = mapRoot.AddComponent<MapOrbitVisual>();
                 OrbitVisual.orbitMaterial = orbitMaterial;
                 OrbitVisual.Initialize(this);
