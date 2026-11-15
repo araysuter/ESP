@@ -121,6 +121,7 @@ namespace ESP.Presentation
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
             Inset = gameObject.AddComponent<MissionInsetView>();
             Inset.Initialize(this);
+            gameObject.AddComponent<SolarSystemMap>().Initialize(this);
             GoToLaunch(SelectedSiteIndex);
             ShowMap();
             RequestWeather();
