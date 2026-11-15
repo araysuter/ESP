@@ -1,3 +1,5 @@
+using Math = System.Math;
+using FlightCore;
 using UnityEngine;
 
 namespace ESP.Presentation
@@ -44,6 +46,21 @@ namespace ESP.Presentation
                 new Vector3(1000, 0, 1000), new Vector3(1000, 0, -1000) };
             mesh.uv = new[] { new Vector2(uCenter-uHalf, vCenter-vHalf), new Vector2(uCenter-uHalf, vCenter+vHalf),
                 new Vector2(uCenter+uHalf, vCenter+vHalf), new Vector2(uCenter+uHalf, vCenter-vHalf) };
+            // Geographic UVs for the observed night-light atlas. The visual plane
+            // remains flat; only its georeferencing uses the WGS84 tangent basis.
+            double lat = site.Latitude * Math.PI / 180, lon = site.Longitude * Math.PI / 180;
+            var origin = EarthFrames.GeodeticToEcef(lat, lon, site.ElevationMeters);
+            var geographicUv = new Vector2[4];
+            var corners = mesh.vertices;
+            for (int i = 0; i < corners.Length; i++)
+            {
+                double east = corners[i].x, north = corners[i].z;
+                var ecef = origin + new Vector3d(-Math.Sin(lon) * east - Math.Sin(lat) * Math.Cos(lon) * north,
+                    Math.Cos(lon) * east - Math.Sin(lat) * Math.Sin(lon) * north, Math.Cos(lat) * north);
+                var geo = EarthFrames.EcefToGeodetic(ecef);
+                geographicUv[i] = new Vector2((float)(geo.LongitudeRadians / (2 * Math.PI) + .5), (float)(geo.LatitudeRadians / Math.PI + .5));
+            }
+            mesh.uv2 = geographicUv;
             mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
             // URP Lit needs a tangent basis; missing tangents rendered the sunlit imagery black.
             mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();

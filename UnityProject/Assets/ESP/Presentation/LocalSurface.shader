@@ -23,13 +23,14 @@ Shader "ESP/Local Surface Imagery"
             #pragma vertex Vert
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "EarthNightLights.hlsl"
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             CBUFFER_START(UnityPerMaterial)
                 float4 _PatchUv, _SunDirection, _SunColor;
                 float _Opacity, _CameraAltitude;
             CBUFFER_END
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
-            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float3 normalWS : TEXCOORD1; float2 uv : TEXCOORD2; };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; float2 geographicUv : TEXCOORD1; };
+            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float3 normalWS : TEXCOORD1; float2 uv : TEXCOORD2; float2 geographicUv : TEXCOORD3; };
             Varyings Vert(Attributes input)
             {
                 Varyings output;
@@ -38,6 +39,7 @@ Shader "ESP/Local Surface Imagery"
                 output.positionWS = position.positionWS;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = input.uv;
+                output.geographicUv = input.geographicUv;
                 return output;
             }
             half4 Frag(Varyings input) : SV_Target
@@ -68,6 +70,7 @@ Shader "ESP/Local Surface Imagery"
                 float horizonHaze = grazing * smoothstep(400, 3500, distanceMeters) * airDensity;
                 half haze = daylight * min(.985, 1 - (1 - baseHaze) * (1 - horizonHaze));
                 color = lerp(color, half3(.26, .48, .90), haze);
+                color += EspNightEmission(input.geographicUv);
                 return half4(color, alpha);
             }
             ENDHLSL

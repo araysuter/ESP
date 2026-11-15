@@ -12,6 +12,8 @@ namespace ESP.Presentation
         public MissionDirector director;
         public RocketFlightDriver driver;
         public Light sun;
+        public Texture2D nightLights;
+        [Range(0, 2)] public float nightLightsStrength = .65f;
         private Light mapSun;
         public float daylightIntensity = 1.5f;
         public DateTime CurrentUtc { get; private set; }
@@ -59,6 +61,9 @@ namespace ESP.Presentation
             CurrentUtc = ReviewUtc ?? (driver != null && driver.HasPosition
                 ? driver.LaunchUtc.AddSeconds(driver.MissionTimeSeconds) : DateTime.UtcNow);
             SunEcef = SolarLighting.DirectionEcef(CurrentUtc);
+            Shader.SetGlobalVector("_EspSunDirectionEcef", new Vector4((float)SunEcef.X, (float)SunEcef.Z, (float)SunEcef.Y, 0));
+            Shader.SetGlobalTexture("_EspNightLights", nightLights != null ? nightLights : Texture2D.blackTexture);
+            Shader.SetGlobalFloat("_EspNightLightsStrength", nightLights != null ? nightLightsStrength : 0);
             var site = LaunchSites.All[director.SelectedSiteIndex];
             double lat = site.Latitude * Math.PI / 180, lon = site.Longitude * Math.PI / 180;
             LocalSunDirection = CameraRelativeCoordinates.FromEcef(SunEcef.X, SunEcef.Y, SunEcef.Z, 0, 0, 0, lat, lon).normalized;
@@ -100,6 +105,8 @@ namespace ESP.Presentation
                 director.launchCamera.backgroundColor = Color.Lerp(new Color(.002f, .005f, .014f), new Color(.11f, .20f, .29f), daylight * air);
             }
         }
+
+        private void OnDisable() { Shader.SetGlobalFloat("_EspNightLightsStrength", 0); }
 
         public static void Aim(Light light, Vector3 towardSun)
         {

@@ -18,6 +18,7 @@ namespace ESP.Presentation
         public RocketFlightDriver driver;
         public MissionDirector director;
         public Shader surfaceShader;
+        public Shader offlineLightsShader;
         public Light surfaceSun;
         public bool networkEnabled = true;
         public const string Attribution = "Ground: USDA / USGS The National Map orthoimagery; NASA / USGS Landsat WELD (2000 annual composite)";
@@ -37,7 +38,8 @@ namespace ESP.Presentation
         private readonly List<TileKey> scratch = new List<TileKey>();
         private RocketSimulation previousSimulation;
         private Transform previousEnvironment;
-        private Renderer oldGround;
+        private Renderer oldGround, offlineLights;
+        private Material offlineLightsMaterial;
         private int siteIndex = -1, generation, maximumDetailZoom = 16;
         private double previousMissionTime = -1;
         private float nextSelection, nextRequest;
@@ -78,6 +80,18 @@ namespace ESP.Presentation
                 // Only this legacy visual plane is hidden. Keep authored pad/deck/buildings.
                 var legacy = previousEnvironment != null ? previousEnvironment.Find("Visual ground (2 km)") : null;
                 oldGround = legacy != null ? legacy.GetComponent<Renderer>() : null;
+                if (oldGround != null && offlineLightsShader != null)
+                {
+                    // Reuse the four-vertex offline plane; never clone globe geometry.
+                    var overlay = new GameObject("Observed lights on offline ground");
+                    overlay.transform.SetParent(legacy, false);
+                    overlay.AddComponent<MeshFilter>().sharedMesh = legacy.GetComponent<MeshFilter>().sharedMesh;
+                    offlineLights = overlay.AddComponent<MeshRenderer>();
+                    offlineLightsMaterial = new Material(offlineLightsShader);
+                    offlineLights.sharedMaterial = offlineLightsMaterial;
+                    offlineLights.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    offlineLights.receiveShadows = false;
+                }
             }
             previousSimulation = simulation;
             previousMissionTime = missionTime;
@@ -96,6 +110,7 @@ namespace ESP.Presentation
                 if (wanted.Count > 0) { wanted.Clear(); ordered.Clear(); AbortUnwanted(); }
                 foreach (var tile in tiles.Values) tile.Object.SetActive(false);
                 if (oldGround != null) oldGround.enabled = true;
+                if (offlineLights != null) offlineLights.enabled = !director.IsMapView;
                 return;
             }
             if (!camera.isActiveAndEnabled)
@@ -104,6 +119,7 @@ namespace ESP.Presentation
                 // clear selection, or render local terrain into another domain.
                 foreach (var tile in tiles.Values) tile.Object.SetActive(false);
                 if (oldGround != null) oldGround.enabled = true;
+                if (offlineLights != null) offlineLights.enabled = !director.IsMapView;
                 return;
             }
             if (Time.unscaledTime >= nextSelection)
@@ -140,6 +156,7 @@ namespace ESP.Presentation
             {
                 TileKey padTile = KeyAt(0, coarseGrid.Zoom, site.Latitude, site.Longitude);
                 oldGround.enabled = !(wanted.Contains(padTile) && tiles.ContainsKey(padTile));
+                if (offlineLights != null) offlineLights.enabled = oldGround.enabled;
             }
             if (networkEnabled && Time.unscaledTime >= nextRequest)
             {
@@ -259,6 +276,7 @@ namespace ESP.Presentation
             Vector3d anchor = EarthFrames.GeodeticToEcef(SurfaceTileMath.LatitudeAtRow(key.Y + .5, n), SurfaceTileMath.LongitudeAtColumn(key.X + .5, n), elevation);
             int side = Subdivisions + 1;
             var vertices = new Vector3[side * side]; var normals = new Vector3[vertices.Length]; var uv = new Vector2[vertices.Length];
+            var geographicUv = new Vector2[vertices.Length];
             var triangles = new int[Subdivisions * Subdivisions * 6];
             for (int y = 0; y < side; y++)
                 for (int x = 0; x < side; x++)
@@ -270,6 +288,7 @@ namespace ESP.Presentation
                     vertices[i] = CameraRelativeCoordinates.FromEcef(p.X, p.Y, p.Z, anchor.X, anchor.Y, anchor.Z, lat, lon);
                     normals[i] = CameraRelativeCoordinates.FromEcef(Math.Cos(vertexLat) * Math.Cos(vertexLon), Math.Cos(vertexLat) * Math.Sin(vertexLon), Math.Sin(vertexLat), 0, 0, 0, lat, lon);
                     uv[i] = new Vector2((float)u, (float)v);
+                    geographicUv[i] = new Vector2((float)(vertexLon / (2 * Math.PI) + .5), (float)(vertexLat / Math.PI + .5));
                     if (x < Subdivisions && y < Subdivisions)
                     {
                         int t = (y * Subdivisions + x) * 6;
@@ -278,7 +297,7 @@ namespace ESP.Presentation
                     }
                 }
             var mesh = new Mesh { name = "WGS84 imagery tile" };
-            mesh.vertices = vertices; mesh.normals = normals; mesh.uv = uv; mesh.triangles = triangles;
+            mesh.vertices = vertices; mesh.normals = normals; mesh.uv = uv; mesh.uv2 = geographicUv; mesh.triangles = triangles;
             mesh.RecalculateBounds();
             var material = new Material(surfaceShader) { name = "Geographic surface imagery", renderQueue = key.Source == 0 ? 2990 : 2991 };
             material.SetTexture("_BaseMap", image);
@@ -328,6 +347,9 @@ namespace ESP.Presentation
             tiles.Clear();
             if (oldGround != null) oldGround.enabled = true;
             oldGround = null;
+            if (offlineLights != null) Destroy(offlineLights.gameObject);
+            if (offlineLightsMaterial != null) Destroy(offlineLightsMaterial);
+            offlineLights = null; offlineLightsMaterial = null;
             nextSelection = nextRequest = 0;
             maximumDetailZoom = 16;
             Status = "Bundled imagery fallback";
