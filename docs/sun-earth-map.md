@@ -25,3 +25,28 @@ changed. The Sun's glow and flare are artistic, not calibrated radiometry.
 The map uses one Unity unit per million meters and adjusts camera clipping as
 it zooms. The inset keeps its existing Earth-focused framing. Ground picking
 at very large zoom distances is limited by floating-point screen-ray precision.
+
+## Reconciliation and validation
+
+The reviewed integration incorporates main `ce27f77` while retaining the
+ship-centered map and solar context. The current parallel macOS/Windows build
+workflow and packaging fixes are preserved, alongside NASA imagery freshness,
+cached Surface/Satellite/Cloud switching, 32-pixel overlap crossfades, 0.22
+cloud daytime opacity, night diffusion and local-ground lighting fixes. The
+flight core and authoritative state are unchanged.
+
+On November 14, 2026 EST, Unity 6000.6.9f1 compiled and packaged macOS ARM integration source
+`e3c4247`. The opt-in `-espShipMapSmoke` passed real ascent, moving ship-center
+tracking, Sun/Earth and SHIP toggles, inset framing and reset for all three
+vehicles across both sites. Ship and system captures were inspected. The
+packaged NASA freshness smoke also passed automatic 4K cloud loading, repeated
+clicks, cached mode cycles, explicit refresh, failed-refresh texture/date
+retention and offline restoration. All three numerical CI workflows passed.
+
+The contributor reported Windows development-player headless and Direct3D 12
+checks on the original source. The reconciled source's Windows-only Actions
+[rehearsal](https://github.com/araysuter/ESP/actions/runs/43676041805) is still
+building at this update; its release/installer result is not yet established.
+A separate macOS headless release probe was interrupted to open the interactive
+player for the user's test and is not recorded as a pass. Native mouse interaction has not yet been retested on the reconciled build.
+Existing release tags and already-running publication sources were not changed.
