@@ -201,7 +201,16 @@ namespace FlightCore
                 double flipSeconds=flipAngle/(45*Math.PI/180)+.5;
                 double flipAltitude=catchAltitude+downward*flipSeconds+1.7*stop+200;
                 if(s.AltitudeMeters<Math.Max(catchAltitude+300,flipAltitude)&&vertical<0)
-                    { Phase=StarshipReturnPhase.LandingFlip;hasApproachPoint=true;approachPosition=s.Position;approachTime=s.MissionTime; }
+                    {
+                        Phase=StarshipReturnPhase.LandingFlip;hasApproachPoint=true;approachTime=s.MissionTime;
+                        // Target the end of the powered horizontal arrest, not ignition at the
+                        // tower. The same endpoint drives coarse search and Newton residuals.
+                        var horizontal=air-up*vertical;
+                        double lateralBrake=Math.Max(1,Math.Min(gravity*.577,sim.ReturnAvailableThrust/s.MassKg*.5));
+                        double horizontalSpeed=horizontal.Magnitude();
+                        // Include finite slew and a margin for the initial low-throttle flip.
+                        approachPosition=s.Position+horizontal*(flipSeconds+horizontalSpeed/(2*lateralBrake)+.5);
+                    }
             }
             if(Phase==StarshipReturnPhase.LandingFlip||Phase==StarshipReturnPhase.PoweredLanding)
             {
@@ -216,16 +225,22 @@ namespace FlightCore
                 // Velocity feedback uses COM motion. Differenced attitude motion would feed
                 // an unsmoothed derivative back into the attitude command itself.
                 double vertical=Dot(air,up);var horizontal=air-up*vertical;var horizontalOffset=offset-up*Dot(offset,up);
-                // Spend real fuel holding a feasible approach height while correcting lateral error.
-                // This may run out of fuel; no target or descent-speed assignment is made.
-                double approachHeight=Math.Min(5000,Math.Max(0,(TargetDistanceMeters-20)*.12));
-                double descentHeight=Math.Max(0,h-approachHeight);
+                // Descend continuously while arresting the upstream approach. A distance-
+                // based height hold made an overshooting vehicle hover and fly back to tower.
                 double brakingAcceleration=Math.Max(1,sim.ReturnAvailableThrust/s.MassKg-Gravity.Acceleration(s.Position).Magnitude());
-                double desiredDown=h>approachHeight?-Math.Min(70,Math.Sqrt(2*brakingAcceleration*descentHeight)*.45):Math.Min(40,(approachHeight-h)/8);
+                double desiredDown=h>0?-Math.Min(70,Math.Min(Math.Sqrt(2*brakingAcceleration*h)*.45,h/4)):Math.Min(5,-h/4);
+                double horizontalDistance=horizontalOffset.Magnitude();
+                double lateralBrake=Math.Max(1,Math.Min(Gravity.Acceleration(s.Position).Magnitude()*.577,sim.ReturnAvailableThrust/s.MassKg*.5));
+                // A stopping-speed envelope begins braking before the tower. The linear
+                // terminal limit brings desired lateral speed smoothly to zero at the lug.
+                // Five seconds with the 1.2 s velocity response is slightly overdamped;
+                // a faster position response produces a visible pass-and-return.
+                double desiredHorizontalSpeed=Math.Min(Math.Sqrt(2*lateralBrake*horizontalDistance)*.8,horizontalDistance/5);
+                var desiredHorizontal=horizontalDistance>1e-8?horizontalOffset*(desiredHorizontalSpeed/horizontalDistance):Vector3d.Zero;
                 var omega=new Vector3d(0,0,Omega);
                 var rotatingFeedForward=Cross(omega,Cross(omega,s.Position))+Cross(omega,air)*2;
                 var acceleration=Gravity.Acceleration(s.Position)*(-1)-sim.ReturnAerodynamicAcceleration+rotatingFeedForward+up*((desiredDown-vertical)/1.2)
-                    +horizontalOffset*.02-horizontal*.28;
+                    +(desiredHorizontal-horizontal)*(1/1.2);
                 // Limit steering to a 30 degree cone while landing; no unlimited lateral acceleration.
                 double axial=Math.Max(0,Dot(acceleration,up));var lateral=acceleration-up*axial;
                 if(lateral.Magnitude()>axial*.577&&lateral.Magnitude()>0)lateral=lateral.Normalize()*(axial*.577);
