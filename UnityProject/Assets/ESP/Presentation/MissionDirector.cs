@@ -61,7 +61,7 @@ namespace ESP.Presentation
         public Transform RocketVisual { get; private set; }
         public bool IsMapView { get; private set; } = true;
         public int SelectedSiteIndex { get; private set; }
-        public float RocketBaseHeightMeters => LaunchEnvironment.RocketBaseHeightFor(
+        public float RocketBaseHeightMeters => LaunchEnvironment.RocketBaseHeightFor(LaunchSites.All[SelectedSiteIndex],
             siteStructurePrefabs != null && SelectedSiteIndex < siteStructurePrefabs.Length
                 ? siteStructurePrefabs[SelectedSiteIndex] : null);
         public string SiteName => LaunchSites.All[SelectedSiteIndex].Name;

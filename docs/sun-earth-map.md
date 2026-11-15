@@ -44,9 +44,11 @@ clicks, cached mode cycles, explicit refresh, failed-refresh texture/date
 retention and offline restoration. All three numerical CI workflows passed.
 
 The contributor reported Windows development-player headless and Direct3D 12
-checks on the original source. The reconciled source's Windows-only Actions
-[rehearsal](https://github.com/araysuter/ESP/actions/runs/43676041805) is still
-building at this update; its release/installer result is not yet established.
-A separate macOS headless release probe was interrupted to open the interactive
-player for the user's test and is not recorded as a pass. Native mouse interaction has not yet been retested on the reconciled build.
+checks on the original source. The Windows-only Actions
+[rehearsal](https://github.com/araysuter/ESP/actions/runs/43676041805) for
+`e3c4247` passed its Windows build, installer packaging, and native headless
+smoke; publishing was skipped. This does not establish an interactive Windows
+release playtest. A separate macOS headless release probe was interrupted to
+open the interactive player for the user's test and is not recorded as a pass.
+Native mouse interaction has not yet been retested on the reconciled build.
 Existing release tags and already-running publication sources were not changed.

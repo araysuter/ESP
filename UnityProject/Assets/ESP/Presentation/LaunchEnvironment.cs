@@ -9,6 +9,9 @@ namespace ESP.Presentation
     {
         /// <summary>Rocket base-origin height placing the placeholder engine bottoms on the mount.</summary>
         public const float RocketBaseHeightMeters = 2.4f;
+        public const string StarbaseTowerName = "Starbase orbital launch tower (approximate)";
+        public const float StarbaseMountDeckHeightMeters = 9.1f;
+        private const float RocketOriginAboveDeckMeters = 1.2f;
         public const string ModernLauncherName = "NASA Mobile Launcher ML1 (approximate)";
         // The normalized source geometry's deck is about 14.7 m above its feet.
         // This is only a local visual offset; flight state stays in the existing SI frame.
@@ -16,8 +19,13 @@ namespace ESP.Presentation
 
         public static bool IsModernLauncher(GameObject prefab) => prefab && prefab.GetComponent<MobileLauncherIdentity>();
 
-        public static float RocketBaseHeightFor(GameObject prefab) => IsModernLauncher(prefab)
-            ? MobileLauncherDeckHeightMeters + 1.2f : RocketBaseHeightMeters;
+        public static float RocketBaseHeightFor(LaunchSite site, GameObject prefab)
+        {
+            if (site.Id == "starbase" && prefab)
+                return StarbaseMountDeckHeightMeters + RocketOriginAboveDeckMeters;
+            return IsModernLauncher(prefab)
+                ? MobileLauncherDeckHeightMeters + RocketOriginAboveDeckMeters : RocketBaseHeightMeters;
+        }
 
         public static GameObject Build(LaunchSite site, Material groundMaterial, GameObject importedStructure = null)
         {
@@ -80,28 +88,37 @@ namespace ESP.Presentation
                 mobileLauncher.transform.localRotation = Quaternion.Euler(0, 90, 0);
                 return root;
             }
-            Box(root, "Pad deck", new Vector3(0, 0.5f, 0), new Vector3(35, 1, 35), concrete);
-            Box(root, "Launch mount", new Vector3(0, 1.1f, 0), new Vector3(8, 0.2f, 8), dark);
-            if (importedStructure != null)
+            if (site.Id == "starbase" && importedStructure)
             {
-                // Historical LC-39 scenery, with an illustrative offset from the
-                // existing mission pad. It is not collision or surveyed placement.
-                var structure = Object.Instantiate(importedStructure, root.transform);
-                structure.name = "NASA historical LC-39 gantry";
-                structure.transform.localPosition = new Vector3(-75, 0, 0);
-                structure.transform.localRotation = Quaternion.identity;
-                return root;
+                // The imported assembly is already centered on the orbital mount.
+                var tower = Object.Instantiate(importedStructure, root.transform, false);
+                tower.name = StarbaseTowerName;
             }
-            // Open tower skeleton, deliberately offset from the rocket's 4 m body.
-            foreach (float x in new[] { 12f, 18f })
-                foreach (float z in new[] { -3f, 3f })
-                    Box(root, "Tower column", new Vector3(x, 24, z), new Vector3(0.8f, 48, 0.8f), dark);
-            for (int y = 8; y <= 48; y += 8)
+            else
             {
-                Box(root, "Tower level", new Vector3(15, y, 0), new Vector3(7, 0.5f, 7), white);
-                Box(root, "Tower stripe", new Vector3(15, y + 0.35f, -3.4f), new Vector3(7, 0.2f, 0.2f), cyan);
+                Box(root, "Pad deck", new Vector3(0, 0.5f, 0), new Vector3(35, 1, 35), concrete);
+                Box(root, "Launch mount", new Vector3(0, 1.1f, 0), new Vector3(8, 0.2f, 8), dark);
+                if (importedStructure != null)
+                {
+                    // Historical LC-39 scenery, with an illustrative offset from the
+                    // existing mission pad. It is not collision or surveyed placement.
+                    var structure = Object.Instantiate(importedStructure, root.transform);
+                    structure.name = "NASA historical LC-39 gantry";
+                    structure.transform.localPosition = new Vector3(-75, 0, 0);
+                    structure.transform.localRotation = Quaternion.identity;
+                    return root;
+                }
+                // Open tower skeleton, deliberately offset from the rocket's 4 m body.
+                foreach (float x in new[] { 12f, 18f })
+                    foreach (float z in new[] { -3f, 3f })
+                        Box(root, "Tower column", new Vector3(x, 24, z), new Vector3(0.8f, 48, 0.8f), dark);
+                for (int y = 8; y <= 48; y += 8)
+                {
+                    Box(root, "Tower level", new Vector3(15, y, 0), new Vector3(7, 0.5f, 7), white);
+                    Box(root, "Tower stripe", new Vector3(15, y + 0.35f, -3.4f), new Vector3(7, 0.2f, 0.2f), cyan);
+                }
+                Box(root, "Access arm", new Vector3(9, 31, 0), new Vector3(7, 0.6f, 1.4f), orange);
             }
-            Box(root, "Access arm", new Vector3(9, 31, 0), new Vector3(7, 0.6f, 1.4f), orange);
             Box(root, "Service building", new Vector3(-65, 4, -42), new Vector3(24, 8, 16), white);
             Box(root, "Service building roof", new Vector3(-65, 8.2f, -42), new Vector3(25, 0.4f, 17), dark);
             for (int i = 0; i < 3; i++)

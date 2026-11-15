@@ -35,6 +35,7 @@ public static class BuildMission
         ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
+        var starbaseTower = ImportStarbaseTower.Build();
         var nasaGantry = ImportLaunchStructures.Build();
         var nasaMobileLauncher = ImportMobileLauncher.Build();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -103,7 +104,7 @@ public static class BuildMission
         // Historical Apollo/Shuttle geometry is an explicit asset-review option,
         // never represented as the modern SLS mobile launcher in a normal build.
         bool historicalGantryReview = Environment.GetEnvironmentVariable("ESP_HISTORICAL_GANTRY_REVIEW") == "1";
-        director.siteStructurePrefabs = new GameObject[] { null, historicalGantryReview ? nasaGantry : nasaMobileLauncher };
+        director.siteStructurePrefabs = new GameObject[] { starbaseTower, historicalGantryReview ? nasaGantry : nasaMobileLauncher };
         director.vehiclePrefabs = new[] { rocket, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-Starship.prefab"), AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-SLS.prefab") };
         foreach (var vehicle in director.vehiclePrefabs) if (!vehicle) throw new Exception("Missing vehicle prefab");
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
