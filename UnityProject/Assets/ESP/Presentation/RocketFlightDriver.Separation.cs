@@ -52,6 +52,7 @@ namespace ESP.Presentation
         private static Transform CopyStageMeshes(Transform source, Transform parent)
         {
             var copy = new GameObject(source.name).transform;
+            copy.gameObject.layer = source.gameObject.layer;
             copy.SetParent(parent, false);
             copy.localPosition = source.localPosition; copy.localRotation = source.localRotation; copy.localScale = source.localScale;
             var filter = source.GetComponent<MeshFilter>(); var renderer = source.GetComponent<MeshRenderer>();
