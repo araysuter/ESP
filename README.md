@@ -54,6 +54,7 @@ Keep `ESP.exe`, `ESP_Data`, `UnityPlayer.dll`, and the other generated files tog
 | Action | Control |
 | --- | --- |
 | Explore the globe | Drag to rotate, scroll to zoom, and right-click a visible point for modeled weather and regional imagery |
+| Focus the map | **SHIP** follows the vehicle; **SUN / EARTH** shows the approximate Earth orbit around the Sun. Scroll or drag to change the view |
 | Change the map layer | **Surface**, **Satellite**, or **Clouds** for bundled Blue Marble, dated MODIS true color, or daytime cloud fraction |
 | Choose a launch site and vehicle | Select a globe marker or enter **Launch View**, then use the vehicle selector on the pad |
 | Menus / pause | **Esc** or **Menu**; New Mission begins at the globe, Resume retains the current in-memory session |

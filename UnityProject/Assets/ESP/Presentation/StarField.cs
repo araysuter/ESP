@@ -77,6 +77,27 @@ namespace ESP.Presentation
             material.SetVector("_RightSky", ToJ2000(targetCamera.transform.right));
             material.SetVector("_UpSky", ToJ2000(targetCamera.transform.up));
             material.SetVector("_ViewParams", new Vector4(Mathf.Tan(targetCamera.fieldOfView * .5f * Mathf.Deg2Rad), targetCamera.aspect, 0, 0));
+            var settings = MissionSession.Instance;
+            material.SetVector("_SkyAdjust", new Vector4(settings != null ? settings.MilkyWayBrightness / 100 : 1,
+                settings != null ? settings.MilkyWaySaturation / 100 : 1, 0, 0));
+            if (sunlight != null && sunlight.CurrentUtc != default)
+            {
+                Vector3 towardSun = ToWorld(sunlight.SunEcef).normalized;
+                float distance = SolarSystemMap.AstronomicalUnit;
+                var director = sunlight.director;
+                bool isMap = director != null && (targetCamera == director.mapCamera ||
+                    (director.Inset != null && targetCamera == director.Inset.MapPreviewCamera));
+                if (isMap)
+                {
+                    Vector3 fromCamera = towardSun * SolarSystemMap.AstronomicalUnit - targetCamera.transform.position;
+                    distance = Mathf.Max(SolarSystemMap.SunRadius, fromCamera.magnitude);
+                    towardSun = fromCamera.normalized;
+                }
+                Vector3 sunSky = ToJ2000(towardSun).normalized;
+                material.SetVector("_SunSky", new Vector4(sunSky.x, sunSky.y, sunSky.z,
+                    Mathf.Clamp(SolarSystemMap.SunRadius / distance, .00001f, .95f)));
+            }
+            else material.SetVector("_SunSky", Vector4.zero);
         }
 
         private void OnDestroy() { if (mesh) Destroy(mesh); }

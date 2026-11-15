@@ -225,6 +225,19 @@ namespace ESP.Presentation
 
         private void BuildSettings(MissionSession session)
         {
+            menuScroll.Add(Label("GRAPHICS · NIGHT SKY", 10, Muted, true));
+            var brightnessLabel = Label("Milky Way brightness: " + Mathf.RoundToInt(session.MilkyWayBrightness) + "%", 11, Text);
+            menuScroll.Add(brightnessLabel);
+            var brightness = new Slider(10, 500) { name = "milky-way-brightness" };
+            brightness.SetValueWithoutNotify(session.MilkyWayBrightness);
+            brightness.RegisterValueChangedCallback(evt => { session.SetMilkyWayBrightness(Mathf.Round(evt.newValue)); brightnessLabel.text = "Milky Way brightness: " + Mathf.RoundToInt(session.MilkyWayBrightness) + "%"; });
+            menuScroll.Add(brightness);
+            var saturationLabel = Label("Milky Way saturation: " + Mathf.RoundToInt(session.MilkyWaySaturation) + "%", 11, Text);
+            menuScroll.Add(saturationLabel);
+            var saturation = new Slider(10, 300) { name = "milky-way-saturation" };
+            saturation.SetValueWithoutNotify(session.MilkyWaySaturation);
+            saturation.RegisterValueChangedCallback(evt => { session.SetMilkyWaySaturation(Mathf.Round(evt.newValue)); saturationLabel.text = "Milky Way saturation: " + Mathf.RoundToInt(session.MilkyWaySaturation) + "%"; });
+            menuScroll.Add(saturation);
             menuScroll.Add(Label("FRAME RATE LIMIT", 10, Muted, true));
             var caps = Row(); caps.style.flexWrap = Wrap.Wrap;
             caps.style.marginTop = 7; caps.style.marginBottom = 12;

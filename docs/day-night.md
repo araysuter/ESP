@@ -3,7 +3,8 @@
 `SolarLighting` computes one offline, double-precision Sun direction in ECEF.
 It uses the [USNO approximate solar coordinates](https://aa.usno.navy.mil/faq/sun_approx)
 and a Greenwich mean sidereal angle. UTC approximates UT1 and terrestrial time;
-nutation, atmospheric refraction, solar angular size and penumbra are omitted.
+nutation, atmospheric refraction, solar angular size in the lighting model and
+penumbra are omitted. The visual solar disc is described in [Sun and Earth map](sun-earth-map.md).
 This is visual lighting, not a navigation ephemeris or a weather measurement.
 
 Before launch the clock follows UTC. `RocketFlightDriver.LaunchUtc` freezes the
