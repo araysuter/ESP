@@ -1,13 +1,14 @@
+using System;
+using FlightCore;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace ESP.Presentation
 {
     /// <summary>
-    /// Orbits the camera around the map origin (or an optional target). The globe
-    /// stays fixed in its geographic frame. Zoom is centered on the target, not
-    /// the cursor, and is limited to the resolution of the existing imagery.
+    /// Orbits the camera around the vehicle while leaving Earth in its ECEF frame.
     /// </summary>
+    [DefaultExecutionOrder(-10)]
     public sealed class GlobeCameraControls : MonoBehaviour
     {
         public Transform target;
@@ -18,16 +19,45 @@ namespace ESP.Presentation
         private float pitch;
         private float distance;
         private bool dragging;
+        private bool alignSystemUp;
+        private MissionDirector director;
+        private Camera mapCamera;
+        public float Distance => distance;
+        public Vector3 FocusPosition => Center;
+        public const float SystemDistance = 900000f;
 
-        private Vector3 Center => target != null ? target.position : Vector3.zero;
+        private Vector3 Center
+        {
+            get
+            {
+                if (target != null) return target.position;
+                if (!useMissionUI || director == null) return Vector3.zero;
+                var driver = director.FlightDriver as RocketFlightDriver;
+                if (driver != null && driver.Simulation != null && driver.Simulation.State.IsLaunched)
+                {
+                    var state = driver.Simulation.State;
+                    return ToMap(EarthFrames.InertialToEcef(state.Position,
+                        Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime));
+                }
+                var site = LaunchSites.All[director.SelectedSiteIndex];
+                return ToMap(EarthFrames.GeodeticToEcef(site.Latitude * Math.PI / 180,
+                    site.Longitude * Math.PI / 180, site.ElevationMeters));
+            }
+        }
+
+        private static Vector3 ToMap(Vector3d value) => new Vector3(
+            (float)(value.X / 1000000), (float)(value.Z / 1000000), (float)(value.Y / 1000000));
 
         private void Start()
         {
-            Vector3 offset = transform.position - Center;
-            distance = Mathf.Clamp(offset.magnitude, 7.2f, 35f);
+            director = FindFirstObjectByType<MissionDirector>();
+            mapCamera = GetComponent<Camera>();
+            Vector3 offset = transform.position - (useMissionUI ? Vector3.zero : Center);
+            distance = Mathf.Clamp(offset.magnitude, 7.2f, SystemDistance);
             if (offset.sqrMagnitude < 1e-8f) offset = Vector3.back;
             yaw = Mathf.Atan2(offset.x, offset.z) * Mathf.Rad2Deg;
             pitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(offset.normalized.y, -1f, 1f)) * Mathf.Rad2Deg, -85f, 85f);
+            if (useMissionUI && director != null) SetDirection(Center.normalized);
             ApplyPose();
         }
 
@@ -44,16 +74,19 @@ namespace ESP.Presentation
             if (dragging && mouse.leftButton.isPressed)
             {
                 Vector2 delta = mouse.delta.ReadValue();
+                if (delta.sqrMagnitude > 0) alignSystemUp = false;
                 yaw += delta.x * degreesPerPixel;
                 pitch = Mathf.Clamp(pitch - delta.y * degreesPerPixel, -85f, 85f);
             }
             if (insideWindow && !overPanel)
             {
                 float scroll = mouse.scroll.ReadValue().y;
-                distance = Mathf.Clamp(distance * Mathf.Exp(-scroll * zoomSensitivity), 7.2f, 35f);
+                float wideZoom = Mathf.InverseLerp(1.5f, 4f, Mathf.Log10(Mathf.Max(1, distance)));
+                distance = Mathf.Clamp(distance * Mathf.Exp(-scroll * zoomSensitivity * Mathf.Lerp(1, 4, wideZoom)), 7.2f, SystemDistance);
             }
-            ApplyPose();
         }
+
+        private void LateUpdate() { ApplyPose(); }
 
         private void OnApplicationFocus(bool hasFocus)
         {
@@ -65,7 +98,33 @@ namespace ESP.Presentation
             dragging = false;
         }
 
-        public void Focus(double latitude,double longitude){yaw=90-(float)longitude;pitch=Mathf.Clamp((float)latitude,-85,85);ApplyPose();}
+        public void Focus(double latitude,double longitude){alignSystemUp=false;yaw=90-(float)longitude;pitch=Mathf.Clamp((float)latitude,-85,85);ApplyPose();}
+
+        public void ShowShip()
+        {
+            distance = 20;
+            alignSystemUp = false;
+            if (Center.sqrMagnitude > 1e-8f) SetDirection(Center.normalized);
+            ApplyPose();
+        }
+
+        public void ShowSystem()
+        {
+            distance = 500000;
+            alignSystemUp = true;
+            var sunlight = director != null ? director.GetComponent<MissionSunlight>() : null;
+            DateTime utc = sunlight != null && sunlight.CurrentUtc != default ? sunlight.CurrentUtc : DateTime.UtcNow;
+            SetDirection(SolarSystemMap.EclipticPole(utc));
+            ApplyPose();
+        }
+
+        private void SetDirection(Vector3 direction)
+        {
+            if (direction.sqrMagnitude < 1e-8f) return;
+            direction.Normalize();
+            yaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+            pitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(direction.y, -1, 1)) * Mathf.Rad2Deg, -85, 85);
+        }
 
         private void ApplyPose()
         {
@@ -73,8 +132,33 @@ namespace ESP.Presentation
             float pitchRadians = pitch * Mathf.Deg2Rad;
             float horizontal = Mathf.Cos(pitchRadians);
             Vector3 offset = new Vector3(horizontal * Mathf.Sin(yawRadians), Mathf.Sin(pitchRadians), horizontal * Mathf.Cos(yawRadians)) * distance;
-            transform.position = Center + offset;
-            transform.LookAt(Center, Vector3.up);
+            Vector3 center = Center;
+            // Prevent a near-Earth camera from passing through the globe and
+            // obscuring the vehicle when the user rotates around it.
+            if (useMissionUI && distance < 100 && center.sqrMagnitude > 1e-8f)
+            {
+                Vector3 radial = center.normalized;
+                Vector3 candidate = center + offset;
+                if (SolarSystemMap.EarthOccludes(center, candidate))
+                    offset -= 2 * Mathf.Min(0, Vector3.Dot(offset, radial)) * radial;
+            }
+            transform.position = center + offset;
+            Vector3 up = Vector3.up;
+            var sunlight = alignSystemUp && director != null ? director.GetComponent<MissionSunlight>() : null;
+            if (sunlight != null && sunlight.CurrentUtc != default)
+            {
+                Vector3 forward = -offset.normalized;
+                Vector3 sun = new Vector3((float)sunlight.SunEcef.X, (float)sunlight.SunEcef.Z, (float)sunlight.SunEcef.Y);
+                Vector3 right = -Vector3.ProjectOnPlane(sun, forward).normalized;
+                if (right.sqrMagnitude > .001f) up = Vector3.Cross(forward, right).normalized;
+            }
+            transform.LookAt(center, up);
+            if (mapCamera != null)
+            {
+                mapCamera.nearClipPlane = Mathf.Clamp(distance * .00001f, .01f, 1f);
+                mapCamera.farClipPlane = Mathf.Max(100, distance + 2 * SolarSystemMap.AstronomicalUnit + 1000);
+            }
         }
     }
 }
+

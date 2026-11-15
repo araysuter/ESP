@@ -121,6 +121,7 @@ namespace ESP.Presentation
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
             Inset = gameObject.AddComponent<MissionInsetView>();
             Inset.Initialize(this);
+            gameObject.AddComponent<SolarSystemMap>().Initialize(this);
             GoToLaunch(SelectedSiteIndex);
             ShowMap();
             RequestWeather();
@@ -303,3 +304,4 @@ namespace ESP.Presentation
         private void OnDestroy() { if (picker != null) picker.PointSelected -= OnPointSelected; if (mapLayers != null) mapLayers.LayerChanged -= RefreshRegion; if (environment) Destroy(environment); if (groundMaterial) Destroy(groundMaterial); }
     }
 }
+
