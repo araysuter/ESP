@@ -30,6 +30,7 @@ public static class BuildMission
         if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone, target))
             throw new Exception("Unity build support is not installed for " + target);
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
+        ESP.Presentation.Editor.NasaImageryTimeChecks.Validate();
         WeatherHeightChecks.Validate();
         ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;
@@ -195,4 +196,3 @@ public static class BuildMission
     }
 
 }
-

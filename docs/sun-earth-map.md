@@ -25,4 +25,3 @@ changed. The Sun's glow and flare are artistic, not calibrated radiometry.
 The map uses one Unity unit per million meters and adjusts camera clipping as
 it zooms. The inset keeps its existing Earth-focused framing. Ground picking
 at very large zoom distances is limited by floating-point screen-ray precision.
-

@@ -1,42 +1,185 @@
 # Observed cloud shell
 
-The CLOUDS selection renders a **smoothed blend of dated NASA cloud-fraction observations** on one mesh above cloud-free Blue Marble. It is not instantaneous global weather, a forecast, measured cloud-top geometry, or a volumetric reconstruction. It does not affect flight forces. The map and flight backdrop share the same decoded texture.
+CLOUDS renders a **dated NASA cloud-fraction composite**, choosing each pixel's
+newest valid observation from at most three advertised daily rasters. Clear-sky
+zero is a valid observation and wins in newest-valid interiors. Missing/fill
+pixels can use an older valid day within that bounded window. The display
+crossfade near a date join uses only actual overlapping observations; it does
+not create valid pixels in missing regions. This is not
+instantaneous global weather, a forecast, measured cloud-top geometry or a
+volumetric reconstruction. It does not affect flight forces.
 
-## Why the earlier globe showed swaths
+The newest-valid selector replaces the earlier weighted temporal blend and
+broad CPU smoothing, which could spread intermediate cloud fractions into a
+blanket. The current visual treatment preserves these newest-valid interiors
+and crossfades only within real overlap at a date boundary. It does not
+reintroduce averaging across the full daily fields or a spatial blur of cloud
+features. The Integration owner is qualifying the combined overlap-crossfade
+revision; earlier passes are identified below.
+One daytime Terra sensor's daily swaths still do not establish a simultaneous
+global weather field. Adjacent swaths can have different acquisition days;
+feathering softens their presentation without making them simultaneous.
 
-The previous cloud selection left the three-day satellite true-color mosaic on the ground. That image already includes clouds and hard daily-swath boundaries; adding a translucent cloud shell doubled the cloud field and could not hide those seams. Cloud mode now explicitly restores Blue Marble underneath the shell. Satellite mode still offers its separately labeled true-color mosaic.
+## Data, decoding and provenance
 
-The previous cloud mosaic also selected the newest valid pixel independently at every location. Adjacent swaths could therefore switch observation day abruptly. Cloud mode now forms one normalized scalar blend, with a small spatial interpolation footprint and smoothly varying support near each daily swath edge. Lower display opacity keeps the ground legible; it does not alter the decoded fractions.
+- Source: NASA GIBS `MODIS_Terra_Cloud_Fraction_Day`, Terra/MODIS MOD06_L2
+  6.1 / 6.1NRT daytime swaths. NASA's [layer metadata](https://gibs.earthdata.nasa.gov/layer-metadata/v1.0/MODIS_Terra_Cloud_Fraction_Day.json)
+  identifies the daily period and underlying products.
+- The [official MODIS cloud-fraction colormap](https://gibs.earthdata.nasa.gov/colormaps/v1.3/MODIS_Cloud_Fraction.xml)
+  is inverted before display filtering. Encoded values 0–100 percent remain
+  quantitative fractions; alpha-zero, fill RGB 192,192,192 and unknown palette
+  colors remain missing. Cloudiness is never inferred from white land/satellite
+  pixels, and missing values are never substituted with clear sky.
+- WMS 1.3.0 EPSG:4326 requests use latitude/longitude BBOX
+  `-90,-180,90,180`, with 4096×2048 transparent PNG for cloud fraction;
+  Satellite remains 2048×1024. Up to three advertised UTC days are fetched newest
+  first. Cloud requests sample approximately 0.088° (about 9.8 km at the equator),
+  without promising native sensor resolution or new observations. The larger
+  cloud raster increases download/decoding/memory work; combined QA must check
+  its actual provider response, timing and target-memory behavior.
+- The visible date range must describe contributing days. `ObservationBlend.Add`
+  reports newly contributing pixels for each day, rather than every valid
+  source pixel including those superseded by newer data. Logs report per-day
+  validity/unknown colors and the final missing fraction. Coverage uses original
+  observation support and cosine-of-latitude area weighting, not inferred data.
+- The display texture carries fraction and validity support. Shader sampling
+  normalizes fraction × support by support after filtering/mipmapping so missing
+  samples cannot become measured clear sky. Display interpolation does not add
+  observations. Transparent areas can mean clear sky or no observation; dates
+  and missingness remain part of the provenance.
 
-## Data and decoding
+## Bounded overlap crossfade
 
-- Source: NASA GIBS `MODIS_Terra_Cloud_Fraction_Day`, Terra/MODIS MOD06_L2 6.1 / 6.1NRT daytime swaths. NASA's [layer metadata](https://gibs.earthdata.nasa.gov/layer-metadata/v1.0/MODIS_Terra_Cloud_Fraction_Day.json), checked November 14, 2026, identifies its daily period and underlying products.
-- [Official v1.3 MODIS cloud-fraction colormap](https://gibs.earthdata.nasa.gov/colormaps/v1.3/MODIS_Cloud_Fraction.xml). `CloudShell.TryCloudFraction` retains exact palette inversion for values 0–100 percent. Alpha-zero samples, fill RGB 192,192,192 (source value 127), and unknown palette colors remain missing. There is no thresholding of white satellite pixels or land/ocean color.
-- WMS 1.3.0 EPSG:4326 requests use latitude/longitude BBOX `-90,-180,90,180`, 2048×1024 transparent PNG. Exact palette inversion precedes filtering.
-- Up to three advertised observation days are fetched, newest first. Every valid sample contributes, including clear-sky zero percent. Relative date weights are 1, 0.65 and 0.4225. These are display-compositing choices, not a NASA product algorithm or uncertainty model. Original per-day dates remain logged; the contributing date range and fetch time remain visible.
-- For each day, the decoded fraction numerator and validity weight are filtered together with two separable box passes of nominal radius two texels. Latitude support extends at most four texels (about 0.7 degrees); longitude radius grows with latitude to approximate the same geographic footprint. A missing region larger than that footprint is not filled. The algorithm takes a weighted mean of the daily filtered numerator/weight pairs, never a maximum of cloudiness. Swath-internal discontinuities present in NASA's raster can only be softened; no new observations are claimed.
-- Longitude filtering wraps at the antimeridian. Latitude filtering reflects across a pole and shifts longitude by 180 degrees. The outermost north/south rows use a common validity-weighted ring value so all UV longitudes meet consistently at the pole. This is a display interpolation of a subpixel polar cap, not a new polar observation.
-- The linear RG texture stores **fraction × spatial support, spatial support**. The shader divides R by G **after** bilinear/trilinear sampling, including mipmaps. Missing values therefore cannot darken neighboring valid values as if they were measured clear sky. Opacity fades at low support; large unsampled areas remain transparent. Both clear sky and missing observations can look transparent, so the UI explicitly reports missingness.
-- Coverage statistics use the original, unfiltered union of valid observation pixels. Logs include the valid and missing pixel counts and unknown palette counts per date; the UI reports approximate Earth area coverage weighted by cosine of latitude. Smoothing and the polar-ring interpolation never count as new observations. Failed/empty downloads preserve the prior rendered layer.
+For each pixel, `ObservationBlend` retains both the newest valid sample and its
+nearest older valid sample, when one exists. `Finish` seeds only the newer side
+of a date join where that pixel's older sample has the same observation day as
+the adjacent older region. A breadth-first traversal expands at most 32 pixels
+inward, and only through pixels with that same selected-day/fallback-day pair.
+Longitude wraps at the antimeridian; latitude sampling reflects across a pole
+with a 180° longitude shift.
 
-NASA provides these [GIBS services](https://nasa-gibs.github.io/gibs-api-docs/access-basics/); credit NASA GIBS / Terra MODIS and NASA Blue Marble in the map. Follow [NASA imagery usage guidance](https://www.nasa.gov/nasa-brand-center/images-and-media/). No new external library or copied third-party rendering code is included.
+Within that bounded overlap strip, smoothstep weights crossfade the newer
+sample toward its actual older sample at the join. Beyond the strip, newest
+interior values stay unchanged. No neighboring cloud fractions are blurred or
+averaged together, and pixels without an older overlapping observation are not
+eligible. A join lacking matching real overlap may therefore remain visible.
+This is a display interpolation between two real dates, not simultaneous weather
+or a newly observed cloud field. The radius is a visual choice, not an accuracy
+or uncertainty estimate; its physical width varies with latitude.
 
-## Alternative products considered
+Fraction × support and support are crossfaded together. The shader divides
+them after texture filtering, preserving the distinction between measured
+clear sky and missing observations. The crossfade does not extend the validity
+mask into gaps: narrow and broad missing regions retain their original missing
+samples. The raw observation mask, contributing dates and reported coverage
+remain unchanged. Normal texture filtering does not count as new observations.
+This replaces the intermediate border-running-sum blur, which could extend
+visual support into missing pixels.
 
-NASA's [MODIS cloud optical property guide](https://atmosphere-imager.gsfc.nasa.gov/sites/default/files/ModAtmo/MODISCloudOpticalPropertyUserGuideFinal_v1.1_1.pdf) distinguishes daily and multi-day cloud fractions. An eight-day aggregation would trade temporal specificity for coverage; it would not establish a simultaneous cloud field. This patch retains the bounded three-day download window and labels the result as a blend.
+Cloud mode uses cloud-free Blue Marble underneath the shell. Satellite mode
+has its own dated true-color mosaic, which already includes clouds and uses a
+paired NASA no-data mask over historical Blue Marble gaps. Stacking this
+satellite mosaic under an independently decoded cloud shell would double the
+cloud field. The map and flight backdrop use the same decoded cloud texture.
 
-NASA [GEOS near-real-time products](https://gmao.gsfc.nasa.gov/gmao-products/geos-near-real-time-data-products/) provide global model/assimilation output and are a plausible future source of a coherent modeled field. They are not direct satellite cloud observations. Their cloud-fraction download, time selection and decoding have **not** been qualified here; this patch does not silently switch to or promise a live GEOS cloud feed.
+Credit NASA GIBS / Terra MODIS and NASA Blue Marble. See NASA's
+[GIBS service documentation](https://nasa-gibs.github.io/gibs-api-docs/access-basics/)
+and [imagery usage guidance](https://www.nasa.gov/nasa-brand-center/images-and-media/).
+NASA does not endorse this game. No new external rendering library is included.
+
+## Latest observations and switching
+
+Normal startup selects CLOUDS automatically; Blue Marble remains usable while
+loading or offline. Availability is checked at startup and every 15 minutes of
+real time, independently of simulation time rate/pause. The refresh icon fetches
+the current catalog and forces the latest selected imagery layer to reload.
+SURFACE explicitly selects the offline surface; refreshing its catalog does
+not silently enable clouds.
+
+The date selector finds the newest advertised day at or before UTC today,
+respecting catalog gaps and whole-day interval cadence. Unsupported formats
+are rejected. An advertised current day may still be empty. Requests, selected
+dates, composite date ranges and UTC timestamp labels use invariant Gregorian
+formatting, including on systems using non-Gregorian calendars.
+
+Each observed mode retains one cached texture together with its requested day,
+contributing dates, provider identity, description and fetch status. Surface
+hides observed layers without destroying their cache. Selecting a cached mode
+restores visual and provenance immediately; repeated clicks on a loading mode
+do not restart its request. Explicit and periodic refresh still force network
+loads. If a newer day is available, the prior cached observations can remain
+visible while the newer data is fetched. Failed/empty requests preserve the
+actual displayed layer and its dates, with a retention message. The credit
+distinguishes the mode requested from the layer actually displayed.
+
+Observation age is recomputed from the wall clock during UI refresh, even after
+network failure. A newest contributing day more than two UTC calendar days old
+is marked STALE; this is an application policy, not a NASA timeliness guarantee.
+Daily WMS metadata does not establish exact per-pixel acquisition times. The
+credit tooltip and mission information expose fuller provenance/fetch status.
 
 ## Geometry and appearance
 
-`CloudShell` clones the existing WGS84 display mesh, preserving its geodetic UVs, outward normals, winding and ECEF X,Z,Y → Unity X,Y,Z convention. It offsets vertices along the geodetic normal by 10,000 m at the map's 1,000,000 m/unit scale. **This is a representative visual altitude, not a measured cloud-top height.** The mesh is an ellipsoidal shell, not a terrain or collision surface.
+`CloudShell` clones the WGS84 display mesh, preserving UVs, normals, winding and
+ECEF X,Z,Y → Unity X,Y,Z axes. It offsets along the geodetic normal by 10,000 m
+at 1,000,000 m/unit. This is a representative visual altitude, not measured
+cloud-top height or a terrain/collision surface. Cloud fraction controls visual
+opacity, not measured optical depth. Map and close-flight daytime opacity are
+both 0.22, reducing the previous opaque appearance while keeping the surface
+legible. The existing night opacity/illumination treatment is preserved. These opacity values are visual choices, not calibrated optical
+properties. The shell has no procedural weather,
+wind advection, ray marching or volumetric physics. Night transmission and
+illumination are visual approximations. Scene builders serialize the cloud
+shader so player stripping retains it; map and flight use the same texture.
 
-The URP `ESP/ObservedCloudShell` shader renders the decoded mean fraction as white opacity with simple directional sunlight. Maximum display opacity is 0.68 on the map and 0.35 in close flight to keep ground legible; opacity is a visual approximation, not measured optical depth. There is no invented wind, temporal advection, procedural cloud field, ray marching or cloud physics. One shell and a 2048×1024 mipmapped texture bound rendering work. Filtering is performed at download time, not per frame.
+## Verification and pending combined QA
 
-## Integration and verification
+Prior source ef4eae5 qualified Unity 6000.6.9f1 compilation and a macOS ARM
+package: automatic cloud startup, explicit refresh, real invalid-layer WMS
+failure retention and offline restoration passed. November 13–15 UTC data
+produced 2,093,314 valid pixels, 3,838 missing pixels, 99.969% area coverage
+and zero unknown palette colors. That run used the previous weighted blend,
+not the newest-valid selector or cache-switch follow-up. The 1280×800 refresh
+control/date credit was inspected. A separate live GEOS-FP request returned
+72/72 native levels valid November 14 at 21:00 UTC; that is launch atmosphere,
+not the visual cloud field.
 
-Scene builders must serialize `NasaMapLayers.cloudShader` from `Assets/ESP/Art/CloudShell.shader` so player shader stripping retains it. `CloudDensityTexture`, `CloudShader` and `CloudsVisible` expose the same map data for the scaled flight backdrop. A backdrop renderer with the same WGS84 mesh can add `CloudShell`, call `Show(texture, shader)` while visible, and `Hide()` otherwise. The shell inherits the renderer's layer and transform. Backdrop ground-material synchronization must follow the map's Blue Marble switch when cloud mode becomes active.
+`NasaImageryTimeChecks.Validate` covers catalog gaps, future dates, cadence,
+malformed/unsupported domains and aging. Its `th-TH` Buddhist-calendar check
+passed using the actual date source in standalone .NET 8, and restores culture
+in `finally`. Builds run the date checks automatically. Python NASA profile
+parser tests passed (four tests).
 
-Historical VM validation on November 14, before the smoothing revision: Unity compilation and packaged shader inclusion passed. The player decoded 2,093,654 valid pixels with zero unknown palette colors across November 12–14, rendered the shell, and restored the offline map. A separate VM check matched all 101 encoded palette colors against NASA's live XML. These results do not validate the new blend or its visual appearance.
+The expanded development-only `-espNasaFreshnessSmoke` checks automatic
+clouds; Surface→Clouds immediate texture/date identity; a first Satellite load
+with repeated selections; eight cached Satellite→Clouds→Surface→Satellite
+cycles; forced latest refresh; real invalid-layer WMS failure retention; and
+offline restoration. It captures `nasa-freshness-latest.png` in the player's
+persistent data directory.
 
-VM qualification for this revision: Unity compiled and packaged the shader. CloudBlendChecks passed constant/clear fields, missing-data support, periodic longitude, polar-ring consistency and dated weighting. The player rendered a smooth blend from November 12–14 with 2,093,686 valid and 3,466 missing pixels, zero unknown palette colors, and 99.978% area-weighted observed coverage. Native map and close-flight captures were inspected. A same-angle Surface capture showed the expected ocean/bathymetry underneath; flight opacity is intentionally lower because linear alpha otherwise washes out close ground views. Failed-refresh injection and dedicated antimeridian/pole visual captures remain unperformed for this revision; those boundaries have numerical checks. All compilation/rendering/tests ran in the VM.
+The Integration owner reported combined source b0e8fe4 plus PR #56's 99d3c4a
+passed the Unity build, cloud checks and packaged freshness smoke: automatic
+4096×2048 cloud loading, twelve repeated loading selections, eight cached
+cycles, explicit replacement, failed-refresh texture/date retention and offline
+restoration. The 4K data had 8,372,683 valid pixels, 15,925 missing pixels,
+99.969% area-weighted coverage and no unknown palette colors, dated November
+13–15 UTC. The combined CloudNightSmoke also passed before the latest border
+revision. These passes validate the earlier newest-valid/cache combination,
+not the subsequent feather appearance.
+
+Intermediate PR #56 revision 1e57aa6 used an eight-pixel border-running-sum
+feather and 0.38 map opacity. The Integration owner reported build 4,
+CloudBlendChecks and CloudNightSmoke passed, including both pads in daylight
+and night and a NASA-profile ascent through 12 km and 150 km. Later iterations
+changed both the border algorithm and opacity; those earlier captures do not
+qualify the final settings.
+
+Current PR #56 revision cc7d790 replaces the spatial blur with the 32-pixel
+real-overlap crossfade and uses 0.22 daytime opacity for map and close flight.
+The Integration owner reported build 6 and CloudBlendChecks passed. Global,
+polar, night and pad/ascent rendered checks remain in progress at this
+documentation update. Do not claim final appearance has passed until those
+captures are inspected. The Integration owner retains the VM lease and will
+record final visual/package evidence. Windows, the complete 15-minute refresh
+interval and injected metadata transport failure have not been exercised for
+this revision.

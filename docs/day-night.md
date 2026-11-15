@@ -48,4 +48,3 @@ Rendered review confirmed day/night agreement on the map, both pads and the
 Earth/vehicle view at 151–154 km. The packaged rehearsal logged
 `ESP_DAY_NIGHT_OK`. Adding ground-mesh tangents corrected a black daylight
 surface found during the review.
-

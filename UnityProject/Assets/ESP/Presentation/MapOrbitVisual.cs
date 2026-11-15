@@ -175,4 +175,3 @@ namespace ESP.Presentation
         private void OnDestroy() { if (runtimeMaterial != null) Destroy(runtimeMaterial); if (trailMaterial != null) Destroy(trailMaterial); }
     }
 }
-

@@ -3,7 +3,7 @@ Shader "ESP/ObservedCloudShell"
     Properties
     {
         _CloudDensity ("Observed cloud fraction", 2D) = "black" {}
-        _Opacity ("Display opacity", Range(0, 1)) = 0.68
+        _Opacity ("Display opacity", Range(0, 1)) = 0.22
     }
     SubShader
     {
@@ -60,10 +60,15 @@ Shader "ESP/ObservedCloudShell"
                 // readability fill; clouds must not glow white over dark oceans.
                 half illumination = lerp(.30h, .006h, night) + .70h * saturate(solarElevationSine);
                 half3 white = half3(0.94h, 0.97h, 1.0h) * illumination;
-                // Cloud fraction is not optical thickness: this is an explicitly
-                // visual transmission approximation (15% at full night coverage).
-                half opacity = lerp(_Opacity, .85h, night);
-                return half4(white, saturate(density * support * opacity));
+                // Cloud fraction is not optical thickness: use a bounded display
+                // approximation. Full night coverage is opaque so sharp ground
+                // lights never bleed through an overcast layer. Missing observed
+                // support remains transparent; daytime opacity stays unchanged.
+                half coverage = saturate(density * support);
+                half clear = 1 - coverage;
+                half nightOpacity = 1 - clear * clear * clear * clear;
+                half opacity = lerp(coverage * _Opacity, nightOpacity, night);
+                return half4(white, opacity);
             }
             ENDHLSL
         }
