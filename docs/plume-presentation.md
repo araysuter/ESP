@@ -25,13 +25,13 @@ the runtime counts all nozzles of the same stage/style to reduce overlapping
 diffuse brightness by `1 / sqrt(count)`. Near-nozzle cores remain individually
 visible. Other presets that group nozzles in one component use the same rule.
 
-## Required Unity/player verification
+## VM verification and further calibration
 
-The initial fan revision compiled and rendered in the VM during an actual
-Starship orbital burn; a subsequent art adjustment lengthens the fan and
-brightens the cores and still requires the following verification. No local
-compilation or rendering was performed. In the owned VM
-editor and packaged macOS player, compare the same Ship stage, camera, exposure
+The revised longer fan compiled and rendered in the VM during an actual
+Starship orbital burn at 100% throttle near 237 km. Engine cutoff removed it;
+native orbit-camera views retained the exhaust without geometry clipping.
+No local compilation or rendering was performed. A controlled equal-camera
+pressure sweep is additional calibration, not yet performed: compare the same Ship stage, camera, exposure
 and `SetFlow(1, pressure)` at **101325 Pa** and **0 Pa**; use 1000 Pa as an
 intermediate state. A presentation-only preview must be labeled; do not report
 these pressure overrides as a simulated flight checkpoint.

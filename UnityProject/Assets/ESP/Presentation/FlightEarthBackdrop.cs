@@ -61,7 +61,8 @@ namespace ESP.Presentation
             background.fieldOfView = mission.launchCamera.fieldOfView;
             background.aspect = mission.launchCamera.aspect;
             if (mission.mapLayers != null && mission.mapLayers.CloudsVisible)
-                cloudShell.Show(mission.mapLayers.CloudDensityTexture, mission.mapLayers.CloudShader);
+                // Coverage is unchanged; a lower overlay opacity keeps close orbital ground readable.
+                cloudShell.Show(mission.mapLayers.CloudDensityTexture, mission.mapLayers.CloudShader, .35f);
             else cloudShell.Hide();
         }
 

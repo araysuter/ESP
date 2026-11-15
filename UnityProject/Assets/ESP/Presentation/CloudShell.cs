@@ -14,7 +14,7 @@ namespace ESP.Presentation
         private Material material;
         private Renderer shellRenderer;
 
-        public bool Show(Texture density, Shader shader)
+        public bool Show(Texture density, Shader shader, float displayOpacity = .68f)
         {
             if (!density) { if (shell) shell.SetActive(false); return true; }
             if (!shell)
@@ -41,6 +41,7 @@ namespace ESP.Presentation
                 shellRenderer.sharedMaterial = material;
             }
             material.SetTexture("_CloudDensity", density);
+            material.SetFloat("_Opacity", Mathf.Clamp01(displayOpacity));
             shell.SetActive(true);
             return true;
         }
