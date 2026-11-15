@@ -15,7 +15,7 @@ is simulated. Water impacts currently use the same effect, without a water plume
 The effect is not a physically calibrated detonation model.
 
 The effect uses 209 procedural quads, one mesh and one material, and expires after
-12 unpaused real seconds. Pause freezes it; map view hides it. Mission restart
+12 unpaused real seconds. Pause freezes it; the live flight inset can display it while the main view is the map. Mission restart
 clears it, restores captured renderer flags and does not replay it. The impact
 notice includes a restart button. Gentle landings and disabled crash destruction
 do not trigger it.

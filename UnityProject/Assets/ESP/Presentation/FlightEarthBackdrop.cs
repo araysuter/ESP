@@ -22,6 +22,7 @@ namespace ESP.Presentation
         // Retained only so old scene builders deserialize; there is no altitude gate.
         [HideInInspector] public double minimumAltitudeMeters;
         public Camera BackgroundCamera => background;
+        public Light BackgroundSun => backgroundSun;
         public bool IsRendering => attached && background != null && background.enabled;
         public Vector3d RenderOriginEcef { get; private set; }
         public double FrameLatitudeRadians { get; private set; }
@@ -46,12 +47,18 @@ namespace ESP.Presentation
         // enabled Overlay orphaned until a later frame or deferred Destroy callback.
         public void Apply(RocketFlightDriver flight, MissionDirector mission)
         {
-            bool show = isActiveAndEnabled && mission != null && !mission.IsMapView &&
-                mission.launchCamera != null && mission.launchCamera.isActiveAndEnabled &&
+            Camera renderCamera = mission != null ? mission.FlightRenderCamera : null;
+            bool show = isActiveAndEnabled && mission != null &&
+                renderCamera != null && renderCamera.isActiveAndEnabled &&
                 globeMesh != null && globeMaterial != null;
             if (!show) { Suspend(); return; }
-            if (launch != null && launch != mission.launchCamera) Release();
-            if (background == null && !Create(mission.launchCamera)) return;
+            if (launch != null && launch != renderCamera)
+            {
+                Suspend();
+                launch = renderCamera;
+                launchData = launch.GetUniversalAdditionalCameraData();
+            }
+            if (background == null && !Create(renderCamera)) return;
 
             var site = LaunchSites.All[mission.SelectedSiteIndex];
             FrameLatitudeRadians = site.Latitude * Math.PI / 180;

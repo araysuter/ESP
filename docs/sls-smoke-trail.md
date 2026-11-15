@@ -21,8 +21,8 @@ burnout/jettison. The live exhaust mesh and flight core are unchanged.
 
 Each puff has a 26-second mission-time lifetime. Time acceleration advances that
 same clock; menu pause freezes it. After terminal impact freezes the core clock,
-remaining smoke finishes using unpaused real seconds. Map view hides the renderer
-while maintaining the same emission, aging and capacity behavior.
+remaining smoke finishes using unpaused real seconds. Drawing follows the active flight camera, including the live inset when the
+main view is the map, while emission, aging and capacity behavior stay identical.
 
 Birth positions interpolate previous/current nozzle samples in double ECEF.
 Every draw subtracts the current vehicle ECEF in double precision, then maps to

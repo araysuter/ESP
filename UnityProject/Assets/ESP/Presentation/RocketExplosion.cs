@@ -71,14 +71,15 @@ namespace ESP.Presentation
             if (destroyed)
                 foreach (var renderer in hidden) if (renderer != null) renderer.enabled = false;
             if (!IsActive) return;
-            if (director == null || director.launchCamera == null) { Clear(); return; }
+            if (director == null) { Clear(); return; }
             // The flight core freezes at impact. Keep using doubles if presentation origin changes.
             var origin = EarthFrames.InertialToEcef(state.Position,
                 Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
             effectRoot.transform.position = CameraRelativeCoordinates.FromEcef(impactEcef.X, impactEcef.Y, impactEcef.Z,
                 origin.X, origin.Y, origin.Z, padLatitude, padLongitude);
-            effectRenderer.enabled = !director.IsMapView;
-            Draw(director.launchCamera);
+            var camera = director.FlightRenderCamera;
+            effectRenderer.enabled = camera != null && camera.isActiveAndEnabled;
+            if (effectRenderer.enabled) Draw(camera);
             if (!driver.IsPaused && !MissionSession.BlocksInput)
                 EffectAgeSeconds += Time.unscaledDeltaTime;
             if (EffectAgeSeconds >= DurationSeconds)

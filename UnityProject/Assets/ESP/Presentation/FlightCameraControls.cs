@@ -10,6 +10,8 @@ namespace ESP.Presentation
     public sealed class FlightCameraControls : MonoBehaviour
     {
         public MissionDirector director;
+        // Preview framing follows the live vehicle but never consumes pointer input.
+        public bool passiveView;
         private Transform trackedVehicle;
         private Vector3 center;
         private float yaw, pitch, distance;
@@ -25,7 +27,7 @@ namespace ESP.Presentation
 
         private void LateUpdate()
         {
-            if (director == null || director.IsMapView || director.RocketVisual == null) { dragging = false; return; }
+            if (director == null || (director.IsMapView && !passiveView) || director.RocketVisual == null) { dragging = false; return; }
             Transform vehicle = director.RocketVisual;
             if (!TryVisibleBounds(vehicle, out Bounds bounds)) { dragging = false; return; }
             float radius = Mathf.Max(1f, bounds.extents.magnitude);
@@ -47,7 +49,7 @@ namespace ESP.Presentation
                 center = Vector3.Lerp(center, bounds.center, 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime));
             }
             Mouse mouse = Mouse.current;
-            if (MissionSession.BlocksInput || mouse == null || !Application.isFocused) dragging = false;
+            if (passiveView || MissionSession.BlocksInput || mouse == null || !Application.isFocused) dragging = false;
             else
             {
                 Vector2 pointer = mouse.position.ReadValue();
