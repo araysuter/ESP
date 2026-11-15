@@ -17,5 +17,12 @@ UnityProject/Assets/ESP/Art/Sites/*.jpg -filter -diff -merge -text
 # Small runtime maps (all under 4 MB), committed directly for a reproducible clean clone.
 UnityProject/Assets/ESP/Art/Vehicles/**/*.png -filter -diff -merge -text
 
+# Compact NASA geometry bundle, expanded by the editor importer for clean builds.
+UnityProject/Assets/ESP/Art/Sites/NasaGantry/*.obj.gz -filter -diff -merge -text
+
 # HDR celestial assets use LFS; full-resolution source downloads stay outside Assets.
 *.exr filter=lfs diff=lfs merge=lfs -text
+
+# Small licensed exhaust textures are bundled directly for clean clones.
+UnityProject/Assets/ESP/Resources/Waterfall/*.png -filter -diff -merge -text
+AssetsSource/ThirdParty/Waterfall/*.dds -filter -diff -merge -text

@@ -17,6 +17,12 @@ namespace ESP.Presentation
         public bool solidBooster;
         public Transform[] nozzles;
         public Shader plumeShader;
+        [Tooltip("Optional serialized overrides. Bundled Waterfall Resources textures are used when empty.")]
+        public Texture2D plumeNoise1, plumeNoise2;
+        [Range(0, 1)] public float textureNoiseStrength = .35f;
+        public bool UsesWaterfallTextures { get; private set; }
+        private static bool warnedMissingNoise;
+        private static bool loggedNoiseBinding;
         [Min(.01f)] public float nozzleRadius = 1f;
         [Min(.01f)] public float plumeLength = 12f;
         private readonly List<Transform> visuals = new List<Transform>();
@@ -36,6 +42,29 @@ namespace ESP.Presentation
             if (plumeShader == null) plumeShader = Shader.Find("ESP/ProceduralPlume");
             if (plumeShader == null) { Debug.LogWarning("ESP plume shader unavailable"); enabled = false; return; }
             material = new Material(plumeShader) { name = "ESP procedural plume (runtime)" };
+            // Resource assets are explicitly included by Unity's player build;
+            // existing prefab builders need no new scene/material assignments.
+            // These images retain their own CC BY-NC-SA 4.0 license/notice.
+            if (plumeNoise1 == null) plumeNoise1 = Resources.Load<Texture2D>("Waterfall/fx-noise-1");
+            if (plumeNoise2 == null) plumeNoise2 = Resources.Load<Texture2D>("Waterfall/fx-noise-2");
+            UsesWaterfallTextures = plumeNoise1 != null && plumeNoise2 != null;
+            if (UsesWaterfallTextures)
+            {
+                material.SetTexture("_NoiseTex1", plumeNoise1);
+                material.SetTexture("_NoiseTex2", plumeNoise2);
+                if (!loggedNoiseBinding)
+                {
+                    Debug.Log("ESP_WATERFALL_TEXTURES_BOUND " + plumeNoise1.name + "=" + plumeNoise1.width + "x" + plumeNoise1.height
+                        + " " + plumeNoise2.name + "=" + plumeNoise2.width + "x" + plumeNoise2.height + " shader=" + plumeShader.name);
+                    loggedNoiseBinding = true;
+                }
+            }
+            else if (!warnedMissingNoise)
+            {
+                Debug.LogWarning("ESP Waterfall plume textures missing; using procedural exhaust fallback");
+                warnedMissingNoise = true;
+            }
+            material.SetFloat("_TextureNoiseStrength", UsesWaterfallTextures ? Mathf.Clamp01(textureNoiseStrength) : 0f);
             properties = new MaterialPropertyBlock();
             mesh = BuildMesh();
             // Starship's importer creates one component per nozzle; other presets

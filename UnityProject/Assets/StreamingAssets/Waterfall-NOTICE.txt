@@ -1,0 +1,37 @@
+WATERFALL NOISE TEXTURES — CC BY-NC-SA 4.0
+
+Credit: Chris Adderley (Nertea) and Waterfall contributors.
+Source: https://github.com/KSPModStewards/Waterfall
+Pinned revision: c232b6722496ec991fa0c6fbd87b0ad694b8eb49
+Original texture commit: f861ceae06d1e9adcfe65e15eabc6aa32cdf994c
+Files: GameData/Waterfall/FX/fx-noise-1.dds and fx-noise-2.dds
+License: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+Changes: DDS textures decoded to 256x256 RGBA PNG for Unity import.
+ESP samples the images for subtle nozzle-exhaust breakup. Converted image
+assets retain CC BY-NC-SA 4.0. No Waterfall shader source, KSP assemblies,
+engine models, authored templates or sounds are included. No endorsement is
+claimed. ESP original code is separately licensed; it does not replace these
+third-party terms. Preserve attribution, noncommercial and share-alike terms.
+
+--- Unmodified pinned upstream LICENSE.md follows ---
+
+## Licensing
+
+Any bundled mods are distributed under their own licenses:
+* ModuleManager by ialdabaoth and sarbian is distributed under a Creative Commons Sharealike license. More details, including source code, can be found [here](http://forum.kerbalspaceprogram.com/threads/31342-0-20-ModuleManager-1-3-for-all-your-stock-modding-needs?p=528607&viewfull=1#post528607)
+
+
+The rest of the content is distributed under the Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+
+You are free to:
+- Share — copy and redistribute the material in any medium or format
+- Adapt — remix, transform, and build upon the material
+
+The licensor cannot revoke these freedoms as long as you follow the license terms.
+
+Under the following terms:
+- Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+- NonCommercial — You may not use the material for commercial purposes.
+- ShareAlike — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+- No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.

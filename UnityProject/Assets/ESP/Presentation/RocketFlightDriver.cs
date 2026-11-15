@@ -119,6 +119,7 @@ namespace ESP.Presentation
                 site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, preset.Boosters);
             MissionSession.Instance?.ConfigureSimulation(simulation);
             director.GetComponent<RocketExplosion>()?.Arm(simulation);
+            director.GetComponent<RocketSmokeTrail>()?.Arm(simulation);
             director.GetComponent<FlightTrailRecorder>()?.RecordSimulation(simulation);
             if (simulation.GravityMultiplier != 1) AssistanceEnabled = false;
             guidance = new AssistedAscent(director.VehicleIndex == 1 ? 220000 : director.VehicleIndex == 2 ? 120000 : 160000, director.VehicleIndex == 2 ? 3 : 2);
@@ -130,6 +131,7 @@ namespace ESP.Presentation
         private static bool Fresh(DateTime time, DateTime now, TimeSpan age) => time.Kind == DateTimeKind.Utc && time <= now && now - time <= age;
         public void ResetMission()
         {
+            if (director != null) director.GetComponent<RocketSmokeTrail>()?.Clear();
             simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
             pendingThrottle = 0; AssistanceEnabled = true; TimeRate = 1;
             LatitudeDegrees = LongitudeDegrees = 0;
