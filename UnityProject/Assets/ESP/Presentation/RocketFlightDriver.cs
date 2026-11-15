@@ -38,7 +38,7 @@ namespace ESP.Presentation
                 (simulation.Primary != CelestialPrimary.Earth || OrbitVerified)) && !simulation.State.IsLanded &&
             simulation.State.IsLaunched && !simulation.BoosterBurning && simulation.Throttle <= 0 &&
             !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight);
-        public void ToggleAssistance() { if (ReentryActive || IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
+        public void ToggleAssistance() { if (ReentryActive || IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; if (AssistanceEnabled) simulation?.DisableManualRotation(); }
         public void SetTimeRate(int rate)
         {
             if (Array.IndexOf(new[] { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 }, rate) < 0) throw new ArgumentOutOfRangeException(nameof(rate));
@@ -90,7 +90,7 @@ namespace ESP.Presentation
         // (no weather available, or an offline launch forced the standard atmosphere).
         public bool LaunchUsesWeather { get; private set; }
         public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • WASD or arrows to steer • " + TimeRate + "× selected" :
-            string.Format("{0} • pitch {1:F0}° • {2}× • {3} SOI • {4}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, TimeRate, simulation.Primary, weatherSource) + (simulation.Celestial != null && !simulation.Celestial.HasReferenceData(simulation.State.MissionTime) ? " • approximate ephemeris" : "") + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (SimulationCatchingUp ? " • rate limited" : "");
+            string.Format("{0} • pitch {1:F0}° • {2}× • {3} SOI • {4}", AssistanceEnabled ? "Assisted" : "Manual", simulation.ActualPitchDegrees, TimeRate, simulation.Primary, weatherSource) + (simulation.Celestial != null && !simulation.Celestial.HasReferenceData(simulation.State.MissionTime) ? " • approximate ephemeris" : "") + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (SimulationCatchingUp ? " • rate limited" : "");
         public RocketSimulation Simulation => simulation;
         public bool HasPosition => simulation != null;
         public DateTime LaunchUtc { get; private set; }
@@ -99,7 +99,7 @@ namespace ESP.Presentation
             if (double.IsNaN(pitchDegrees) || double.IsInfinity(pitchDegrees)) throw new ArgumentOutOfRangeException(nameof(pitchDegrees));
             if (ReentryActive) return;
             AssistanceEnabled = false;
-            if (simulation != null) simulation.PitchDegrees = Math.Max(-90, Math.Min(90, pitchDegrees));
+            if (simulation != null) { simulation.DisableManualRotation(); simulation.PitchDegrees = Math.Max(-90, Math.Min(90, pitchDegrees)); }
         }
         public double LatitudeDegrees { get; private set; }
         public double LongitudeDegrees { get; private set; }
@@ -202,17 +202,17 @@ namespace ESP.Presentation
             {
                 float pitchInput = (keyboard.sKey.isPressed || (!controlFocused && keyboard.downArrowKey.isPressed) ? 1 : 0) - (keyboard.wKey.isPressed || (!controlFocused && keyboard.upArrowKey.isPressed) ? 1 : 0);
                 float headingInput = (keyboard.dKey.isPressed || (!controlFocused && keyboard.rightArrowKey.isPressed) ? 1 : 0) - (keyboard.aKey.isPressed || (!controlFocused && keyboard.leftArrowKey.isPressed) ? 1 : 0);
-                if (pitchInput != 0 || headingInput != 0)
-                {
-                    AssistanceEnabled = false;
-                    simulation.PitchDegrees = Math.Max(-90, Math.Min(90, simulation.PitchDegrees + pitchInput * 20 * Time.unscaledDeltaTime));
-                    simulation.HeadingDegrees = (simulation.HeadingDegrees + headingInput * 20 * Time.unscaledDeltaTime + 360) % 360;
-                }
-                float throttleInput = (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed ? 1 : 0) -
+                float rollInput = (keyboard.eKey.isPressed ? 1 : 0) - (keyboard.qKey.isPressed ? 1 : 0);
+                bool steering = pitchInput != 0 || headingInput != 0 || rollInput != 0;
+                bool shift = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
+                if (steering) AssistanceEnabled = false;
+                if (!AssistanceEnabled) simulation.SetRotationInputs(pitchInput * (shift ? 1 : .5), -headingInput * (shift ? 1 : .5), rollInput * (shift ? 1 : .5));
+                float throttleInput = (shift && !steering ? 1 : 0) -
                     (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed ? 1 : 0);
                 if (throttleInput != 0) SetThrottle(Throttle + throttleInput * .35f * Time.unscaledDeltaTime);
                 if (!controlFocused && keyboard.spaceKey.wasPressedThisFrame) Stage();
             }
+            else if (!ReentryActive && !AssistanceEnabled) simulation.SetRotationInputs(0, 0, 0);
             // Cap requested work to what can be simulated this frame. Do not queue
             // unbounded future flight after the player selects a lower rate.
             if (ReturnNeedsRealTime) TimeRate = 1;
@@ -299,7 +299,13 @@ namespace ESP.Presentation
                 double localUp = Math.Cos(lat) * Math.Cos(lon) * x + Math.Cos(lat) * Math.Sin(lon) * y + Math.Sin(lat) * z;
                 Vector3 direction = new Vector3((float)localEast, (float)localUp, (float)localNorth).normalized;
                 // Choose a deterministic perpendicular reference; the flight model supplies no roll.
-                director.RocketVisual.rotation = Quaternion.FromToRotation(Vector3.up, direction);
+                if (simulation.ManualRotation && !ReentryActive)
+                {
+                    var forward = EarthFrames.InertialToEcef(simulation.ManualForwardInertial, Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+                    Vector3 localForward = new Vector3((float)(-Math.Sin(lon)*forward.X+Math.Cos(lon)*forward.Y), (float)(Math.Cos(lat)*Math.Cos(lon)*forward.X+Math.Cos(lat)*Math.Sin(lon)*forward.Y+Math.Sin(lat)*forward.Z), (float)(-Math.Sin(lat)*Math.Cos(lon)*forward.X-Math.Sin(lat)*Math.Sin(lon)*forward.Y+Math.Cos(lat)*forward.Z));
+                    director.RocketVisual.rotation = Quaternion.LookRotation(localForward, direction);
+                }
+                else director.RocketVisual.rotation = Quaternion.FromToRotation(Vector3.up, direction);
                 RenderReentry(ecef, lat, lon);
             }
 

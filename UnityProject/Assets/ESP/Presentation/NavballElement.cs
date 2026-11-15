@@ -75,7 +75,10 @@ namespace ESP.Presentation
             {
                 RocketSnapshot state = simulation.State;
                 next = NavballProjection.FromFlight(state.Position, state.Velocity, state.MissionTime,
-                    simulation.ActualPitchDegrees, simulation.ActualHeadingDegrees);
+                    simulation.ActualPitchDegrees, simulation.ActualHeadingDegrees,
+                    simulation.ManualRotation ? simulation.ThrustDirectionInertial : (Vector3d?)null,
+                    simulation.ManualRotation ? simulation.ManualForwardInertial : (Vector3d?)null);
+                if (simulation.ManualRotation) needsPaint = true;
             }
             if (double.IsNaN(paintedPitch) || Math.Abs(next.PitchDegrees - paintedPitch) > .02 ||
                 Math.Abs(next.HeadingDegrees - paintedHeading) > .02) needsPaint = true;

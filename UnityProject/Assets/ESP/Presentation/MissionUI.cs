@@ -535,6 +535,10 @@ namespace ESP.Presentation
             }
             var focused = root?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
+            bool controlFocused = focused is Button || focused is Slider || focused?.GetFirstAncestorOfType<Button>() != null || focused?.GetFirstAncestorOfType<Slider>() != null;
+            if (!MissionSession.BlocksInput && !editingText && !controlFocused && Application.isFocused && GUIUtility.keyboardControl == 0 &&
+                Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame && director != null && !director.IsMapView && director.CanLaunch && countdownRemaining <= 0)
+            { countdownRemaining = 3f; Refresh(); }
             if (!MissionSession.BlocksInput && !editingText && Application.isFocused && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
                 ToggleView();
             if (subscribedDirector != director)

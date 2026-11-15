@@ -286,7 +286,7 @@ namespace ESP.Presentation
                 menuScroll.Add(scale);
             }
             menuScroll.Add(Label("KEYBOARD INPUT", 10, Muted, true));
-            var keyboardHelp = Note("W / S — pitch down / up\nA / D — turn left / right\nShift / Ctrl — increase / decrease throttle\nSpace — stage\nM — map / flight view\nEsc — pause / back\n\nSteering uses a simplified attitude controller; engine thrust follows the commanded orientation. It is not a physical gimbal simulation.");
+            var keyboardHelp = Note("W / S — pitch up / down\nA / D — yaw left / right\nQ / E — roll\nHold Shift with a steering key for full control; normal input is half strength. Rotation continues after release.\nShift / Ctrl alone — increase / decrease throttle\nSpace — launch or stage\nM — map / flight view\nEsc — pause / back\n\nManual steering is a simplified rotational model, not a physical gimbal simulation.");
             keyboardHelp.name = "keyboard-input-reference";
             keyboardHelp.style.marginBottom = 16;
             menuScroll.Add(keyboardHelp);

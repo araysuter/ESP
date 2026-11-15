@@ -14,6 +14,42 @@ namespace FlightCore
         public const double DestructiveImpactSpeedMetersPerSecond = 10;
         readonly double step,lat,lon,pad; readonly SolidBoosterDefinition? booster; bool boosterAttached; double boosterFuel; readonly StageDefinition[] stages; readonly WeatherAtmosphere atmosphere;
         Vector3d position,velocity; double time,fuel,actualPitch,actualHeading,throttle,pitch=90,heading=90; int stage; bool commanded,launched,landed,destroyed;
+        bool manualRotation;
+        Vector3d manualAxis, manualRight, manualForward;
+        double pitchRate, yawRate, rollRate, pitchControl, yawControl, rollControl;
+        public bool ManualRotation => manualRotation;
+        public Vector3d ManualForwardInertial => manualForward;
+        /// <summary>Manual rotational accelerations, normalized to [-1,1]. No automatic damping is applied.</summary>
+        public void SetRotationInputs(double pitchInput, double yawInput, double rollInput)
+        {
+            Check(pitchInput,-1,1); Check(yawInput,-1,1); Check(rollInput,-1,1);
+            if (!manualRotation && (pitchInput != 0 || yawInput != 0 || rollInput != 0))
+            {
+                var geo=Geo(position,time);
+                manualAxis=ThrustDirection(position,time,geo).Normalize();
+                var east=Direction(geo,time,0,90);
+                manualRight=(east-manualAxis*Dot(east,manualAxis));
+                if(manualRight.Magnitude()<1e-6) { var north=Direction(geo,time,0,0); manualRight=north-manualAxis*Dot(north,manualAxis); }
+                manualRight=manualRight.Normalize(); manualForward=Cross(manualRight,manualAxis).Normalize();
+                manualRotation=true;
+            }
+            pitchControl=pitchInput; yawControl=yawInput; rollControl=rollInput;
+        }
+        public void DisableManualRotation() { manualRotation=false; pitchRate=yawRate=rollRate=pitchControl=yawControl=rollControl=0; }
+        static double Dot(Vector3d a,Vector3d b)=>a.X*b.X+a.Y*b.Y+a.Z*b.Z;
+        static Vector3d Cross(Vector3d a,Vector3d b)=>new Vector3d(a.Y*b.Z-a.Z*b.Y,a.Z*b.X-a.X*b.Z,a.X*b.Y-a.Y*b.X);
+        static Vector3d Rotate(Vector3d v,Vector3d axis,double angle)=>v*Math.Cos(angle)+Cross(axis,v)*Math.Sin(angle)+axis*(Dot(axis,v)*(1-Math.Cos(angle)));
+        void StepManualRotation()
+        {
+            const double acceleration=20*Math.PI/180;
+            pitchRate+=pitchControl*acceleration*step; yawRate+=yawControl*acceleration*step; rollRate+=rollControl*acceleration*step;
+            var rotation=manualRight*pitchRate+manualForward*yawRate+manualAxis*rollRate;
+            double speed=rotation.Magnitude();
+            if(speed>1e-12) { var axis=rotation*(1/speed);manualAxis=Rotate(manualAxis,axis,speed*step).Normalize();manualRight=Rotate(manualRight,axis,speed*step).Normalize();manualForward=Cross(manualRight,manualAxis).Normalize();manualRight=Cross(manualAxis,manualForward).Normalize(); }
+            var geo=Geo(position,time);var up=Direction(geo,time,90,0);var east=Direction(geo,time,0,90);var north=Direction(geo,time,0,0);
+            actualPitch=Math.Asin(Math.Max(-1,Math.Min(1,Dot(manualAxis,up))))*180/Math.PI;
+            actualHeading=(Math.Atan2(Dot(manualAxis,east),Dot(manualAxis,north))*180/Math.PI+360)%360;
+        }
         double gravityMultiplier = 1;
         internal bool ReturnMode;
         internal Vector3d ReturnCommand, ReturnAxis;
@@ -37,7 +73,7 @@ namespace FlightCore
             c.ReturnAttitudeSlewDegreesPerSecond=ReturnAttitudeSlewDegreesPerSecond;c.ReturnBankRadians=ReturnBankRadians;c.ReturnMode=ReturnMode;c.ReturnAxis=ReturnAxis;c.ReturnCommand=ReturnCommand;c.throttle=throttle;
             return c;
         }
-        internal void EnableReturn() { ReturnAttitudeSlewDegreesPerSecond=10;ReturnMode=true;ReturnAxis=Direction(Geo(position,time),time,actualPitch,actualHeading);ReturnCommand=ReturnAxis;throttle=0; }
+        internal void EnableReturn() { ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ThrustDirection(position,time,Geo(position,time));DisableManualRotation();ReturnMode=true;ReturnCommand=ReturnAxis;throttle=0; }
         internal void CatchAtCurrentPosition() { IsCaught=true;landed=true;throttle=0;velocity=Rotation(position); }
 
         bool infiniteFuel, crashDestructionEnabled = true;
@@ -70,7 +106,7 @@ namespace FlightCore
             Check(latitudeRadians,-Math.PI/2,Math.PI/2);if(!Finite(longitudeRadians)||!Finite(padAltitudeMeters))throw new ArgumentOutOfRangeException(nameof(longitudeRadians));
             celestial=launchUtc.HasValue ? new LunarEphemeris(launchUtc.Value) : null;this.step=step;this.stages=(StageDefinition[])stages.Clone();this.atmosphere=atmosphere??throw new ArgumentNullException(nameof(atmosphere));lat=latitudeRadians;lon=longitudeRadians;pad=padAltitudeMeters;this.booster=booster;Reset();
         }
-        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";ReturnMode=false;IsCaught=false;ReturnBankRadians=0;ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ReturnCommand=Vector3d.Zero;}
+        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";ReturnMode=false;IsCaught=false;ReturnBankRadians=0;ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ReturnCommand=Vector3d.Zero;DisableManualRotation();}
         public void Launch(){if(!landed)commanded=true;}
         // The parallel solids are mounted to the core; discard them before separating it.
         public bool Stage(){if(landed||boosterAttached||stage>=stages.Length-1)return false;stage++;fuel=stages[stage].PropellantKg;return true;}
@@ -107,7 +143,7 @@ namespace FlightCore
         {
             if(landed||!commanded)return;
             if(ReturnMode) ReturnAxis=StarshipReturnController.Slew(ReturnAxis,ReturnCommand,ReturnAttitudeSlewDegreesPerSecond*Math.PI/180*step);
-            actualPitch=Move(actualPitch,pitch,5*step);double delta=((heading-actualHeading+540)%360)-180;actualHeading=(actualHeading+Math.Max(-5*step,Math.Min(5*step,delta))+360)%360;
+            if(manualRotation&&!ReturnMode) StepManualRotation(); else { actualPitch=Move(actualPitch,pitch,5*step);double delta=((heading-actualHeading+540)%360)-180;actualHeading=(actualHeading+Math.Max(-5*step,Math.Min(5*step,delta))+360)%360; }
             if(!launched){var padGeo=Geo(position,time);var air=Air(position,time,padGeo);var engine=Engine(air.sample.PressurePascals);double coreThrust=fuel>0?engine.thrust:0;double solidThrust=BoosterBurning?booster!.ThrustNewtons:0;double thrust=coreThrust+solidThrust;var up=Direction(padGeo,time,90,0);var gravityVector=Gravity.Acceleration(position)*gravityMultiplier;double gravity=-(gravityVector.X*up.X+gravityVector.Y*up.Y+gravityVector.Z*up.Z);if(thrust*Math.Sin(actualPitch*Math.PI/180)<=Mass(fuel,boosterFuel)*gravity){
                 // Hold-down burns both propellants; a mass-driven liftoff is checked next tick.
                 if(!infiniteFuel){fuel=Math.Max(0,fuel-coreThrust/(engine.isp*G0)*step);
@@ -221,6 +257,7 @@ namespace FlightCore
         // center-relative radial up and the inertial north pole for heading.
         Vector3d ThrustDirection(Vector3d p,double t,GeodeticPosition earthGeo)
         {
+            if(manualRotation) return manualAxis;
             var primary=celestial?.Primary(p,t) ?? CelestialPrimary.Earth;
             if(primary==CelestialPrimary.Earth) return Direction(earthGeo,t,actualPitch,actualHeading);
             var relative=p-celestial!.Position(primary,t);
