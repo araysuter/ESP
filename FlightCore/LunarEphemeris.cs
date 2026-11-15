@@ -23,6 +23,27 @@ namespace FlightCore
             var moon = new EphemerisTable(moonBytes); var sun = new EphemerisTable(sunBytes);
             moonTable=moon; sunTable=sun;
         }
+        static readonly System.Collections.Generic.Dictionary<CelestialPrimary, EphemerisTable> planets = new System.Collections.Generic.Dictionary<CelestialPrimary, EphemerisTable>();
+        public static void ConfigurePlanet(CelestialPrimary body, byte[] bytes)
+        {
+            if (Array.IndexOf(InnerPlanets, body) < 0)
+                throw new ArgumentOutOfRangeException(nameof(body), "Expected a supported planet or dwarf planet.");
+            var table = new EphemerisTable(bytes);
+            planets[body] = table;
+        }
+        public static readonly CelestialPrimary[] InnerPlanets = { CelestialPrimary.Mercury, CelestialPrimary.Venus, CelestialPrimary.Mars, CelestialPrimary.Jupiter, CelestialPrimary.Saturn, CelestialPrimary.Ceres, CelestialPrimary.Uranus, CelestialPrimary.Neptune, CelestialPrimary.Pluto, CelestialPrimary.Eris, CelestialPrimary.Haumea, CelestialPrimary.Makemake };
+        public static double Radius(CelestialPrimary body) => body == CelestialPrimary.Eris ? 1200000 : body == CelestialPrimary.Haumea ? 715000 : body == CelestialPrimary.Makemake ? 714000 : body == CelestialPrimary.Uranus ? 25362000 : body == CelestialPrimary.Neptune ? 24622000 : body == CelestialPrimary.Pluto ? 1188300 : body == CelestialPrimary.Jupiter ? 69911000 : body == CelestialPrimary.Saturn ? 58232000 : body == CelestialPrimary.Ceres ? 469720 : body == CelestialPrimary.Mercury ? 2439400 : body == CelestialPrimary.Venus ? 6051800 : body == CelestialPrimary.Mars ? 3389500 : body == CelestialPrimary.Moon ? MoonRadius : body == CelestialPrimary.Sun ? SunRadius : EarthFrames.SemiMajorAxisMeters;
+        public static double Mu(CelestialPrimary body) => body == CelestialPrimary.Eris ? 1.1077338e12 : body == CelestialPrimary.Haumea ? 2.673529e11 : body == CelestialPrimary.Makemake ? 2.069033e11 : body == CelestialPrimary.Uranus ? 5.7939513e15 : body == CelestialPrimary.Neptune ? 6.83509997e15 : body == CelestialPrimary.Pluto ? 8.693e11 : body == CelestialPrimary.Jupiter ? 1.26686534196e17 : body == CelestialPrimary.Saturn ? 3.793120623e16 : body == CelestialPrimary.Ceres ? 6.262905e10 : body == CelestialPrimary.Mercury ? 2.2031868551e13 : body == CelestialPrimary.Venus ? 3.24858592e14 : body == CelestialPrimary.Mars ? 4.2828375816e13 : body == CelestialPrimary.Moon ? MoonMu : body == CelestialPrimary.Sun ? SunMu : Gravity.EarthGravitationalParameter;
+        public double Soi(CelestialPrimary body, double t)
+        {
+            if (body == CelestialPrimary.Earth) return EarthSoi;
+            if (body == CelestialPrimary.Moon) return MoonSoi;
+            if (body == CelestialPrimary.Sun) return double.PositiveInfinity;
+            return (Position(body,t)-SunPosition(t)).Magnitude()*Math.Pow(Mu(body)/SunMu,.4);
+        }
+        public bool TryPlanet(CelestialPrimary body, double t, out Vector3d p, out Vector3d v, out Vector3d a) => Reference(planets.TryGetValue(body,out var table) ? table : null,t,out p,out v,out a);
+        public Vector3d Position(CelestialPrimary body,double t) { if(body==CelestialPrimary.Earth)return Vector3d.Zero; if(body==CelestialPrimary.Moon)return MoonPosition(t); if(body==CelestialPrimary.Sun)return SunPosition(t); if(TryPlanet(body,t,out var p,out _,out _))return p; throw new InvalidOperationException("Planet ephemeris unavailable"); }
+        public Vector3d Velocity(CelestialPrimary body,double t) { if(body==CelestialPrimary.Earth)return Vector3d.Zero; if(body==CelestialPrimary.Moon)return MoonVelocity(t); if(body==CelestialPrimary.Sun)return SunVelocity(t); if(TryPlanet(body,t,out _,out var v,out _))return v; throw new InvalidOperationException("Planet ephemeris unavailable"); }
         readonly DateTime launch;
         internal DateTime LaunchUtc => launch;
         readonly double launchSidereal;
@@ -55,7 +76,7 @@ namespace FlightCore
                 const double blend=7*86400.0;
                 double offset=table.OffsetSeconds(launch,seconds), remaining=table.DurationSeconds-offset;
                 double distance=Math.Min(offset,remaining);
-                if(distance<blend)
+                if(distance<blend && (ReferenceEquals(table,moonTable) || ReferenceEquals(table,sunTable)))
                 {
                     bool moon=ReferenceEquals(table,moonTable);
                     Vector3d f=moon ? ApproxMoonPosition(seconds) : ApproxSunPosition(seconds);
@@ -124,11 +145,18 @@ namespace FlightCore
             // evaluation for the common near-Earth launch and orbit cases.
             if (earthDistance < 250000000) return CelestialPrimary.Earth;
             if ((position-MoonPosition(seconds)).Magnitude() < MoonSoi) return CelestialPrimary.Moon;
-            return earthDistance < EarthSoi ? CelestialPrimary.Earth : CelestialPrimary.Sun;
+            if (earthDistance < EarthSoi) return CelestialPrimary.Earth;
+            foreach(var body in InnerPlanets) if(TryPlanet(body,seconds,out var p,out _,out _) && (position-p).Magnitude()<Soi(body,seconds)) return body;
+            return CelestialPrimary.Sun;
         }
-        static Vector3d Attraction(Vector3d relative, double mu)
+        static Vector3d Attraction(Vector3d relative, double mu, double radius = 0)
         {
             double r = relative.Magnitude();
+            // RK trial stages can enter a body before the swept surface event
+            // truncates the step. A uniform-sphere interior extension is finite
+            // at the center and continuous at the surface. It is only used for
+            // those rejected trial states; exterior gravity is unchanged.
+            if (r < radius) return relative * (-mu/(radius*radius*radius));
             if (r < 1) throw new InvalidOperationException("Singular celestial gravity.");
             return relative * (-mu/(r*r*r));
         }
@@ -137,11 +165,12 @@ namespace FlightCore
         {
             switch (Primary(position,seconds))
             {
-                case CelestialPrimary.Moon: return MoonAcceleration(seconds)+Attraction(position-MoonPosition(seconds),MoonMu*gravityMultiplier);
-                case CelestialPrimary.Sun: return SunAcceleration(seconds)+Attraction(position-SunPosition(seconds),SunMu*gravityMultiplier);
-                default: return Attraction(position,Gravity.EarthGravitationalParameter*gravityMultiplier);
+                case CelestialPrimary.Moon: return MoonAcceleration(seconds)+Attraction(position-MoonPosition(seconds),MoonMu*gravityMultiplier,MoonRadius);
+                case CelestialPrimary.Sun: return SunAcceleration(seconds)+Attraction(position-SunPosition(seconds),SunMu*gravityMultiplier,SunRadius);
+                case CelestialPrimary.Earth: return Attraction(position,Gravity.EarthGravitationalParameter*gravityMultiplier);
+                default: var body=Primary(position,seconds); if(TryPlanet(body,seconds,out var p,out _,out var a)) return a+Attraction(position-p,Mu(body)*gravityMultiplier,Radius(body)); throw new InvalidOperationException("Planet ephemeris unavailable");
             }
         }
     }
-    public enum CelestialPrimary { Earth, Moon, Sun }
+    public enum CelestialPrimary { Earth, Moon, Sun, Mercury, Venus, Mars, Jupiter, Saturn, Ceres, Uranus, Neptune, Pluto, Eris, Haumea, Makemake }
 }

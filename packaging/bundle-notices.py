@@ -13,6 +13,7 @@ notices.mkdir(exist_ok=True)
 for filename in ("LICENSE", "LICENSE-SCOPE.md"):
     shutil.copy2(filename, notices / filename)
 shutil.copytree("docs", notices / "docs", dirs_exist_ok=True)
+shutil.copy2("data/solar-system-texture-manifest.json", notices / "solar-system-texture-manifest.json")
 for path in pathlib.Path("UnityProject/Assets").rglob("*"):
     if path.is_file() and any(word in path.name.lower() for word in ("license", "notice", "attribution")) and path.suffix != ".meta":
         target = notices / path

@@ -30,6 +30,7 @@ namespace ESP.Presentation
         private Label rocketMarker, mapMission;
         private Label systemEarth, systemSun, systemVehicle, systemMoon;
         private readonly Label[] orbitMarkers = new Label[3];
+        private readonly Dictionary<FlightCore.CelestialPrimary, Label> planetLabels = new Dictionary<FlightCore.CelestialPrimary, Label>();
         private readonly Label[] transitionMarkers = new Label[6];
         private MissionDirector subscribedDirector;
         private Button roadsterMarker;
@@ -143,6 +144,13 @@ namespace ESP.Presentation
                 root.Add(label);
             }
 
+            foreach(var body in FlightCore.LunarEphemeris.InnerPlanets)
+            {
+                var label=Label("●  "+body.ToString().ToUpperInvariant() +
+                    (body == FlightCore.CelestialPrimary.Ceres || body == FlightCore.CelestialPrimary.Eris || body == FlightCore.CelestialPrimary.Haumea || body == FlightCore.CelestialPrimary.Makemake ? " (ILLUSTRATIVE)" : ""),10,Text,FontStyle.Bold);
+                label.style.position=Position.Absolute; label.style.display=DisplayStyle.None; label.pickingMode=PickingMode.Ignore;
+                root.Add(label); planetLabels.Add(body,label);
+            }
             for (int i = 0; i < orbitMarkers.Length; i++)
             {
                 orbitMarkers[i] = Label("", 10, i == 2 ? Amber : Cyan, FontStyle.Bold);
@@ -276,8 +284,8 @@ namespace ESP.Presentation
             var scaleRow = Row();
             var shipView = Button("SHIP", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowShip(), false, "map-focus-ship");
             shipView.tooltip = "Focus the map on the vehicle";
-            var systemView = Button("SUN / EARTH", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowSystem(), false, "map-sun-earth-view");
-            systemView.tooltip = "Show the approximate Sun–Earth system and Earth's orbit";
+            var systemView = Button("SOLAR SYSTEM", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowSystem(), false, "map-sun-earth-view");
+            systemView.tooltip = "Show the solar system; scroll out to see outer planets";
             scaleRow.Add(shipView); scaleRow.Add(systemView); layerGroup.Add(scaleRow);
             mapBar.Add(layerGroup);
             weatherToggle = Button("WEATHER", () => { weatherOpen = !weatherOpen; if (weatherOpen) director?.RefreshPointWeather(); Refresh(); }, false, "point-weather-toggle");
@@ -600,6 +608,12 @@ namespace ESP.Presentation
             RefreshRoadster(camera, solarMap?.RoadsterPosition, systemView);
             PlaceSystemLabel(systemMoon, camera, solarMap != null ? solarMap.MoonPosition : Vector3.zero,
                 director != null && director.IsMapView && solarMap != null);
+            foreach(var pair in planetLabels)
+            {
+                Vector3 planetPosition=Vector3.zero;
+                bool visible=systemView && solarMap != null && solarMap.TryPlanetPosition(pair.Key,out planetPosition);
+                PlaceSystemLabel(pair.Value,camera,planetPosition,visible);
+            }
             for (int i = 0; i < orbitMarkers.Length; i++)
             {
                 Vector2 orbitScreen = default;
@@ -733,6 +747,9 @@ namespace ESP.Presentation
                 (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60);
             string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  / requested {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
+            var planets = director != null ? director.GetComponent<SolarSystemMap>() : null;
+            if (planets != null && planets.AvailablePlanetCount < FlightCore.LunarEphemeris.InnerPlanets.Length)
+                mapMission.text += " · PLANET DATA UNAVAILABLE (2020–2037 coverage)";
             if (flight != null)
             {
                 string actual = flight.IsPlanningReturn ? " · planning return — simulation time paused" :

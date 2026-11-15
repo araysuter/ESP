@@ -30,6 +30,9 @@ namespace ESP.Presentation
         }
         private IEnumerator Start()
         {
+            try { PlanetSmoke.Validate(); }
+            catch (Exception error) { Fail("planetary resources: " + error.Message); }
+            if (failed) yield break;
             yield return null;
             var director = FindFirstObjectByType<MissionDirector>();
             var driver = FindFirstObjectByType<RocketFlightDriver>();

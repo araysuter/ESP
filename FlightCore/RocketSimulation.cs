@@ -90,6 +90,7 @@ namespace FlightCore
                 altitude=(position-celestial.SunPosition(time)).Magnitude()-LunarEphemeris.SunRadius;
                 speed=(velocity-celestial.SunVelocity(time)).Magnitude();
             }
+            else if(celestial != null && Primary!=CelestialPrimary.Earth) { altitude=(position-celestial.Position(Primary,time)).Magnitude()-LunarEphemeris.Radius(Primary); speed=(velocity-celestial.Velocity(Primary,time)).Magnitude(); }
             return new RocketSnapshot(position,velocity,time,fuel,stage,forces.Mass,altitude,speed,forces.Drag.DynamicPressurePascals,landed,launched,landed,destroyed,status);
         }}
         /// <summary>Instantaneous shared force evaluation at the current state. Net acceleration excludes pad/ground support; label it free-flight acceleration when constrained.</summary>
@@ -132,18 +133,18 @@ namespace FlightCore
                     var sun0 = celestial.SunPosition(time); var sun1 = celestial.SunPosition(time+duration);
                     double moonHit = SphereHit(start.p-moon0,end.p-moon1,LunarEphemeris.MoonRadius);
                     double sunHit = SphereHit(start.p-sun0,end.p-sun1,LunarEphemeris.SunRadius);
-                    double fraction = Math.Min(moonHit,sunHit);
+                    double fraction = Math.Min(moonHit,sunHit); CelestialPrimary hitBody=moonHit<=sunHit?CelestialPrimary.Moon:CelestialPrimary.Sun;
+                    foreach(var body in LunarEphemeris.InnerPlanets) if(celestial.TryPlanet(body,time,out var p0,out _,out _) && celestial.TryPlanet(body,time+duration,out var p1,out _,out _)) { double hit=SphereHit(start.p-p0,end.p-p1,LunarEphemeris.Radius(body)); if(hit<fraction) { fraction=hit;hitBody=body; } }
                     if(fraction <= 1)
                     {
-                        bool moon = moonHit <= sunHit; double hitTime = time+duration*fraction;
-                        var center = moon ? celestial.MoonPosition(hitTime) : celestial.SunPosition(hitTime);
-                        var centerVelocity = moon ? celestial.MoonVelocity(hitTime) : celestial.SunVelocity(hitTime);
+                        double hitTime = time+duration*fraction;
+                        var centerVelocity = celestial.Velocity(hitBody,hitTime);
                         position = start.p+(end.p-start.p)*fraction;
                         var impactVelocity = start.v+(end.v-start.v)*fraction;
                         ImpactSpeedMetersPerSecond=(impactVelocity-centerVelocity).Magnitude();
                         destroyed=crashDestructionEnabled&&ImpactSpeedMetersPerSecond>DestructiveImpactSpeedMetersPerSecond;
                         velocity=centerVelocity;fuel=Math.Max(0,start.f+(end.f-start.f)*fraction);boosterFuel=Math.Max(0,start.b+(end.b-start.b)*fraction);
-                        impactBody=moon?"Moon":"Sun";time=hitTime;landed=true;break;
+                        impactBody=hitBody.ToString();time=hitTime;landed=true;break;
                     }
                 }
                 double oldAlt=Geo(position,time).AltitudeMeters-pad,newAlt=Geo(end.p,time+duration).AltitudeMeters-pad;
@@ -222,7 +223,7 @@ namespace FlightCore
         {
             var primary=celestial?.Primary(p,t) ?? CelestialPrimary.Earth;
             if(primary==CelestialPrimary.Earth) return Direction(earthGeo,t,actualPitch,actualHeading);
-            var relative=p-(primary==CelestialPrimary.Moon ? celestial!.MoonPosition(t) : celestial!.SunPosition(t));
+            var relative=p-celestial!.Position(primary,t);
             double longitude=Math.Atan2(relative.Y,relative.X);
             double latitude=Math.Atan2(relative.Z,Math.Sqrt(relative.X*relative.X+relative.Y*relative.Y));
             return Direction(new GeodeticPosition(latitude,longitude,0),0,actualPitch,actualHeading);

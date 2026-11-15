@@ -146,6 +146,7 @@ namespace ESP.Presentation
             var position=point.Position;
             if(primary==CelestialPrimary.Moon) position+=ephemeris.MoonPosition(now)-ephemeris.MoonPosition(point.Time);
             else if(primary==CelestialPrimary.Sun) position+=ephemeris.SunPosition(now)-ephemeris.SunPosition(point.Time);
+            else if(primary!=CelestialPrimary.Earth) position+=ephemeris.Position(primary,now)-ephemeris.Position(primary,point.Time);
             return ToMap(EarthFrames.InertialToEcef(position,earthAngle));
         }
         private void HidePatches() { foreach (var patch in patchLines) patch.enabled=false; transitions.Clear(); }

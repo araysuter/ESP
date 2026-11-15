@@ -37,3 +37,7 @@ UnityProject/Assets/ESP/Art/Earth/BlackMarble2016Lights.png -filter -diff -merge
 # Small offline NASA lunar globe, bundled directly for clean clones.
 UnityProject/Assets/ESP/Resources/MoonSurface.jpg -filter -diff -merge -text
 UnityProject/Assets/ESP/Resources/Starman.jpg -filter -diff -merge -text
+
+# Compact offline solar system textures, directly bundled.
+UnityProject/Assets/ESP/Resources/SolarSystem/*.jpg -filter -diff -merge -text
+UnityProject/Assets/ESP/Resources/SolarSystem/*.png -filter -diff -merge -text

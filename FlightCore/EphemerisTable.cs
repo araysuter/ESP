@@ -29,6 +29,8 @@ namespace FlightCore
         public double DurationSeconds => (values.Length-1)*interval;
         public bool Sample(DateTime launch, double seconds, out Vector3d position, out Vector3d velocity, out Vector3d acceleration)
         {
+            if (launch.Kind != DateTimeKind.Utc) throw new ArgumentException("Ephemeris time must be UTC.", nameof(launch));
+            if (double.IsNaN(seconds) || double.IsInfinity(seconds)) throw new ArgumentOutOfRangeException(nameof(seconds));
             double t=(launch-start).TotalSeconds+seconds, index=t/interval;
             if(index<0 || index>values.Length-1) { position=velocity=acceleration=Vector3d.Zero; return false; }
             int k=Math.Min(values.Length-2,(int)Math.Floor(index)); double u=index-k, u2=u*u, u3=u2*u;
