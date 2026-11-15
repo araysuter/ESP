@@ -166,6 +166,8 @@ public static class BuildMission
         }
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scenePath }, locationPathName = buildPath, target = target, options = release ? BuildOptions.None : BuildOptions.Development });
         if (report.summary.result != BuildResult.Succeeded) throw new Exception("Mission build failed");
+        // GameCI validates this exact marker after the custom build method returns.
+        Debug.Log("Build succeeded!");
         Debug.Log("ESP_MISSION_BUILD_OK version=" + PlayerSettings.bundleVersion + " target=" + target + " release=" + release);
     }
     private static string Argument(string name)
