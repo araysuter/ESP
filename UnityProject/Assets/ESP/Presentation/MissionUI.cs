@@ -116,7 +116,17 @@ namespace ESP.Presentation
             for (int i = 0; i < markers.Length; i++)
             {
                 int index = i;
-                markers[i] = Button("●", () => { director?.GoToLaunch(index); Refresh(); }, false, "site-marker-" + i);
+                IVisualElementScheduledItem pendingSiteClick = null;
+                bool doubleSiteClick = false;
+                markers[i] = Button("●", () => {
+                    if (doubleSiteClick) { doubleSiteClick = false; return; }
+                    pendingSiteClick = root.schedule.Execute(() => { if (!MissionSession.BlocksInput && director != null && director.IsMapView) { director.GoToLaunch(index); Refresh(); } }).StartingIn(350);
+                }, false, "site-marker-" + i);
+                markers[i].RegisterCallback<PointerDownEvent>(evt => {
+                    if (evt.button != 0 || evt.clickCount != 2 || MissionSession.BlocksInput) return;
+                    pendingSiteClick?.Pause(); doubleSiteClick = true;
+                    director?.mapCamera?.GetComponent<GlobeCameraControls>()?.FocusSite(index);
+                }, TrickleDown.TrickleDown);
                 markers[i].style.position = Position.Absolute;
                 markers[i].style.display = DisplayStyle.None;
                 root.Add(markers[i]);
@@ -127,7 +137,7 @@ namespace ESP.Presentation
             rocketMarker.style.width = 26; rocketMarker.style.height = 26;
             rocketMarker.style.unityTextAlign = TextAnchor.MiddleCenter;
             rocketMarker.name = "rocket-map-marker";
-            rocketMarker.pickingMode = PickingMode.Position;
+            rocketMarker.pickingMode = PickingMode.Ignore;
             rocketMarker.style.position = Position.Absolute;
             rocketMarker.style.display = DisplayStyle.None;
             root.Add(rocketMarker);
@@ -183,10 +193,18 @@ namespace ESP.Presentation
             var photo = Resources.Load<Texture2D>("Starman");
             if (photo == null) return;
 
+            IVisualElementScheduledItem pendingRoadsterClick = null;
+            bool doubleRoadsterClick = false;
             roadsterMarker = Button("◇", () =>
             {
-                if (!MissionSession.BlocksInput) roadsterOpen = !roadsterOpen;
+                if (doubleRoadsterClick) { doubleRoadsterClick = false; return; }
+                pendingRoadsterClick = root.schedule.Execute(() => { if (!MissionSession.BlocksInput && director != null && director.IsMapView) roadsterOpen = !roadsterOpen; }).StartingIn(350);
             }, false, "roadster-marker");
+            roadsterMarker.RegisterCallback<PointerDownEvent>(evt => {
+                if (evt.button != 0 || evt.clickCount != 2 || MissionSession.BlocksInput) return;
+                pendingRoadsterClick?.Pause(); doubleRoadsterClick = true;
+                director?.mapCamera?.GetComponent<GlobeCameraControls>()?.FocusRoadster();
+            }, TrickleDown.TrickleDown);
             Absolute(roadsterMarker, 0, 0, null, null);
             roadsterMarker.style.width = 26;
             roadsterMarker.style.height = 26;
@@ -606,7 +624,7 @@ namespace ESP.Presentation
             PlaceSystemLabel(systemEarth, camera, Vector3.zero, systemView);
             systemVehicle.text = director != null && director.VehicleIndex == 1 ? "▲  STARSHIP" :
                 director != null && director.VehicleIndex == 2 ? "▲  SLS" : "▲  ESP DEMO";
-            PlaceSystemLabel(systemVehicle, camera, controls != null ? controls.FocusPosition : Vector3.zero, systemView, 4);
+            PlaceSystemLabel(systemVehicle, camera, controls != null ? controls.VehiclePosition : Vector3.zero, systemView, 4);
             var solarMap = director != null ? director.GetComponent<SolarSystemMap>() : null;
             PlaceSystemLabel(systemSun, camera, solarMap != null ? solarMap.SunPosition : Vector3.zero, systemView && solarMap != null);
             RefreshRoadster(camera, solarMap?.RoadsterPosition, systemView);
