@@ -131,7 +131,7 @@ namespace ESP.Presentation
 
             physicsPanel = new VisualElement { name = "live-physics-panel" };
             physicsPanel.style.position = Position.Absolute;
-            physicsPanel.style.top = 62; physicsPanel.style.right = 14;
+            physicsPanel.style.top = 128; physicsPanel.style.right = 14;
             physicsPanel.style.width = 278;
             physicsPanel.style.backgroundColor = Surface;
             physicsPanel.style.paddingLeft = 11; physicsPanel.style.paddingRight = 11;

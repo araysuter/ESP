@@ -37,7 +37,7 @@ namespace ESP.Presentation
         private bool roadsterOpen;
         private float countdownRemaining;
         private Button viewToggle, action, reentry, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
-        private Button cameraToggle;
+        private Button cameraToggle, cinematicToggle;
         private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
             ? director.launchCamera.GetComponent<FlightCameraControls>() : null;
         private readonly Button[] rateButtons = new Button[2];
@@ -99,6 +99,13 @@ namespace ESP.Presentation
             }, false, "flight-camera-toggle");
             Absolute(cameraToggle, null, 51, 18, null);
             root.Add(cameraToggle);
+            cinematicToggle = Button("CINEMATIC", () => {
+                if (!MissionSession.BlocksInput) MainFlightCamera?.ToggleCinematicView();
+                Refresh();
+            }, false, "cinematic-camera-toggle");
+            Absolute(cinematicToggle, null, 86, 18, null);
+            cinematicToggle.tooltip = "Cycle through cinematic views of the vehicle";
+            root.Add(cinematicToggle);
             mapMission = Label("", 10, Text, FontStyle.Bold);
             mapMission.name = "map-mission-clock";
             mapMission.pickingMode = PickingMode.Ignore;
@@ -693,9 +700,13 @@ namespace ESP.Presentation
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
             cameraToggle.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
+            cinematicToggle.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
             var camera = isMap ? null : MainFlightCamera;
             bool onboard = camera != null && camera.IsOnboardView;
             cameraToggle.SetEnabled(camera != null && director.RocketVisual != null);
+            cinematicToggle.SetEnabled(camera != null && director.RocketVisual != null);
+            cinematicToggle.text = camera != null && camera.IsCinematicView ? "EXIT CINEMATIC" : "CINEMATIC";
+            Selected(cinematicToggle, camera != null && camera.IsCinematicView);
             cameraToggle.text = onboard ? "CHASE CAM" : "ONBOARD CAM";
             cameraToggle.tooltip = onboard ? "Return to the external chase camera" : "Look along the rocket from its hull";
             Selected(cameraToggle, onboard);
