@@ -1,8 +1,7 @@
 # Map flight instruments
 
-The map uses a small, display-only copy of the sourced vehicle. Its position is
-georeferenced, but its size and camera-facing orientation are presentation aids.
-The navball shows simulated attitude and surface-relative prograde independently
+The map uses a red triangle for the current simulated vehicle position.
+No enlarged vehicle model is drawn on the globe. The navball shows simulated attitude and surface-relative prograde independently
 of the map camera. The same compact flight dock is available in both views after
 launch; imagery selectors remain separate.
 

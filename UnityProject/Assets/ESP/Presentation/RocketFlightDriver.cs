@@ -201,26 +201,7 @@ namespace ESP.Presentation
                 // Choose a deterministic perpendicular reference; the flight model supplies no roll.
                 director.RocketVisual.rotation = Quaternion.FromToRotation(Vector3.up, direction);
             }
-            if (!director.IsMapView && director.launchCamera != null)
-            {
-                Vector3 target = director.RocketVisual != null ? director.RocketVisual.position : Vector3.zero;
-                Bounds bounds = default; bool found = false;
-                if (director.RocketVisual != null)
-                {
-                    var rocketView = director.RocketVisual.GetComponent<RocketPresentation>();
-                    foreach (Renderer renderer in director.RocketVisual.GetComponentsInChildren<Renderer>())
-                    {
-                        if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || RocketPlume.IsExhaustRenderer(renderer) ||
-                            (rocketView != null && rocketView.exhaust != null && renderer.transform.IsChildOf(rocketView.exhaust))) continue;
-                        if (!found) { bounds = renderer.bounds; found = true; }
-                        else bounds.Encapsulate(renderer.bounds);
-                    }
-                    if (found) target = bounds.center;
-                }
-                float frameScale = found ? Mathf.Max(1, bounds.size.magnitude / 60f) : 1;
-                director.launchCamera.transform.position = target + new Vector3(75, 20, -90) * frameScale;
-                director.launchCamera.transform.LookAt(target);
-            }
+
         }
     }
 }

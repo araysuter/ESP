@@ -7,7 +7,7 @@
 *.unity text
 *.prefab text
 *.mat text
-# Small offline NASA fallback (under 300 KB), bundled directly for clean clones.
+# Offline NASA 8192x4096 fallback (about 3 MB), bundled directly for clean clones.
 UnityProject/Assets/ESP/Art/Earth/BlueMarble.jpg -filter -diff -merge -text
 UnityProject/Assets/ESP/Art/Earth/CloudFractionLegend.png -filter -diff -merge -text
 

@@ -75,9 +75,13 @@ namespace ESP.Presentation
                 markers[i].style.display = DisplayStyle.None;
                 root.Add(markers[i]);
             }
-            rocketMarker = Label("▲", 11, Cyan, FontStyle.Bold);
+            rocketMarker = Label("▲", 20, new Color(1f, .19f, .13f), FontStyle.Bold);
+            rocketMarker.style.unityTextOutlineColor = new Color(.05f, .015f, .01f);
+            rocketMarker.style.unityTextOutlineWidth = 1.2f;
+            rocketMarker.style.width = 26; rocketMarker.style.height = 26;
+            rocketMarker.style.unityTextAlign = TextAnchor.MiddleCenter;
             rocketMarker.name = "rocket-map-marker";
-            rocketMarker.pickingMode = PickingMode.Ignore;
+            rocketMarker.pickingMode = PickingMode.Position;
             rocketMarker.style.position = Position.Absolute;
             rocketMarker.style.display = DisplayStyle.None;
             root.Add(rocketMarker);
@@ -369,7 +373,8 @@ namespace ESP.Presentation
             if (rocketVisible)
             {
                 Vector2 p = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(rocketScreen.x, Screen.height - rocketScreen.y));
-                rocketMarker.style.left = p.x; rocketMarker.style.top = p.y - 18;
+                rocketMarker.style.left = p.x - 13; rocketMarker.style.top = p.y - 13;
+                rocketMarker.tooltip = director.VehicleIndex == 1 ? "Starship — current position" : director.VehicleIndex == 2 ? "SLS — current position" : "Vehicle — current position";
             }
             for (int i = 0; i < markers.Length; i++)
             {
@@ -433,7 +438,7 @@ namespace ESP.Presentation
             status.text = isMap ? "EARTH / SELECT A LAUNCH SITE" : (director.FlightStatus ?? "READY").ToUpperInvariant();
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
-            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nVehicle map markers are enlarged and camera-facing; position is georeferenced. Flight attitude is shown on the navball.\n" + vehicleInfo +
+            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
                 "\nOrbit line: coast prediction — engines cut now; ignores drag. Ap/Pe mark radial apsides with local WGS84 heights. Impact clips the path at the surface.";
             string steeringInfo = "Pitch: W/S or ↑/↓  ·  Heading: A/D  ·  Stage: Space  ·  Map: M\n" +
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";

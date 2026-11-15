@@ -46,7 +46,6 @@ namespace ESP.Presentation
             if (environment) Destroy(environment);
             environment = null; RocketVisual = null;
             if (!IsMapView) GoToLaunch(SelectedSiteIndex);
-            if (mapVehicle != null) mapVehicle.SetVehicle(rocketPrefab);
         }
         public Texture[] siteGroundTextures;
         public Material siteGroundTemplate;
@@ -88,7 +87,6 @@ namespace ESP.Presentation
         public bool CanLaunch => FlightDriver != null && FlightDriver.CanLaunch;
         private GameObject environment;
         private Material groundMaterial;
-        private MapVehicleVisual mapVehicle;
         public Material orbitMaterial;
         public MapOrbitVisual OrbitVisual { get; private set; }
 
@@ -99,9 +97,6 @@ namespace ESP.Presentation
                 SelectVehicle(1);
             if (mapRoot != null)
             {
-                mapVehicle = mapRoot.AddComponent<MapVehicleVisual>();
-                mapVehicle.Initialize(this);
-                mapVehicle.SetVehicle(rocketPrefab);
                 OrbitVisual = mapRoot.AddComponent<MapOrbitVisual>();
                 OrbitVisual.orbitMaterial = orbitMaterial;
                 OrbitVisual.Initialize(this);
@@ -158,14 +153,11 @@ namespace ESP.Presentation
             if (mapRoot) mapRoot.SetActive(false);
             if (mapCamera) mapCamera.gameObject.SetActive(false);
             if (launchCamera) launchCamera.gameObject.SetActive(true);
-            if (CanLaunch && RocketVisual != null && launchCamera != null)
+            if (launchCamera)
             {
-                var bounds = new Bounds(RocketVisual.position, Vector3.zero);
-                foreach (var r in RocketVisual.GetComponentsInChildren<Renderer>())
-                    if (r.enabled && !RocketPlume.IsExhaustRenderer(r)) bounds.Encapsulate(r.bounds);
-                float scale = Mathf.Max(1, bounds.size.magnitude / 60f);
-                launchCamera.transform.position = bounds.center + new Vector3(75, 20, -90) * scale;
-                launchCamera.transform.LookAt(bounds.center);
+                var controls = launchCamera.GetComponent<FlightCameraControls>();
+                if (!controls) controls = launchCamera.gameObject.AddComponent<FlightCameraControls>();
+                controls.director = this;
             }
         }
         private void OnPointSelected(double lat, double lon)

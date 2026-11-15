@@ -12,12 +12,23 @@ public static class BuildMission
     {
         string buildPath = Environment.GetEnvironmentVariable("ESP_BUILD_PATH");
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
+        ESP.Presentation.Editor.CloudBlendChecks.Validate();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/ESP/Art/Earth/EarthMesh.asset");
+        // Regenerate the display ellipsoid at the qualified orbital-view tessellation.
+        var detailedMesh = EarthEllipsoid.BuildMesh();
+        if (mesh) { EditorUtility.CopySerialized(detailedMesh, mesh); UnityEngine.Object.DestroyImmediate(detailedMesh); }
+        else { mesh = detailedMesh; AssetDatabase.CreateAsset(mesh, "Assets/ESP/Art/Earth/EarthMesh.asset"); }
+        EditorUtility.SetDirty(mesh);
         var earthMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/ESP/Art/Earth/Earth.mat");
         var texture = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Earth/BlueMarble.jpg");
+        var textureImporter = (TextureImporter)AssetImporter.GetAtPath("Assets/ESP/Art/Earth/BlueMarble.jpg");
+        textureImporter.maxTextureSize = 8192; textureImporter.anisoLevel = 8;
+        textureImporter.SaveAndReimport();
+        texture = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ESP/Art/Earth/BlueMarble.jpg");
+        if (texture.width != 8192 || texture.height != 4096) throw new Exception("Expected NASA 8192x4096 base texture");
         var rocket = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/ESP-Rocket.prefab");
         if (!mesh || !earthMaterial || !texture || !rocket) throw new Exception("Missing Earth mesh, material, texture, or rocket prefab");
         var globe = new GameObject("Earth map");
@@ -28,11 +39,16 @@ public static class BuildMission
         map.nearClipPlane = .01f; map.farClipPlane = 100; map.fieldOfView = 45;
         map.clearFlags = CameraClearFlags.SolidColor; map.backgroundColor = new Color(.002f, .005f, .014f);
         var controls = map.gameObject.AddComponent<GlobeCameraControls>(); controls.useMissionUI = true;
+        var starShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/StarField.shader");
+        if (!starShader) throw new Exception("Missing star field shader");
+        // Serialized scene reference preserves the shader without runtime lookup.
+        var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader;
         var launch = new GameObject("Launch camera").AddComponent<Camera>();
         launch.transform.position = new Vector3(75, 38, -90); launch.transform.LookAt(new Vector3(0, 18, 0));
         launch.nearClipPlane = .1f; launch.farClipPlane = 4000; launch.fieldOfView = 45;
         launch.clearFlags = CameraClearFlags.SolidColor; launch.backgroundColor = new Color(.11f, .20f, .29f);
         var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.5f;
+        sun.cullingMask = ~(1 << 31);
         sun.transform.rotation = Quaternion.Euler(35, -35, 0);
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat; RenderSettings.ambientLight = new Color(.25f, .29f, .32f);
         var manager = new GameObject("Mission");
@@ -54,6 +70,7 @@ public static class BuildMission
         var flight = manager.AddComponent<RocketFlightDriver>(); flight.director = director; flight.nasaWeather = nasaWeather;
         var backdrop = manager.AddComponent<FlightEarthBackdrop>();
         backdrop.driver = flight; backdrop.director = director; backdrop.globeMesh = mesh; backdrop.globeMaterial = earthMaterial;
+        backdrop.starShader = starShader; backdrop.earthSun = sun;
         director.picker = picker; director.pointWeather = pointWeather; director.regional = regional;
         director.events = events; director.spaceWeather = spaceWeather;
         var groundPath = "Assets/ESP/Art/Sites/Ground.mat";

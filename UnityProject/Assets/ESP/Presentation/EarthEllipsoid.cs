@@ -22,13 +22,13 @@ namespace ESP.Presentation
                 filter.sharedMesh = BuildMesh(metersPerUnit);
         }
 
-        /// <summary>Builds a display mesh, with 128 longitude and 64 latitude segments.</summary>
+        /// <summary>Builds a display mesh, with 512 longitude and 256 latitude segments.</summary>
         public static Mesh BuildMesh(double metersPerUnit = 1000000.0)
         {
             if (double.IsNaN(metersPerUnit) || double.IsInfinity(metersPerUnit) || metersPerUnit <= 0)
                 throw new ArgumentOutOfRangeException(nameof(metersPerUnit));
-            const int longitudeSegments = 128;
-            const int latitudeSegments = 64;
+            const int longitudeSegments = 512;
+            const int latitudeSegments = 256;
             const double a = 6378137.0;
             const double b = 6356752.314245;
             double eccentricitySquared = 1.0 - b * b / (a * a);
@@ -70,7 +70,7 @@ namespace ESP.Presentation
                 triangles[cursor++] = upper;
                 triangles[cursor++] = upper + 1;
             }
-            var mesh = new Mesh { name = "WGS84 Display Ellipsoid", indexFormat = IndexFormat.UInt16 };
+            var mesh = new Mesh { name = "WGS84 Display Ellipsoid", indexFormat = IndexFormat.UInt32 };
             mesh.vertices = vertices;
             mesh.normals = normals;
             mesh.uv = uv;

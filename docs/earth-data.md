@@ -1,38 +1,41 @@
 # Earth imagery provenance and mapping
 
-NASA's Global Imagery Browse Services (GIBS) lists `BlueMarble_ShadedRelief_Bathymetry` in its geographic WMS capabilities. On November 14, 2026, the following request returned HTTP 200 with `image/jpeg` (283,733 bytes). This checks the endpoint response; it does not establish that the image has been imported or rendered in the game.
+The bundled Earth image is NASA GIBS `BlueMarble_ShadedRelief_Bathymetry`,
+retrieved November 14, 2026 at 8192 × 4096 pixels. This replaces the original
+2048 × 1024 fallback with 16 times as many texels, in both map and flight views.
 
-[Download global 2048 × 1024 Blue Marble image](https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&CRS=EPSG%3A4326&BBOX=-90%2C-180%2C90%2C180&WIDTH=2048&HEIGHT=1024&FORMAT=image%2Fjpeg)
+[Exact source request](https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&CRS=EPSG%3A4326&BBOX=-90%2C-180%2C90%2C180&WIDTH=8192&HEIGHT=4096&FORMAT=image%2Fjpeg)
 
-The WMS 1.3.0 EPSG:4326 bounding box is ordered latitude, longitude: south -90°, west -180°, north 90°, east 180°. The resulting equirectangular texture spans longitude west-to-east and latitude north-to-south. Map longitude -180° and +180° to the texture seam and the poles to its top and bottom; verify the engine's UV orientation and longitude convention visually. Geographic coordinates use WGS84. See [GIBS access basics](https://nasa-gibs.github.io/gibs-api-docs/access-basics/) and [available visualizations](https://nasa-gibs.github.io/gibs-api-docs/available-visualizations/).
+Unmodified JPEG response: 3,118,845 bytes; SHA-256
+`dc26b816037021601eeea972c59e264a37fd41cd4062381fdb4d9dc9a6230348`.
+The image is committed directly under the existing explicit LFS exception so
+clean clones retain an offline Earth. Unity imports at 8192 with mipmaps and
+anisotropic filtering. It is a historical visual composite, not live imagery,
+elevation, terrain geometry, or collision data. At global scale it cannot show
+individual buildings or metre-scale terrain.
 
-This is a visual composite, including shaded relief and bathymetry. It is not elevation data and must not define terrain height, collision, or physics. Keep the simulation's WGS84 placement and collision model independent of the texture. The low-resolution global image is an approximation and will not provide detailed ground imagery.
+GIBS WMS 1.3.0 EPSG:4326 BBOX uses south, west, north, east ordering. The texture
+is equirectangular. Longitude wraps; latitude clamps. The display mesh uses
+512 longitude and 256 latitude segments with UInt32 indices on WGS84. ECEF
+X/Z/Y map to Unity X/Y/Z; UV U increases eastward and V northward. One map unit
+is one million metres; the authoritative simulation remains double-precision SI.
 
-Bundle a locally stored visual fallback in the build so the demo does not depend on GIBS or a network connection; the request above is a candidate source, not evidence that a fallback has already been bundled. Record the retrieved file and any processing with the shipped asset. Credit the imagery in the application or accompanying attribution as **“Blue Marble imagery: NASA, via NASA GIBS.”** NASA states that most NASA Earth Science materials may be reused, including commercially, except where copyright is indicated; check the specific product's attribution and any third-party restrictions before distribution, and follow [NASA's media usage guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/). See also the [NASA Earth Science FAQ](https://science.nasa.gov/earth/faq/).
+The flight backdrop shares the selected map material and current imagery.
+A separate scaled-space camera follows the flight camera orientation and
+position, with Earth expressed in the launch site's fixed east/up/north frame.
+The backdrop sunlight is rotated into that same frame. NASA clouds are a
+separate shell; see [cloud provenance](weather-cloud-shell.md). Satellite mode
+currently uses a 2048 × 1024 dated mosaic, while Surface and Clouds retain the
+higher-resolution cloud-free base.
 
-## Bundled fallback
+Credit: **Blue Marble imagery: NASA, via NASA GIBS.** See
+[NASA media usage](https://www.nasa.gov/nasa-brand-center/images-and-media/),
+[NASA Earth Science FAQ](https://science.nasa.gov/earth/faq/) and
+[GIBS access](https://nasa-gibs.github.io/gibs-api-docs/access-basics/).
 
-`UnityProject/Assets/ESP/Art/Earth/BlueMarble.jpg` is the unmodified response to
-that request, retrieved November 14, 2026. SHA-256:
-`b7c2ee592bae14fc1a60f4a2c75475693156cbbe093e057a1646d938df706d6a`.
-This small image is committed directly (explicit exception to LFS) so a clean
-checkout can build offline without an LFS download. The build has no runtime
-NASA API calls or API-key requirement. GIBS was used to acquire the bundled data.
-
-The globe uses geodetic latitude/longitude vertices on a WGS84 ellipsoid.
-ECEF X/Z/Y map to Unity X/Y/Z; UV U increases eastward and V northward.
-This is a map view at one Unity unit per million meters, not a change to flight
-units. It does not yet place the launch pad or connect the flight trajectory.
-
-## Verification
-
-November 14: Unity 6000.6.9f1 compiled and packaged the Earth preview for macOS;
-the VM's Metal player rendered the Americas with north up. Build checks passed
-for WGS84 equatorial/polar diameters and outward triangle winding. Texture size
-was checked at 2048 × 1024. No live imagery request is made by the player. This
-is a globe-rendering smoke test; orbital flight, ground detail, and Windows
-packaging remain unverified.
-
-Open `Assets/ESP/Art/Earth/EarthPreview.unity` in the Unity project. To package
-this view, set `ESP_BUILD_PATH` and execute `BuildEarthPreview.Build` in the
-owned integration editor. The ordinary build scene remains the rocket preview.
+VM verification: NASA returned the dimensions above; Unity 6000.6.9f1 built the
+macOS ARM player with an explicit 8192 × 4096 import assertion. The packaged
+Starship ascent reached verified orbit and native camera dragging changed the
+view around the vehicle with the Earth backdrop following. Windows and Intel
+macOS remain untested. BuildMission.Build is the integrated game entry point;
+BuildEarthPreview.Build remains an optional globe-only qualification scene.

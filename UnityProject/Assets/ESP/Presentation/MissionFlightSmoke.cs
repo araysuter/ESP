@@ -72,6 +72,16 @@ namespace ESP.Presentation
             yield return new WaitForSecondsRealtime(1);
             Capture("flight-map.png");
             yield return new WaitForSecondsRealtime(1);
+            if (Array.IndexOf(arguments, "-espGraphicsReview") >= 0)
+            {
+                director.GoToLaunch(director.SelectedSiteIndex);
+                driver.SetThrottle(1);
+                yield return new WaitForSecondsRealtime(4);
+                Capture("flight-vacuum-burn.png");
+                Debug.Log("ESP_VACUUM_BURN_REVIEW altitude=" + driver.AltitudeMeters + " throttle=" + driver.Throttle);
+                yield return new WaitForSecondsRealtime(1);
+                driver.SetThrottle(0);
+            }
             if (Array.IndexOf(arguments, "-espKeepOpen") >= 0)
             { Debug.Log("ESP_FLIGHT_REVIEW_READY verified simulated orbit; map controls available"); yield break; }
             director.GoToLaunch(0);
