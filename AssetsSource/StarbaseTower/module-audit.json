@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "units": "metres",
+  "up_axis": "Y",
+  "level_instances": 23,
+  "degenerate_cross_product_squared_threshold_m4": 1e-20,
+  "modules": [
+    {
+      "name": "TowerLevel",
+      "sha256": "52bd2dbc946bbc572cc701b03971451cad275be33db373778823fbd97f1636da",
+      "bytes": 1268889,
+      "vertices": 13578,
+      "normals": 1182,
+      "texcoords": 0,
+      "triangles": 27476,
+      "bounds_min_m": [
+        -6.760938,
+        0.0,
+        -42.760944
+      ],
+      "bounds_max_m": [
+        6.760938,
+        5.67231,
+        -29.239056
+      ],
+      "degenerate_triangles": 0,
+      "material_sha256": {
+        "TowerLevel.mtl": "e52ef2e3c11f04abc353280604004b6e1fea4a8879207baa5fa3397d57c9f585"
+      }
+    },
+    {
+      "name": "TowerTop",
+      "sha256": "fdc960743b4ff3b0ebd9b1cfbfe42c699682df4eeb8ca1ac75bbfd6d30c14032",
+      "bytes": 2244760,
+      "vertices": 21346,
+      "normals": 3995,
+      "texcoords": 0,
+      "triangles": 43480,
+      "bounds_min_m": [
+        -6.756934,
+        130.463135,
+        -42.760937
+      ],
+      "bounds_max_m": [
+        6.756934,
+        136.748581,
+        -29.239063
+      ],
+      "degenerate_triangles": 32,
+      "material_sha256": {
+        "TowerTop.mtl": "e52ef2e3c11f04abc353280604004b6e1fea4a8879207baa5fa3397d57c9f585"
+      }
+    },
+    {
+      "name": "CatchArms",
+      "sha256": "e2ab4e14e925d42793659f9b074ba1c4e37f3ab83231e56b751e4b8045895ae3",
+      "bytes": 3418837,
+      "vertices": 25826,
+      "normals": 23507,
+      "texcoords": 0,
+      "triangles": 52288,
+      "bounds_min_m": [
+        -9.079381,
+        58.259312,
+        -29.199938
+      ],
+      "bounds_max_m": [
+        9.079828,
+        74.709206,
+        4.379154
+      ],
+      "degenerate_triangles": 0,
+      "material_sha256": {
+        "CatchArms.mtl": "f7eb9c58b96a17c34195b65a3c0dc734b40ce2eb7d80662c8519db5674bad871"
+      }
+    },
+    {
+      "name": "QuickDisconnect",
+      "sha256": "65b899979230c6f25d773c919ea13b1d0bd5804f69701434f3b505a7ebfbfa00",
+      "bytes": 1322822,
+      "vertices": 9584,
+      "normals": 13307,
+      "texcoords": 0,
+      "triangles": 19360,
+      "bounds_min_m": [
+        1.3625,
+        79.0,
+        -36.0
+      ],
+      "bounds_max_m": [
+        12.6375,
+        90.349998,
+        -15.322168
+      ],
+      "degenerate_triangles": 3,
+      "material_sha256": {
+        "QuickDisconnect.mtl": "f7eb9c58b96a17c34195b65a3c0dc734b40ce2eb7d80662c8519db5674bad871"
+      }
+    },
+    {
+      "name": "LaunchMount",
+      "sha256": "f38a84f5ee3a67c31d633622a70e01827647820e6c633c480ddb641147fa12db",
+      "bytes": 2255350,
+      "vertices": 16548,
+      "normals": 20081,
+      "texcoords": 396,
+      "triangles": 33638,
+      "bounds_min_m": [
+        -8.45,
+        0.0,
+        -8.400152
+      ],
+      "bounds_max_m": [
+        8.45,
+        9.1,
+        8.399848
+      ],
+      "degenerate_triangles": 0,
+      "material_sha256": {
+        "LaunchMount.mtl": "640ed8efba05bbd470e68746a9e028c7ecc25e3cf1d8bad7d3b510aca0849f19"
+      }
+    },
+    {
+      "name": "Foundation",
+      "sha256": "9bf853564f79a7c0f1da7f07a96b8979d87c8ea3c4f6b823e94bb77720a1c691",
+      "bytes": 981,
+      "vertices": 8,
+      "normals": 6,
+      "texcoords": 14,
+      "triangles": 12,
+      "bounds_min_m": [
+        -8.0,
+        -2.0,
+        -44.0
+      ],
+      "bounds_max_m": [
+        8.0,
+        0.0,
+        -28.0
+      ],
+      "degenerate_triangles": 0,
+      "material_sha256": {
+        "Foundation.mtl": "f98841e52c560a2e2de5b4da4a59a5cb9cb4f918bb01f59a54f757879f4494a6"
+      }
+    }
+  ],
+  "assembled_triangles": 780726,
+  "scope": "Source geometry only; Unity import, visual quality and runtime performance are not certified."
+}
