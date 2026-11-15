@@ -25,8 +25,9 @@ namespace ESP.Presentation
         private readonly Label[] orbitMarkers = new Label[3];
         private MissionDirector subscribedDirector;
         private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
-        private readonly Button[] rateButtons = new Button[3];
-        private static readonly int[] Rates = { 1, 5, 20 };
+        private readonly Button[] rateButtons = new Button[2];
+        private static readonly int[] Rates = { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 };
+        private Label warpValue;
         private Slider throttle;
         private NavballElement navball;
         private float nextRefresh, nextMarkerRefresh;
@@ -268,14 +269,12 @@ namespace ESP.Presentation
             assist.tooltip = "Assisted ascent follows the same throttle, steering and staging limits. Manual pitch: W/S or ↑/↓. Heading: A/D. Steering follows the model’s finite rate.";
             guidance.Add(assist);
             var rates = Row(); rates.name = "time-rate-controls";
-            for (int i = 0; i < Rates.Length; i++)
-            {
-                int rate = Rates[i];
-                rateButtons[i] = Button(rate + "×", () => { if (director?.FlightDriver is RocketFlightDriver f) f.SetTimeRate(rate); Refresh(); }, false, "time-rate-" + rate);
-                rateButtons[i].style.flexGrow = 1; rateButtons[i].style.paddingLeft = 4; rateButtons[i].style.paddingRight = 4;
-                rateButtons[i].style.height = 23;
-                rates.Add(rateButtons[i]);
-            }
+            rateButtons[0] = Button("−", () => ChangeWarp(-1), false, "time-rate-down");
+            rateButtons[1] = Button("+", () => ChangeWarp(1), false, "time-rate-up");
+            rateButtons[1].tooltip = "Above 20× requires a verified, unpowered orbit. Achieved speed may be lower when the simulation is rate limited.";
+            warpValue = Label("1×", 10, Text, FontStyle.Bold);
+            warpValue.style.flexGrow = 1; warpValue.style.unityTextAlign = TextAnchor.MiddleCenter;
+            rates.Add(rateButtons[0]); rates.Add(warpValue); rates.Add(rateButtons[1]);
             guidance.Add(rates); right.Add(guidance);
 
             var throttleBox = Column(); throttleBox.name = "throttle-instrument";
@@ -437,6 +436,15 @@ namespace ESP.Presentation
             else director.ShowMap();
             Refresh();
         }
+        private void ChangeWarp(int direction)
+        {
+            if (director?.FlightDriver is RocketFlightDriver flight)
+            {
+                int index = Array.IndexOf(Rates, flight.TimeRate);
+                flight.SetTimeRate(Rates[Mathf.Clamp(index + direction, 0, Rates.Length - 1)]);
+                Refresh();
+            }
+        }
         private void OpenWeather() { weatherOpen = true; Refresh(); }
 
         private void RefreshMarkers()
@@ -540,8 +548,13 @@ namespace ESP.Presentation
             // The shared dock carries mission time/rate in both views; avoid duplicate clocks.
             mapMission.style.display = DisplayStyle.None;
             double seconds = Math.Max(0, director.MissionTimeSeconds);
-            string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  /  {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
+            string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  / requested {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
+            if (flight != null)
+            {
+                string actual = string.Format(" · actual avg {0:F1}×{1}", flight.ActualTimeRate, flight.SimulationCatchingUp ? " (limited)" : "");
+                missionTime.text += actual; mapMission.text += actual;
+            }
             weather.text = director.WeatherSummary ?? "Weather unavailable";
             string imageryDate = director.mapLayers != null ? director.mapLayers.DisplayedDate : "";
             mapCredit.text = string.IsNullOrEmpty(imageryDate) ? "NASA · historical Blue Marble fallback" : "NASA · through " + imageryDate + " UTC\n" + director.mapLayers.Freshness;
@@ -597,8 +610,8 @@ namespace ESP.Presentation
             for (int i = 0; i < rateButtons.Length; i++)
             {
                 rateButtons[i].SetEnabled(flight != null);
-                Selected(rateButtons[i], flight != null && flight.TimeRate == Rates[i]);
             }
+            if (warpValue != null) warpValue.text = (flight != null ? flight.TimeRate : 1) + "×";
             altitudeGauge.SetValue((director.AltitudeMeters / 1000).ToString(Math.Abs(director.AltitudeMeters) < 10000 ? "N2" : "N1"));
             speedGauge.SetValue((director.SpeedMetersPerSecond * 3.6).ToString("N0"));
             if (flight != null)

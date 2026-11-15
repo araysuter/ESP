@@ -26,10 +26,20 @@ namespace ESP.Presentation
         private float pendingThrottle = 1f;
         public bool AssistanceEnabled { get; private set; } = true;
         public int TimeRate { get; private set; } = 1;
+        public bool SimulationCatchingUp { get; private set; }
+        private double actualTimeRate;
+        public double ActualTimeRate => IsPaused || MissionSession.BlocksInput || simulation == null || simulation.State.IsLanded ? 0 : actualTimeRate;
+        // Higher rates are only offered after the normal mission has verified
+        // a sustained, unpowered orbit. Integration remains at the fixed step.
+        public bool CanHighWarp => OrbitVerified && simulation != null && !simulation.State.IsLanded &&
+            simulation.State.IsLaunched && !simulation.BoosterBurning && simulation.Throttle <= 0 &&
+            !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight);
         public void ToggleAssistance() { if (IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
         public void SetTimeRate(int rate)
         {
-            if (rate != 1 && rate != 5 && rate != 20) throw new ArgumentOutOfRangeException(nameof(rate));
+            if (Array.IndexOf(new[] { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 }, rate) < 0) throw new ArgumentOutOfRangeException(nameof(rate));
+            if (rate > 20 && !CanHighWarp) return;
+            if (TimeRate != rate) actualTimeRate = 0;
             TimeRate = rate;
         }
         private string weatherSource = "Standard atmosphere (no launch yet)";
@@ -71,7 +81,7 @@ namespace ESP.Presentation
         // (no weather available, or an offline launch forced the standard atmosphere).
         public bool LaunchUsesWeather { get; private set; }
         public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • WASD or arrows to steer • " + TimeRate + "× selected" :
-            string.Format("{0} • pitch {1:F0}° • {2}× • {3}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (accumulator >= StepSeconds ? " • simulation catching up" : "");
+            string.Format("{0} • pitch {1:F0}° • {2}× • {3}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (SimulationCatchingUp ? " • rate limited" : "");
         public RocketSimulation Simulation => simulation;
         public bool HasPosition => simulation != null;
         public DateTime LaunchUtc { get; private set; }
@@ -145,7 +155,7 @@ namespace ESP.Presentation
         {
             if (director != null) director.GetComponent<RocketSmokeTrail>()?.Clear();
             simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
-            pendingThrottle = 0; AssistanceEnabled = true; TimeRate = 1;
+            pendingThrottle = 0; AssistanceEnabled = true; TimeRate = 1; actualTimeRate = 0; SimulationCatchingUp = false;
             LatitudeDegrees = LongitudeDegrees = 0;
             LaunchUtc = default;
             weatherSource = "Standard atmosphere (no launch yet)";
@@ -162,8 +172,8 @@ namespace ESP.Presentation
             }
             if (director != null) { director.ResetLaunchFraming(); director.RefreshFlightBackdrop(); }
         }
-        public void Stage() { if (IsPaused || simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
-        public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
+        public void Stage() { if (IsPaused || simulation == null) return; if (TimeRate > 20) TimeRate = 20; InvalidateOrbitVerification(); if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
+        public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; if (pendingThrottle > 0) InvalidateOrbitVerification(); if (TimeRate > 20 && !CanHighWarp) TimeRate = 20; }
 
         private void Update()
         {
@@ -186,8 +196,12 @@ namespace ESP.Presentation
                 }
                 if (!controlFocused && director != null && !director.IsMapView && keyboard.spaceKey.wasPressedThisFrame) Stage();
             }
-            // Keep all elapsed simulation time; limit work per frame and retain any backlog.
-            accumulator += Time.unscaledDeltaTime * TimeRate;
+            // Cap requested work to what can be simulated this frame. Do not queue
+            // unbounded future flight after the player selects a lower rate.
+            if (TimeRate > 20 && !CanHighWarp) TimeRate = 20;
+            double requested = accumulator + Time.unscaledDeltaTime * TimeRate;
+            SimulationCatchingUp = requested >= 500 * StepSeconds;
+            accumulator = Math.Min(requested, 500 * StepSeconds);
             int steps = 0;
             while (accumulator >= StepSeconds && steps < 500)
             {
@@ -201,6 +215,13 @@ namespace ESP.Presentation
                     AssistanceEnabled = false; TimeRate = 1; accumulator = 0;
                     break;
                 }
+                if (TimeRate > 20 && !CanHighWarp) { TimeRate = 20; accumulator = 0; break; }
+            }
+            if (Time.unscaledDeltaTime > 0)
+            {
+                double measuredRate = steps * StepSeconds / Time.unscaledDeltaTime;
+                double weight = 1 - Math.Exp(-Time.unscaledDeltaTime * 3);
+                actualTimeRate += (measuredRate - actualTimeRate) * weight;
             }
             RenderState();
         }

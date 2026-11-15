@@ -16,7 +16,7 @@ Shader "ESP/Star Field"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             TEXTURE2D(_Sky); SAMPLER(sampler_Sky);
             CBUFFER_START(UnityPerMaterial)
-                float4 _ForwardSky, _RightSky, _UpSky, _ViewParams, _SunSky;
+                float4 _ForwardSky, _RightSky, _UpSky, _ViewParams, _SunSky, _SkyAdjust;
             CBUFFER_END
             struct Attributes { float4 positionOS : POSITION; };
             struct Varyings { float4 positionCS : SV_POSITION; float2 screen : TEXCOORD0; };
@@ -37,6 +37,8 @@ Shader "ESP/Star Field"
                 float2 dx = ddx(uv), dy = ddy(uv);
                 dx.x -= round(dx.x); dy.x -= round(dy.x);
                 float3 color = SAMPLE_TEXTURE2D_GRAD(_Sky, sampler_Sky, uv, dx, dy).rgb;
+                float luminance = dot(color, float3(.2126, .7152, .0722));
+                color = max(0, lerp(luminance.xxx, color, _SkyAdjust.y)) * _SkyAdjust.x;
                 // Original procedural solar disc and optical flare, behind Earth.
                 // The disc follows the same solar vector as the directional light.
                 if (_SunSky.w > 0 && dot(ray, _SunSky.xyz) > 0)
