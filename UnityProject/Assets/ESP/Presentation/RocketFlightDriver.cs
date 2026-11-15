@@ -26,10 +26,17 @@ namespace ESP.Presentation
         private float pendingThrottle = 1f;
         public bool AssistanceEnabled { get; private set; } = true;
         public int TimeRate { get; private set; } = 1;
+        public bool SimulationCatchingUp => accumulator >= StepSeconds;
+        // Higher rates are only offered after the normal mission has verified
+        // a sustained, unpowered orbit. Integration remains at the fixed step.
+        public bool CanHighWarp => OrbitVerified && simulation != null && !simulation.State.IsLanded &&
+            simulation.State.IsLaunched && !simulation.BoosterBurning && simulation.Throttle <= 0 &&
+            !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight);
         public void ToggleAssistance() { if (IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
         public void SetTimeRate(int rate)
         {
-            if (rate != 1 && rate != 5 && rate != 20) throw new ArgumentOutOfRangeException(nameof(rate));
+            if (Array.IndexOf(new[] { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 }, rate) < 0) throw new ArgumentOutOfRangeException(nameof(rate));
+            if (rate > 20 && !CanHighWarp) return;
             TimeRate = rate;
         }
         private string weatherSource = "Standard atmosphere (no launch yet)";
@@ -150,7 +157,7 @@ namespace ESP.Presentation
             if (director != null) { director.ResetLaunchFraming(); director.RefreshFlightBackdrop(); }
         }
         public void Stage() { if (IsPaused || simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
-        public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
+        public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; if (TimeRate > 20 && !CanHighWarp) { TimeRate = 20; accumulator = 0; } }
 
         private void Update()
         {
@@ -174,12 +181,14 @@ namespace ESP.Presentation
                 if (!controlFocused && director != null && !director.IsMapView && keyboard.spaceKey.wasPressedThisFrame) Stage();
             }
             // Keep all elapsed simulation time; limit work per frame and retain any backlog.
+            if (TimeRate > 20 && !CanHighWarp) { TimeRate = 20; accumulator = 0; }
             accumulator += Time.unscaledDeltaTime * TimeRate;
             int steps = 0;
             while (accumulator >= StepSeconds && steps < 500)
             {
                 if (AssistanceEnabled && guidance != null) guidance.Update(simulation);
                 simulation.Step(); UpdateOrbitVerification(); accumulator -= StepSeconds; steps++;
+                if (TimeRate > 20 && !CanHighWarp) { TimeRate = 20; accumulator = 0; break; }
                 if (simulation.State.IsLanded)
                 {
                     // Impact is terminal. Stop the controls and work backlog immediately;
@@ -254,3 +263,4 @@ namespace ESP.Presentation
         }
     }
 }
+

@@ -54,6 +54,7 @@ Keep `ESP.exe`, `ESP_Data`, `UnityPlayer.dll`, and the other generated files tog
 | Action | Control |
 | --- | --- |
 | Explore the globe | Drag to rotate, scroll to zoom, and right-click a visible point for modeled weather and regional imagery |
+| Focus the map | **SHIP** follows the vehicle; **SUN / EARTH** shows the approximate Earth orbit around the Sun. Scroll or drag to change the view |
 | Change the map layer | **Surface**, **Satellite**, or **Clouds** for bundled Blue Marble, dated MODIS true color, or daytime cloud fraction |
 | Choose a launch site and vehicle | Select a globe marker or enter **Launch View**, then use the vehicle selector on the pad |
 | Menus / pause | **Esc** or **Menu**; New Mission begins at the globe, Resume retains the current in-memory session |
@@ -110,3 +111,4 @@ Run the packaged smoke test with `Builds/ESP.app/Contents/MacOS/ESP -espFlightSm
 - **Packaged flight checkpoint, November 14.** The macOS ARM64 development player completed `-espFlightSmoke` with a live-fetched NASA GEOS-FP analysis valid at 09:00 UTC. It staged at approximately 148 s, verified 60 s of unpowered orbit at 481.14 s and about 227.5 km altitude, displayed the simulated map position, and reset when switching sites. The scaled Earth camera rendered during flight. The Unity build also passed parser and compilation checks. [Mission integration record](docs/mission-integration.md)
 - **Representative vehicle packages.** Recorded macOS ARM64 runs verified orbit at 529.36 s for Starship and at 1,109.32 s for SLS, followed by successful map and site-change reset. Both used a frozen Open-Meteo profile because the available NASA analysis was stale. [Vehicle verification details](docs/vehicle-specs.md)
 - **Remaining platform verification.** Packaged checks were performed in the Apple Silicon macOS VM. Windows, Intel macOS, and judging hardware remain unverified. A packaged offline rehearsal remains on the acceptance checklist. The flight models use representative parameters and simplified atmosphere, impact, and terrain assumptions. [Mission acceptance checklist](docs/mission-acceptance.md)
+

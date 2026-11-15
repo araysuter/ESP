@@ -25,6 +25,8 @@ namespace ESP.Presentation
         public bool ModifiedFlight => modified || (driver?.Simulation?.HasUsedCheats ?? false);
         public int FrameRateLimit { get; private set; } = 60;
         public bool VSync { get; private set; }
+        public float MilkyWayBrightness { get; private set; } = 100;
+        public float MilkyWaySaturation { get; private set; } = 100;
         public string PhysicsText { get; private set; } = "Launch to inspect forces.\nSI units · authoritative flight core";
         private MissionDirector director;
         private RocketFlightDriver driver;
@@ -51,6 +53,8 @@ namespace ESP.Presentation
             int saved = PlayerPrefs.GetInt("ESP.Video.FrameLimit", 60);
             FrameRateLimit = Array.IndexOf(FrameLimits, saved) >= 0 ? saved : 60;
             VSync = PlayerPrefs.GetInt("ESP.Video.VSync", 0) == 1;
+            MilkyWayBrightness = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWayBrightness", 100), 10, 500);
+            MilkyWaySaturation = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWaySaturation", 100), 10, 300);
             ApplyVideo();
             string[] args = Environment.GetCommandLineArgs();
             // Existing opt-in flight rehearsals retain their explicit entry path.
@@ -150,6 +154,8 @@ namespace ESP.Presentation
             ApplyVideo(); SaveVideo();
         }
         public void SetVSync(bool value) { VSync = value; ApplyVideo(); SaveVideo(); }
+        public void SetMilkyWayBrightness(float value) { MilkyWayBrightness = Mathf.Clamp(value, 10, 500); PlayerPrefs.SetFloat("ESP.Video.MilkyWayBrightness", MilkyWayBrightness); PlayerPrefs.Save(); }
+        public void SetMilkyWaySaturation(float value) { MilkyWaySaturation = Mathf.Clamp(value, 10, 300); PlayerPrefs.SetFloat("ESP.Video.MilkyWaySaturation", MilkyWaySaturation); PlayerPrefs.Save(); }
         private void ApplyVideo() { QualitySettings.vSyncCount = VSync ? 1 : 0; Application.targetFrameRate = VSync || FrameRateLimit == 0 ? -1 : FrameRateLimit; }
         private void SaveVideo() { PlayerPrefs.SetInt("ESP.Video.FrameLimit", FrameRateLimit); PlayerPrefs.SetInt("ESP.Video.VSync", VSync ? 1 : 0); PlayerPrefs.Save(); }
         private void RefreshTelemetry()
@@ -168,3 +174,4 @@ namespace ESP.Presentation
         private void OnDestroy() { if (Instance == this) Instance = null; }
     }
 }
+

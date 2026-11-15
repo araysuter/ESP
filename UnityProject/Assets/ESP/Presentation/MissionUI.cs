@@ -21,11 +21,13 @@ namespace ESP.Presentation
         private Label stageFuel, boosterFuel;
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
         private Label rocketMarker, mapMission;
+        private Label systemEarth, systemSun, systemVehicle;
         private readonly Label[] orbitMarkers = new Label[3];
         private MissionDirector subscribedDirector;
         private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
-        private readonly Button[] rateButtons = new Button[3];
-        private static readonly int[] Rates = { 1, 5, 20 };
+        private readonly Button[] rateButtons = new Button[2];
+        private static readonly int[] Rates = { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 };
+        private Label warpValue;
         private Slider throttle;
         private NavballElement navball;
         private float nextRefresh, nextMarkerRefresh;
@@ -91,6 +93,17 @@ namespace ESP.Presentation
             rocketMarker.style.position = Position.Absolute;
             rocketMarker.style.display = DisplayStyle.None;
             root.Add(rocketMarker);
+
+            systemEarth = Label("●  EARTH", 10, Cyan, FontStyle.Bold);
+            systemSun = Label("SUN", 10, Amber, FontStyle.Bold);
+            systemVehicle = Label("▲  STARSHIP", 10, Text, FontStyle.Bold);
+            foreach (var label in new[] { systemEarth, systemSun, systemVehicle })
+            {
+                label.style.position = Position.Absolute;
+                label.style.display = DisplayStyle.None;
+                label.pickingMode = PickingMode.Ignore;
+                root.Add(label);
+            }
 
             for (int i = 0; i < orbitMarkers.Length; i++)
             {
@@ -164,6 +177,12 @@ namespace ESP.Presentation
             refreshImagery.tooltip = "Fetch NASA availability and the latest advertised observations for the selected layer";
             layerRow.Add(refreshImagery);
             layerGroup.Add(layerRow);
+            var scaleRow = Row();
+            var shipView = Button("SHIP", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowShip(), false, "map-focus-ship");
+            shipView.tooltip = "Focus the map on the vehicle";
+            var systemView = Button("SUN / EARTH", () => director?.mapCamera?.GetComponent<GlobeCameraControls>()?.ShowSystem(), false, "map-sun-earth-view");
+            systemView.tooltip = "Show the approximate Sun–Earth system and Earth's orbit";
+            scaleRow.Add(shipView); scaleRow.Add(systemView); layerGroup.Add(scaleRow);
             mapBar.Add(layerGroup);
             weatherToggle = Button("WEATHER", () => { weatherOpen = !weatherOpen; if (weatherOpen) director?.RefreshPointWeather(); Refresh(); }, false, "point-weather-toggle");
             var mapUtilities = Row(); mapUtilities.pickingMode = PickingMode.Ignore;
@@ -250,14 +269,12 @@ namespace ESP.Presentation
             assist.tooltip = "Assisted ascent follows the same throttle, steering and staging limits. Manual pitch: W/S or ↑/↓. Heading: A/D. Steering follows the model’s finite rate.";
             guidance.Add(assist);
             var rates = Row(); rates.name = "time-rate-controls";
-            for (int i = 0; i < Rates.Length; i++)
-            {
-                int rate = Rates[i];
-                rateButtons[i] = Button(rate + "×", () => { if (director?.FlightDriver is RocketFlightDriver f) f.SetTimeRate(rate); Refresh(); }, false, "time-rate-" + rate);
-                rateButtons[i].style.flexGrow = 1; rateButtons[i].style.paddingLeft = 4; rateButtons[i].style.paddingRight = 4;
-                rateButtons[i].style.height = 23;
-                rates.Add(rateButtons[i]);
-            }
+            rateButtons[0] = Button("−", () => ChangeWarp(-1), false, "time-rate-down");
+            rateButtons[1] = Button("+", () => ChangeWarp(1), false, "time-rate-up");
+            rateButtons[1].tooltip = "Above 20× requires a verified, unpowered orbit. Actual speed may be lower while the simulation catches up.";
+            warpValue = Label("1×", 10, Text, FontStyle.Bold);
+            warpValue.style.flexGrow = 1; warpValue.style.unityTextAlign = TextAnchor.MiddleCenter;
+            rates.Add(rateButtons[0]); rates.Add(warpValue); rates.Add(rateButtons[1]);
             guidance.Add(rates); right.Add(guidance);
 
             var throttleBox = Column(); throttleBox.name = "throttle-instrument";
@@ -419,16 +436,36 @@ namespace ESP.Presentation
             else director.ShowMap();
             Refresh();
         }
+        private void ChangeWarp(int direction)
+        {
+            if (director?.FlightDriver is RocketFlightDriver flight)
+            {
+                int index = Array.IndexOf(Rates, flight.TimeRate);
+                flight.SetTimeRate(Rates[Mathf.Clamp(index + direction, 0, Rates.Length - 1)]);
+                Refresh();
+            }
+        }
         private void OpenWeather() { weatherOpen = true; Refresh(); }
 
         private void RefreshMarkers()
         {
             if (root == null || root.panel == null) return;
+            var camera = director != null ? director.mapCamera : null;
+            var controls = camera != null ? camera.GetComponent<GlobeCameraControls>() : null;
+            bool systemView = director != null && director.IsMapView && controls != null && controls.Distance >= 1000;
+            var sunlight = director != null ? director.GetComponent<MissionSunlight>() : null;
+            PlaceSystemLabel(systemEarth, camera, Vector3.zero, systemView);
+            systemVehicle.text = director != null && director.VehicleIndex == 1 ? "▲  STARSHIP" :
+                director != null && director.VehicleIndex == 2 ? "▲  SLS" : "▲  ESP DEMO";
+            PlaceSystemLabel(systemVehicle, camera, controls != null ? controls.FocusPosition : Vector3.zero, systemView, 4);
+            Vector3 sunPosition = sunlight != null ? new Vector3((float)sunlight.SunEcef.X, (float)sunlight.SunEcef.Z,
+                (float)sunlight.SunEcef.Y) * SolarSystemMap.AstronomicalUnit : Vector3.zero;
+            PlaceSystemLabel(systemSun, camera, sunPosition, systemView && sunlight != null && sunlight.CurrentUtc != default);
             for (int i = 0; i < orbitMarkers.Length; i++)
             {
                 Vector2 orbitScreen = default;
                 double apsisHeight = 0;
-                bool showOrbit = director != null && director.IsMapView && director.OrbitVisual != null &&
+                bool showOrbit = !systemView && director != null && director.IsMapView && director.OrbitVisual != null &&
                     director.OrbitVisual.TryGetMarkerScreenPosition((FlightCore.OrbitMarkerKind)i, out orbitScreen, out apsisHeight);
                 var marker = orbitMarkers[i];
                 marker.style.display = showOrbit ? DisplayStyle.Flex : DisplayStyle.None;
@@ -440,7 +477,7 @@ namespace ESP.Presentation
                     ". Coast prediction — engines cut now; ignores drag.";
             }
             Vector2 rocketScreen = default;
-            bool rocketVisible = director != null && director.TryGetRocketScreenPosition(out rocketScreen);
+            bool rocketVisible = !systemView && director != null && director.TryGetRocketScreenPosition(out rocketScreen);
             rocketMarker.style.display = rocketVisible ? DisplayStyle.Flex : DisplayStyle.None;
             if (rocketVisible)
             {
@@ -451,13 +488,24 @@ namespace ESP.Presentation
             for (int i = 0; i < markers.Length; i++)
             {
                 Vector2 screen = default;
-                bool show = director != null && director.IsMapView && director.TryGetSiteScreenPosition(i, out screen);
+                bool show = !systemView && director != null && director.IsMapView && director.TryGetSiteScreenPosition(i, out screen);
                 markers[i].style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
                 if (!show) continue;
                 Vector2 point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
                 markers[i].style.left = point.x - 18; markers[i].style.top = point.y - 16;
                 markers[i].text = "●  " + (i == 0 ? "STARBASE" : "LC-39B");
             }
+        }
+
+        private void PlaceSystemLabel(Label label, Camera camera, Vector3 position, bool visible, float yOffset = -18)
+        {
+            Vector3 screen = visible && camera != null ? camera.WorldToScreenPoint(position) : Vector3.zero;
+            visible = visible && camera != null && screen.z > 0 && camera.pixelRect.Contains(new Vector2(screen.x, screen.y));
+            label.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible) return;
+            Vector2 point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
+            label.style.left = point.x + 9;
+            label.style.top = point.y + yOffset;
         }
 
         private void Refresh()
@@ -502,6 +550,7 @@ namespace ESP.Presentation
             double seconds = Math.Max(0, director.MissionTimeSeconds);
             string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  /  {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
+            if (flight != null && flight.SimulationCatchingUp) missionTime.text += " · CATCHING UP";
             weather.text = director.WeatherSummary ?? "Weather unavailable";
             string imageryDate = director.mapLayers != null ? director.mapLayers.DisplayedDate : "";
             mapCredit.text = string.IsNullOrEmpty(imageryDate) ? "NASA · historical Blue Marble fallback" : "NASA · through " + imageryDate + " UTC\n" + director.mapLayers.Freshness;
@@ -510,6 +559,9 @@ namespace ESP.Presentation
             mapCredit.tooltip = director.MapCredit;
             if (director.mapLayers != null && (director.mapLayers.Status.Contains("retained") || director.mapLayers.Status.StartsWith("No verified")))
                 mapCredit.text += "\n" + director.mapLayers.Status;
+            var mapCameraControls = director.mapCamera != null ? director.mapCamera.GetComponent<GlobeCameraControls>() : null;
+            if (isMap && mapCameraControls != null && mapCameraControls.Distance >= 1000)
+                mapCredit.text += " · EARTH ORBIT APPROXIMATE";
             nasaStatus.text = director.NasaStatus;
             regionalImage.style.display = director.RegionalImage != null ? DisplayStyle.Flex : DisplayStyle.None;
             regionalImage.style.backgroundImage = director.RegionalImage != null ? new StyleBackground((Texture2D)director.RegionalImage) : new StyleBackground(StyleKeyword.None);
@@ -525,7 +577,8 @@ namespace ESP.Presentation
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
             string mapInfo = (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n" + director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
-                "\nCyan: coast prediction — engines cut now; ignores drag. Muted blue: actual flown path behind the vehicle. Ap/Pe mark radial apsides with local WGS84 heights. Impact clips the path at the surface.";
+                "\nCyan: coast prediction — engines cut now; ignores drag. Muted blue: actual flown path behind the vehicle. Ap/Pe mark radial apsides with local WGS84 heights. Impact clips the path at the surface." +
+                "\nSun / Earth view: the Sun follows the lighting direction; Earth's orbit is a visual, circular 1 AU approximation, not a simulated heliocentric trajectory.";
             string steeringInfo = "Pitch: W/S or ↑/↓  ·  Heading: A/D  ·  Stage: Space  ·  Map: M\n" +
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
             var localSurface = director.GetComponent<LocalSurfaceTiles>();
@@ -549,8 +602,8 @@ namespace ESP.Presentation
             for (int i = 0; i < rateButtons.Length; i++)
             {
                 rateButtons[i].SetEnabled(flight != null);
-                Selected(rateButtons[i], flight != null && flight.TimeRate == Rates[i]);
             }
+            if (warpValue != null) warpValue.text = (flight != null ? flight.TimeRate : 1) + "×";
             altitudeGauge.SetValue((director.AltitudeMeters / 1000).ToString(Math.Abs(director.AltitudeMeters) < 10000 ? "N2" : "N1"));
             speedGauge.SetValue((director.SpeedMetersPerSecond * 3.6).ToString("N0"));
             if (flight != null)
@@ -641,3 +694,4 @@ namespace ESP.Presentation
         }
     }
 }
+
