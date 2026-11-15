@@ -30,6 +30,9 @@ namespace ESP.Presentation
         public bool VSync { get; private set; }
         public float MilkyWayBrightness { get; private set; } = DefaultMilkyWayBrightness;
         public float MilkyWaySaturation { get; private set; } = DefaultMilkyWaySaturation;
+        public float AuroraKp { get; private set; } = AuroraCurtains.DefaultKp;
+        public float AuroraColorBoost { get; private set; } = AuroraCurtains.DefaultColor;
+        public float AuroraIntensity { get; private set; } = AuroraCurtains.DefaultIntensity;
         public string PhysicsText { get; private set; } = "Launch to inspect forces.\nSI units · authoritative flight core";
         private MissionDirector director;
         private RocketFlightDriver driver;
@@ -58,6 +61,9 @@ namespace ESP.Presentation
             VSync = PlayerPrefs.GetInt("ESP.Video.VSync", 0) == 1;
             MilkyWayBrightness = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWayBrightness", DefaultMilkyWayBrightness), 10, 500);
             MilkyWaySaturation = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWaySaturation", DefaultMilkyWaySaturation), 10, 300);
+            AuroraKp = LoadAurora("Kp", AuroraCurtains.DefaultKp, 0, 9);
+            AuroraColorBoost = LoadAurora("ColorBoost", AuroraCurtains.DefaultColor, 50, 500);
+            AuroraIntensity = LoadAurora("Intensity", AuroraCurtains.DefaultIntensity, 50, 500);
             ApplyVideo();
             string[] args = Environment.GetCommandLineArgs();
             // Existing opt-in flight rehearsals retain their explicit entry path.
@@ -159,6 +165,20 @@ namespace ESP.Presentation
         public void SetVSync(bool value) { VSync = value; ApplyVideo(); SaveVideo(); }
         public void SetMilkyWayBrightness(float value) { MilkyWayBrightness = Mathf.Clamp(value, 10, 500); PlayerPrefs.SetFloat("ESP.Video.MilkyWayBrightness", MilkyWayBrightness); PlayerPrefs.Save(); }
         public void SetMilkyWaySaturation(float value) { MilkyWaySaturation = Mathf.Clamp(value, 10, 300); PlayerPrefs.SetFloat("ESP.Video.MilkyWaySaturation", MilkyWaySaturation); PlayerPrefs.Save(); }
+        private static float ClampAurora(float value, float fallback, float low, float high)
+        { return float.IsNaN(value) || float.IsInfinity(value) ? fallback : Mathf.Clamp(value, low, high); }
+        private static float LoadAurora(string key, float fallback, float low, float high)
+        { return ClampAurora(PlayerPrefs.GetFloat("ESP.Video.Curtains." + key, fallback), fallback, low, high); }
+        private static float SaveAurora(string key, float value, float fallback, float low, float high)
+        {
+            value = ClampAurora(value, fallback, low, high);
+            PlayerPrefs.SetFloat("ESP.Video.Curtains." + key, value);
+            return value;
+        }
+        public void SetAuroraKp(float value) { AuroraKp = SaveAurora("Kp", value, AuroraCurtains.DefaultKp, 0, 9); }
+        public void SetAuroraColorBoost(float value) { AuroraColorBoost = SaveAurora("ColorBoost", value, AuroraCurtains.DefaultColor, 50, 500); }
+        public void SetAuroraIntensity(float value) { AuroraIntensity = SaveAurora("Intensity", value, AuroraCurtains.DefaultIntensity, 50, 500); }
+
         private void ApplyVideo() { QualitySettings.vSyncCount = VSync ? 1 : 0; Application.targetFrameRate = VSync || FrameRateLimit == 0 ? -1 : FrameRateLimit; }
         private void SaveVideo() { PlayerPrefs.SetInt("ESP.Video.FrameLimit", FrameRateLimit); PlayerPrefs.SetInt("ESP.Video.VSync", VSync ? 1 : 0); PlayerPrefs.Save(); }
         private void RefreshTelemetry()
