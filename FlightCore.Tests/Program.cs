@@ -33,6 +33,7 @@ namespace FlightCore.Tests
         static void RunTests()
         {
             LunarChecks.Run(ReadCelestialData("MoonEphemeris.bytes"), ReadCelestialData("SunEphemeris.bytes"));
+            LunarGuidanceTests.Run();
             SolarLightingTests.Run();
             CelestialFramesTests.Run();
             TestAtEarthSurface();

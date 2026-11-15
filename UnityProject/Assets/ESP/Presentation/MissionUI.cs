@@ -29,6 +29,9 @@ namespace ESP.Presentation
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
         private Label rocketMarker, mapMission;
         private Label systemEarth, systemSun, systemVehicle, systemMoon;
+        private VisualElement maneuverWindow;
+        private Button deorbitManeuver, freeReturnManeuver, lunarOrbitManeuver, cancelLunarManeuver;
+        private Label lunarManeuverStatus;
         private readonly Label[] orbitMarkers = new Label[3];
         private readonly Dictionary<FlightCore.CelestialPrimary, Label> planetLabels = new Dictionary<FlightCore.CelestialPrimary, Label>();
         private readonly Label[] transitionMarkers = new Label[6];
@@ -184,6 +187,7 @@ namespace ESP.Presentation
             BuildMapControls();
             BuildFlightControls();
             BuildRoadsterDiscovery();
+            BuildManeuverWindow();
             Resize();
             Refresh();
         }
@@ -243,6 +247,40 @@ namespace ESP.Presentation
             roadsterCard.Add(credit);
             roadsterCard.style.display = DisplayStyle.None;
             root.Add(roadsterCard);
+        }
+
+        private void BuildManeuverWindow()
+        {
+            maneuverWindow=Panel(); maneuverWindow.name="maneuver-guidance-window";
+            maneuverWindow.style.width=300; maneuverWindow.style.position=Position.Absolute;
+            maneuverWindow.style.right=18; maneuverWindow.style.bottom=190;
+            maneuverWindow.style.display=DisplayStyle.None;
+            maneuverWindow.Add(Label("AUTOGUIDANCE MANEUVERS", 12, Text, FontStyle.Bold));
+            deorbitManeuver=Button("STARSHIP DEORBIT", () => {
+                if (director?.FlightDriver is RocketFlightDriver f && f.CanBeginReentry) { f.BeginReentry(); maneuverWindow.style.display=DisplayStyle.None; }
+                Refresh();
+            }, false, "maneuver-deorbit");
+            maneuverWindow.Add(deorbitManeuver);
+            freeReturnManeuver=Button("MOON FREE RETURN", () => {
+                if(director?.FlightDriver is RocketFlightDriver f) f.BeginLunarManeuver(FlightCore.LunarManeuver.FreeReturn);
+                Refresh();
+            }, false, "maneuver-moon-free-return");
+            freeReturnManeuver.tooltip="Search for a lunar flyby that returns to Earth without a capture burn.";
+            maneuverWindow.Add(freeReturnManeuver);
+            lunarOrbitManeuver=Button("MOON ORBIT INSERTION", () => {
+                if(director?.FlightDriver is RocketFlightDriver f) f.BeginLunarManeuver(FlightCore.LunarManeuver.LunarOrbit);
+                Refresh();
+            }, false, "maneuver-moon-orbit");
+            lunarOrbitManeuver.tooltip="Search for a lunar encounter and burn into a bound Moon orbit.";
+            maneuverWindow.Add(lunarOrbitManeuver);
+            lunarManeuverStatus=Label("",10,Muted,FontStyle.Normal);
+            lunarManeuverStatus.style.whiteSpace=WhiteSpace.Normal; maneuverWindow.Add(lunarManeuverStatus);
+            cancelLunarManeuver=Button("CANCEL LUNAR GUIDANCE", () => {
+                if(director?.FlightDriver is RocketFlightDriver f) f.CancelLunarManeuver(); Refresh();
+            }, false, "maneuver-lunar-cancel");
+            maneuverWindow.Add(cancelLunarManeuver);
+            maneuverWindow.Add(Button("CLOSE", () => { maneuverWindow.style.display=DisplayStyle.None; }, false, "maneuver-close"));
+            root.Add(maneuverWindow);
         }
 
         private void BuildMapControls()
@@ -421,8 +459,8 @@ namespace ESP.Presentation
             throttleBox.Add(throttle); right.Add(throttleBox);
 
             var staging = Column(); staging.style.width = 83; staging.style.flexShrink = 0;
-            reentry = Button("RE-ENTRY", () => {
-                if (director?.FlightDriver is RocketFlightDriver f) f.BeginReentry();
+            reentry = Button("GUIDANCE", () => {
+                if (maneuverWindow != null) maneuverWindow.style.display = maneuverWindow.resolvedStyle.display == DisplayStyle.None ? DisplayStyle.Flex : DisplayStyle.None;
                 Refresh();
             }, false, "starship-reentry-action");
             reentry.style.height = 25;
@@ -774,7 +812,7 @@ namespace ESP.Presentation
                 mapMission.text += " · PLANET DATA UNAVAILABLE (2020–2037 coverage)";
             if (flight != null)
             {
-                string actual = flight.IsPlanningReturn ? " · planning return — simulation time paused" :
+                string actual = flight.IsPlanningReturn || flight.IsPlanningLunar ? " · planning maneuver — simulation time paused" :
                     string.Format(" · actual avg {0:F1}×{1}", flight.ActualTimeRate, flight.SimulationCatchingUp ? " (limited)" : "");
                 missionTime.text += actual; mapMission.text += actual;
             }
@@ -802,7 +840,7 @@ namespace ESP.Presentation
             modelCredit.tooltip = mapModelCredit.tooltip = (director.VehicleIndex == 1 || director.VehicleIndex == 3) ? "Starship model by Clarence365, CC BY 4.0; adapted for ESP. Open source model." : "NASA SLS model adapted for ESP. Open source model.";
             site.text = (director.SiteName ?? "Launch site").Replace(" (approximate)", "").Replace(" (Approximate)", "").ToUpperInvariant();
             status.text = (director.FlightStatus ?? "READY").ToUpperInvariant();
-            status.style.display = flight != null && flight.ReentryActive ? DisplayStyle.Flex : DisplayStyle.None;
+            status.style.display = flight != null && (flight.ReentryActive || flight.HasLunarStatus) ? DisplayStyle.Flex : DisplayStyle.None;
             status.tooltip = director.FlightStatus ?? "";
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 3 ? "Fictional preset: five times the fuel at the same loaded mass." : director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
@@ -829,13 +867,13 @@ namespace ESP.Presentation
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
                 "\n" + (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n\n" + steeringInfo;
             flightDetailText.text = isMap ? mapInfo + (mapFlying ? "\n\n" + flightInfo : "") + surfaceInfo : flightInfo + "\n\n" + vehicleInfo + surfaceInfo;
-            assist.SetEnabled(flight != null && !flight.ReentryActive);
-            assist.text = flight != null && flight.IsPlanningReturn ? "PLANNING" : flight != null && flight.ReentryActive ? "RETURN AUTO" : flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
+            assist.SetEnabled(flight != null && !flight.ReentryActive && !flight.LunarActive);
+            assist.text = flight != null && (flight.IsPlanningReturn || flight.IsPlanningLunar) ? "PLANNING" : flight != null && flight.LunarActive ? "LUNAR AUTO" : flight != null && flight.ReentryActive ? "RETURN AUTO" : flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
             Selected(assist, flight != null && flight.AssistanceEnabled);
             for (int i = 0; i < rateButtons.Length; i++)
             {
-                rateButtons[i].SetEnabled(flight != null && !flight.IsPlanningReturn && !flight.ReturnNeedsRealTime);
-                rateButtons[i].tooltip = flight != null && flight.ReturnNeedsRealTime ? "Final approach runs at 1× so you can watch the powered flip and catch" : "Change simulation speed";
+                rateButtons[i].SetEnabled(flight != null && !flight.IsPlanningReturn && !flight.IsPlanningLunar && !flight.ReturnNeedsRealTime && !flight.LunarNeedsRealTime);
+                rateButtons[i].tooltip = flight != null && flight.ReturnNeedsRealTime ? "Final approach runs at 1× so you can watch the powered flip and catch" : flight != null && flight.LunarNeedsRealTime ? "Lunar guidance runs burns and corrections at 1×" : "Change simulation speed";
             }
             if (warpValue != null) warpValue.text = (flight != null ? flight.TimeRate : 1) + "×";
             altitudeGauge.SetValue((director.AltitudeMeters / 1000).ToString(Math.Abs(director.AltitudeMeters) < 10000 ? "N2" : "N1"));
@@ -856,12 +894,17 @@ namespace ESP.Presentation
             }
             action.text = countdownRemaining > 0 ? "T−" + Mathf.CeilToInt(countdownRemaining) :
                 director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
-            action.SetEnabled(countdownRemaining <= 0 && director.FlightDriver != null && !(flight?.ReentryActive ?? false));
-            reentry.style.display = (director.VehicleIndex == 1 || director.VehicleIndex == 3) ? DisplayStyle.Flex : DisplayStyle.None;
-            reentry.SetEnabled(flight != null && flight.CanBeginReentry);
-            reentry.text = flight != null && flight.IsPlanningReturn ? "SEARCHING" : flight?.Simulation?.IsCaught == true ? "CAUGHT" : flight != null && flight.ReentryActive ? "RETURNING" : "RE-ENTRY";
-            reentry.tooltip = flight != null ? flight.ReentryStatus : "Starship return to Starbase";
-            throttle.SetEnabled(director.FlightDriver != null && !(flight?.ReentryActive ?? false));
+            action.SetEnabled(countdownRemaining <= 0 && director.FlightDriver != null && !(flight?.ReentryActive ?? false) && !(flight?.LunarActive ?? false));
+            reentry.style.display = DisplayStyle.Flex;
+            reentry.SetEnabled(flight != null);
+            reentry.text = flight != null && (flight.IsPlanningReturn || flight.IsPlanningLunar) ? "SEARCHING" : flight != null && (flight.ReentryActive || flight.LunarActive) ? "GUIDING" : "GUIDANCE";
+            if(deorbitManeuver != null) { deorbitManeuver.SetEnabled(flight != null && flight.CanBeginReentry); deorbitManeuver.tooltip=flight != null ? flight.ReentryStatus : "Starship return unavailable"; }
+            if(freeReturnManeuver != null) freeReturnManeuver.SetEnabled(flight != null && flight.CanRequestLunar);
+            if(lunarOrbitManeuver != null) lunarOrbitManeuver.SetEnabled(flight != null && flight.CanRequestLunar);
+            if(cancelLunarManeuver != null) cancelLunarManeuver.style.display=flight != null && flight.LunarActive ? DisplayStyle.Flex : DisplayStyle.None;
+            if(lunarManeuverStatus != null) lunarManeuverStatus.text=flight != null ? flight.LunarStatus : "Launch a vehicle to select guidance.";
+            reentry.tooltip = flight != null && flight.LunarActive ? flight.LunarStatus : "Select an autoguidance maneuver";
+            throttle.SetEnabled(director.FlightDriver != null && !(flight?.ReentryActive ?? false) && !(flight?.LunarActive ?? false));
             throttle.SetValueWithoutNotify(director.Throttle);
             throttleValue.text = (director.Throttle * 100).ToString("F0") + "%";
             throttleValue.style.color = director.Throttle > 0 ? Text : Muted;

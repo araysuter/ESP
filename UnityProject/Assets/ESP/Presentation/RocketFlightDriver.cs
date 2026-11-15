@@ -31,18 +31,18 @@ namespace ESP.Presentation
         public double ActualTimeRate => IsPaused || MissionSession.BlocksInput || simulation == null || simulation.State.IsLanded ? 0 : actualTimeRate;
         // Higher rates are only offered after the normal mission has verified
         // a sustained, unpowered orbit. Integration remains at the fixed step.
-        public bool CanHighWarp => simulation != null && !IsPlanningReturn && simulation.State.AltitudeMeters > 120000 &&
-            (ReentryActive ? (simulation.Primary == CelestialPrimary.Earth &&
+        public bool CanHighWarp => simulation != null && !IsPlanningReturn && !IsPlanningLunar && simulation.State.AltitudeMeters > 120000 &&
+            (LunarActive ? lunarGuidance.CanCoastWarp : ReentryActive ? (simulation.Primary == CelestialPrimary.Earth &&
                 (returnController.Phase == StarshipReturnPhase.CoastToBurn ||
                 (returnController.Phase == StarshipReturnPhase.EntryCoast && simulation.State.AltitudeMeters > 130000))) :
                 (simulation.Primary != CelestialPrimary.Earth || OrbitVerified)) && !simulation.State.IsLanded &&
             simulation.State.IsLaunched && !simulation.BoosterBurning && simulation.Throttle <= 0 &&
-            !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight);
-        public void ToggleAssistance() { if (ReentryActive || IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; if (AssistanceEnabled) simulation?.DisableManualRotation(); }
+            (LunarActive || !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight));
+        public void ToggleAssistance() { if (ReentryActive || LunarActive || IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; if (AssistanceEnabled) simulation?.DisableManualRotation(); }
         public void SetTimeRate(int rate)
         {
             if (Array.IndexOf(new[] { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 }, rate) < 0) throw new ArgumentOutOfRangeException(nameof(rate));
-            if (rate > 1 && (IsPlanningReturn || ReturnNeedsRealTime)) return;
+            if (rate > 1 && (IsPlanningReturn || IsPlanningLunar || ReturnNeedsRealTime || LunarNeedsRealTime)) return;
             if (rate > 20 && !CanHighWarp) return;
             if (TimeRate != rate) actualTimeRate = 0;
             TimeRate = rate;
@@ -80,7 +80,7 @@ namespace ESP.Presentation
         }
 
         public bool CanLaunch => !started;
-        public string Status => ReentryActive ? ReentryStatus : simulation != null ? (OrbitVerified ? "Orbit verified (60 s unpowered)" : !simulation.State.IsLanded && AssistanceEnabled && guidance != null && guidance.IsCoasting ? "Coasting to ICPS circularization burn" : simulation.State.Status) : "Ready — " + (AssistanceEnabled ? "assisted" : "manual") + " • " + TimeRate + "× selected";
+        public string Status => ReentryActive ? ReentryStatus : lunarGuidance != null || lunarNotice != null ? LunarStatus : simulation != null ? (OrbitVerified ? "Orbit verified (60 s unpowered)" : !simulation.State.IsLanded && AssistanceEnabled && guidance != null && guidance.IsCoasting ? "Coasting to ICPS circularization burn" : simulation.State.Status) : "Ready — " + (AssistanceEnabled ? "assisted" : "manual") + " • " + TimeRate + "× selected";
         public double AltitudeMeters => simulation != null ? simulation.State.AltitudeMeters : 0;
         public double SpeedMetersPerSecond => simulation != null ? simulation.State.SpeedRelativeGround : 0;
         public double MissionTimeSeconds => simulation != null ? simulation.State.MissionTime : 0;
@@ -98,7 +98,7 @@ namespace ESP.Presentation
         public void SetPitchTarget(double pitchDegrees)
         {
             if (double.IsNaN(pitchDegrees) || double.IsInfinity(pitchDegrees)) throw new ArgumentOutOfRangeException(nameof(pitchDegrees));
-            if (ReentryActive) return;
+            if (ReentryActive || LunarActive) return;
             AssistanceEnabled = false;
             if (simulation != null) { simulation.DisableManualRotation(); simulation.PitchDegrees = Math.Max(-90, Math.Min(90, pitchDegrees)); }
         }
@@ -168,7 +168,7 @@ namespace ESP.Presentation
         {
             ClearSeparatedStages();
             if (director != null) director.GetComponent<RocketSmokeTrail>()?.Clear();
-            ClearReentry();
+            ClearReentry(); ClearLunarGuidance();
             simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
             pendingThrottle = 0; AssistanceEnabled = true; TimeRate = 1; actualTimeRate = 0; SimulationCatchingUp = false;
             LatitudeDegrees = LongitudeDegrees = 0;
@@ -187,21 +187,21 @@ namespace ESP.Presentation
             }
             if (director != null) { director.ResetLaunchFraming(); director.RefreshFlightBackdrop(); }
         }
-        public void Stage() { if (ReentryActive || IsPaused || simulation == null) return; if (TimeRate > 20) TimeRate = 20; InvalidateOrbitVerification(); if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
-        public void SetThrottle(float value) { if (ReentryActive || IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; if (pendingThrottle > 0) InvalidateOrbitVerification(); if (TimeRate > 20 && !CanHighWarp) TimeRate = 20; }
+        public void Stage() { if (ReentryActive || LunarActive || IsPaused || simulation == null) return; if (TimeRate > 20) TimeRate = 20; InvalidateOrbitVerification(); if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
+        public void SetThrottle(float value) { if (ReentryActive || LunarActive || IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; if (pendingThrottle > 0) InvalidateOrbitVerification(); if (TimeRate > 20 && !CanHighWarp) TimeRate = 20; }
 
         private void Update()
         {
             if (simulation == null || IsPaused || MissionSession.BlocksInput) return;
             DetectSeparatedStages();
-            if (simulation.State.IsLanded) { returnController?.Update(simulation); accumulator = 0; RenderState(); return; }
-            if (AdvanceReturnPlanning()) { accumulator = 0; actualTimeRate = 0; RenderState(); return; }
+            if (simulation.State.IsLanded) { returnController?.Update(simulation); if(LunarActive) lunarGuidance.Update(simulation); accumulator = 0; RenderState(); return; }
+            if (AdvanceReturnPlanning() || AdvanceLunarPlanning()) { accumulator = 0; actualTimeRate = 0; RenderState(); return; }
             Keyboard keyboard = Keyboard.current;
             var focused = missionDocument?.rootVisualElement?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
             bool controlFocused = focused is Button || focused is Slider ||
                 focused?.GetFirstAncestorOfType<Button>() != null || focused?.GetFirstAncestorOfType<Slider>() != null;
-            if (!ReentryActive && keyboard != null && Application.isFocused && !editingText && !simulation.State.IsLanded)
+            if (!ReentryActive && !LunarActive && keyboard != null && Application.isFocused && !editingText && !simulation.State.IsLanded)
             {
                 float pitchInput = (keyboard.sKey.isPressed || (!controlFocused && keyboard.downArrowKey.isPressed) ? 1 : 0) - (keyboard.wKey.isPressed || (!controlFocused && keyboard.upArrowKey.isPressed) ? 1 : 0);
                 float headingInput = (keyboard.dKey.isPressed || (!controlFocused && keyboard.rightArrowKey.isPressed) ? 1 : 0) - (keyboard.aKey.isPressed || (!controlFocused && keyboard.leftArrowKey.isPressed) ? 1 : 0);
@@ -215,10 +215,10 @@ namespace ESP.Presentation
                 if (throttleInput != 0) SetThrottle(Throttle + throttleInput * .35f * Time.unscaledDeltaTime);
                 if (!controlFocused && keyboard.spaceKey.wasPressedThisFrame) Stage();
             }
-            else if (!ReentryActive && !AssistanceEnabled) simulation.SetRotationInputs(0, 0, 0);
+            else if (!ReentryActive && !LunarActive && !AssistanceEnabled) simulation.SetRotationInputs(0, 0, 0);
             // Cap requested work to what can be simulated this frame. Do not queue
             // unbounded future flight after the player selects a lower rate.
-            if (ReturnNeedsRealTime) TimeRate = 1;
+            if (ReturnNeedsRealTime || LunarNeedsRealTime) TimeRate = 1;
             else if (TimeRate > 20 && !CanHighWarp) TimeRate = 20;
             double requested = accumulator + Time.unscaledDeltaTime * TimeRate;
             SimulationCatchingUp = requested >= 500 * StepSeconds;
@@ -227,12 +227,13 @@ namespace ESP.Presentation
             while (accumulator >= StepSeconds && steps < 500)
             {
                 if (ReentryActive) returnController.Update(simulation);
+                else if (LunarActive) lunarGuidance.Update(simulation);
                 else if (AssistanceEnabled && guidance != null) guidance.Update(simulation);
                 DetectSeparatedStages();
                 AdvanceSeparatedStages(StepSeconds);
                 simulation.Step();
                 DetectSeparatedStages();
-                if (simulation.State.IsComplete) returnController?.Update(simulation);
+                if (simulation.State.IsComplete) { returnController?.Update(simulation); if(LunarActive) lunarGuidance.Update(simulation); }
                 UpdateOrbitVerification(); accumulator -= StepSeconds; steps++;
                 if (simulation.State.IsLanded)
                 {
@@ -242,7 +243,7 @@ namespace ESP.Presentation
                     AssistanceEnabled = false; TimeRate = 1; accumulator = 0;
                     break;
                 }
-                if (TimeRate > 1 && ReturnNeedsRealTime) { TimeRate = 1; accumulator = 0; break; }
+                if (TimeRate > 1 && (ReturnNeedsRealTime || LunarNeedsRealTime)) { TimeRate = 1; accumulator = 0; break; }
                 if (TimeRate > 20 && !CanHighWarp) { TimeRate = 20; accumulator = 0; break; }
             }
             if (Time.unscaledDeltaTime > 0)

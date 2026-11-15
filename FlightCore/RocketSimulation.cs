@@ -52,6 +52,9 @@ namespace FlightCore
         }
         double gravityMultiplier = 1;
         internal bool ReturnMode;
+        // Lunar pointing reuses the finite-slew attitude actuator without enabling
+        // the Starship-specific entry aerodynamics used by Earth return.
+        internal bool ReturnAerodynamics;
         internal Vector3d ReturnCommand, ReturnAxis;
         internal double ReturnBankRadians;
         internal double ReturnAttitudeSlewDegreesPerSecond=10;
@@ -69,11 +72,38 @@ namespace FlightCore
             var c=new RocketSimulation(newStep,stages,atmosphere,lat,lon,pad,booster,celestial?.LaunchUtc);
             c.position=position;c.velocity=velocity;c.time=time;c.fuel=fuel;c.stage=stage;c.boosterFuel=boosterFuel;c.boosterAttached=boosterAttached;
             c.gravityMultiplier=gravityMultiplier;c.infiniteFuel=infiniteFuel;c.crashDestructionEnabled=crashDestructionEnabled;c.HasUsedCheats=HasUsedCheats;
+            c.manualRotation=manualRotation;c.manualAxis=manualAxis;c.manualRight=manualRight;c.manualForward=manualForward;
+            c.pitchRate=pitchRate;c.yawRate=yawRate;c.rollRate=rollRate;c.pitchControl=pitchControl;c.yawControl=yawControl;c.rollControl=rollControl;
+            c.pitch=pitch;c.heading=heading;
             c.commanded=commanded;c.launched=launched;c.landed=landed;c.destroyed=destroyed;c.actualPitch=actualPitch;c.actualHeading=actualHeading;
-            c.ReturnAttitudeSlewDegreesPerSecond=ReturnAttitudeSlewDegreesPerSecond;c.ReturnBankRadians=ReturnBankRadians;c.ReturnMode=ReturnMode;c.ReturnAxis=ReturnAxis;c.ReturnCommand=ReturnCommand;c.throttle=throttle;
+            c.ReturnAttitudeSlewDegreesPerSecond=ReturnAttitudeSlewDegreesPerSecond;c.ReturnBankRadians=ReturnBankRadians;c.ReturnMode=ReturnMode;c.ReturnAerodynamics=ReturnAerodynamics;c.ReturnAxis=ReturnAxis;c.ReturnCommand=ReturnCommand;c.throttle=throttle;
             return c;
         }
-        internal void EnableReturn() { ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ThrustDirection(position,time,Geo(position,time));DisableManualRotation();ReturnMode=true;ReturnCommand=ReturnAxis;throttle=0; }
+        internal void EnableReturn() { ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ThrustDirection(position,time,Geo(position,time));DisableManualRotation();ReturnMode=true;ReturnAerodynamics=true;ReturnCommand=ReturnAxis;throttle=0; }
+        internal void EnableLunarPointing() { ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ThrustDirectionInertial.Normalize();DisableManualRotation();ReturnMode=true;ReturnAerodynamics=false;ReturnCommand=ReturnAxis;throttle=0; }
+        internal void EndLunarPointing()
+        {
+            throttle=0;
+            if(!ReturnMode || ReturnAerodynamics)return;
+            manualAxis=ReturnAxis.Normalize(); var reference=Math.Abs(manualAxis.Z)<.9 ? new Vector3d(0,0,1) : new Vector3d(1,0,0);
+            manualRight=Cross(reference,manualAxis).Normalize(); manualForward=Cross(manualRight,manualAxis).Normalize();
+            pitchRate=yawRate=rollRate=pitchControl=yawControl=rollControl=0;manualRotation=true;ReturnMode=false;
+        }
+        internal double LunarAvailableDeltaV()
+        {
+            if(fuel<=0 || ReturnAvailableThrust<=0)return 0;
+            if(infiniteFuel)return double.PositiveInfinity;
+            var s=stages[stage];double mass=Mass(fuel,boosterFuel), dry=mass-fuel*s.PropellantMassFraction;
+            return s.IspVacuumSeconds*G0/s.PropellantMassFraction*Math.Log(mass/dry);
+        }
+        internal double LunarBurnSeconds(double deltaV)
+        {
+            double thrust=ReturnAvailableThrust;if(thrust<=0)return double.PositiveInfinity;
+            double mass=Mass(fuel,boosterFuel); if(infiniteFuel)return deltaV*mass/thrust;
+            var s=stages[stage]; double ve=s.IspVacuumSeconds*G0;
+            double used=(mass-mass*Math.Exp(-deltaV*s.PropellantMassFraction/ve))/s.PropellantMassFraction;
+            return used/(thrust/ve);
+        }
         internal void CatchAtCurrentPosition() { IsCaught=true;landed=true;throttle=0;velocity=Rotation(position); }
 
         bool infiniteFuel, crashDestructionEnabled = true;
@@ -106,7 +136,7 @@ namespace FlightCore
             Check(latitudeRadians,-Math.PI/2,Math.PI/2);if(!Finite(longitudeRadians)||!Finite(padAltitudeMeters))throw new ArgumentOutOfRangeException(nameof(longitudeRadians));
             celestial=launchUtc.HasValue ? new LunarEphemeris(launchUtc.Value) : null;this.step=step;this.stages=(StageDefinition[])stages.Clone();this.atmosphere=atmosphere??throw new ArgumentNullException(nameof(atmosphere));lat=latitudeRadians;lon=longitudeRadians;pad=padAltitudeMeters;this.booster=booster;Reset();
         }
-        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";ReturnMode=false;IsCaught=false;ReturnBankRadians=0;ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ReturnCommand=Vector3d.Zero;DisableManualRotation();}
+        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";ReturnMode=false;ReturnAerodynamics=false;IsCaught=false;ReturnBankRadians=0;ReturnAttitudeSlewDegreesPerSecond=10;ReturnAxis=ReturnCommand=Vector3d.Zero;DisableManualRotation();}
         public void Launch(){if(!landed)commanded=true;}
         // The parallel solids are mounted to the core; discard them before separating it.
         public bool Stage(){if(landed||boosterAttached||stage>=stages.Length-1)return false;stage++;fuel=stages[stage].PropellantKg;return true;}
@@ -228,7 +258,7 @@ namespace FlightCore
             var gravity=celestial != null ? celestial.Acceleration(y.p,t,gravityMultiplier) : Gravity.Acceleration(y.p)*gravityMultiplier;
             double heatFlux=0;
             var acceleration=gravity+(ReturnMode?ReturnAxis:ThrustDirection(y.p,t,geo))*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
-            if(ReturnMode)
+            if(ReturnMode && ReturnAerodynamics)
             {
                 var relative=y.v-air.velocity;double speed=relative.Magnitude();
                 // Broadside 9 m by 50 m body area; slender end-on area. Coefficients are game estimates.
