@@ -1,5 +1,13 @@
 # Earth imagery provenance and mapping
 
+Local surface imagery tiles are cached in the application's persistent data directory
+after a successful download. Previously visited areas can load without another
+network request while network imagery is enabled. The cache holds at most 256
+tiles of at most 1 MiB each, evicts least-recently accessed files, and expires
+USGS tiles after seven days and fixed NASA composites after 90 days. Invalid or
+unreadable entries fall back to a fresh request; the bundled globe remains
+available. The first visit still requires downloads; cache files are disposable.
+
 The bundled Earth image is NASA GIBS `BlueMarble_ShadedRelief_Bathymetry`,
 retrieved November 14, 2026 at 8192 × 4096 pixels. This replaces the original
 2048 × 1024 fallback with 16 times as many texels, in both map and flight views.

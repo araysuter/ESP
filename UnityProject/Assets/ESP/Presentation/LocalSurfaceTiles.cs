@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using FlightCore;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -26,6 +27,8 @@ namespace ESP.Presentation
         public int ResidentTileCount => tiles.Count;
         public int ActiveRequestCount => requests.Count;
         private const int CacheLimit = 48, ConcurrentRequests = 2, Subdivisions = 16;
+        private const int DiskTileLimit = 256, MaxTileBytes = 1048576;
+        private string diskCachePath;
         private const double MaximumAltitude = 400000, MercatorLimit = 85.05112878;
         private const string Landsat = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/2000-12-01/GoogleMapsCompatible_Level12/";
         private const string BlueMarble = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/";
@@ -166,6 +169,7 @@ namespace ESP.Presentation
                     if (requests.Count >= ConcurrentRequests) break;
                     if (tiles.ContainsKey(key) || requests.ContainsKey(key) ||
                         (retryAfter.TryGetValue(key, out float retry) && retry > Time.unscaledTime)) continue;
+                    if (TryLoadCachedTile(key)) break;
                     StartCoroutine(Fetch(key, generation));
                     // Limit start rate as well as concurrency when the craft moves quickly.
                     nextRequest = Time.unscaledTime + .15f;
@@ -231,7 +235,7 @@ namespace ESP.Presentation
         private IEnumerator Fetch(TileKey key, int requestGeneration)
         {
             string url = (key.Source == 1 ? Usgs : key.Source == 2 ? BlueMarble : Landsat) + key.Zoom + "/" + key.Y + "/" + key.X + (key.Source == 1 ? "" : ".jpeg");
-            using (var request = UnityWebRequestTexture.GetTexture(url, true))
+            using (var request = UnityWebRequest.Get(url))
             {
                 request.timeout = 15;
                 requests.Add(key, request);
@@ -240,8 +244,8 @@ namespace ESP.Presentation
                 if (requests.TryGetValue(key, out var current) && ReferenceEquals(current, request)) requests.Remove(key);
                 bool abandoned = abandonedRequests.Remove(request);
                 Texture2D image = null;
-                if (request.result == UnityWebRequest.Result.Success)
-                    try { image = DownloadHandlerTexture.GetContent(request); } catch (Exception) { }
+                byte[] encoded = request.result == UnityWebRequest.Result.Success ? request.downloadHandler.data : null;
+                if (encoded != null) image = DecodeTile(encoded);
                 if (requestGeneration != generation || !wanted.Contains(key) || abandoned)
                 {
                     if (image != null) Destroy(image);
@@ -264,13 +268,82 @@ namespace ESP.Presentation
                     Status = "Ground tile rejected; bundled fallback retained";
                     yield break;
                 }
-                EvictForOneTile();
-                image.wrapMode = TextureWrapMode.Clamp;
-                image.filterMode = FilterMode.Trilinear;
-                image.anisoLevel = 4;
-                tiles.Add(key, BuildTile(key, image));
-                Status = key.Source == 1 ? "USDA / USGS aerial imagery near craft (source resolution varies)" : key.Source == 2 ? "NASA GIBS Blue Marble (MODIS)" : "NASA / USGS Landsat WELD 2000 (30 m source)";
+                StoreCachedTile(key, encoded);
+                AddTile(key, image);
             }
+        }
+
+        private string CacheFile(TileKey key)
+        {
+            if (diskCachePath == null) diskCachePath = Path.Combine(Application.persistentDataPath, "ground-imagery-v1");
+            return Path.Combine(diskCachePath, key.Source + "_" + key.Zoom + "_" + key.X + "_" + key.Y + ".tile");
+        }
+
+        private static Texture2D DecodeTile(byte[] encoded)
+        {
+            if (encoded == null || encoded.Length == 0 || encoded.Length > MaxTileBytes) return null;
+            var image = new Texture2D(2, 2, TextureFormat.RGBA32, true);
+            try { if (ImageConversion.LoadImage(image, encoded, true) && image.width == 256 && image.height == 256) return image; }
+            catch (Exception) { }
+            Destroy(image);
+            return null;
+        }
+
+        private bool TryLoadCachedTile(TileKey key)
+        {
+            string path = CacheFile(key);
+            try
+            {
+                if (!File.Exists(path)) return false;
+                var info = new FileInfo(path);
+                // USGS imagery can change; the NASA products use fixed composites.
+                if (info.Length <= 0 || info.Length > MaxTileBytes || DateTime.UtcNow - info.LastWriteTimeUtc > TimeSpan.FromDays(key.Source == 1 ? 7 : 90))
+                { File.Delete(path); return false; }
+                Texture2D image = DecodeTile(File.ReadAllBytes(path));
+                if (image == null) { File.Delete(path); return false; }
+                try { File.SetLastAccessTimeUtc(path, DateTime.UtcNow); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                AddTile(key, image);
+                // Cached imagery is already available; do not replay the network fade-in.
+                tiles[key].LoadedAt = Time.unscaledTime - .6f;
+                return true;
+            }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
+        }
+
+        private void StoreCachedTile(TileKey key, byte[] encoded)
+        {
+            if (encoded == null || encoded.Length > MaxTileBytes) return;
+            string path = CacheFile(key);
+            string temp = path + ".tmp";
+            try
+            {
+                Directory.CreateDirectory(diskCachePath);
+                var files = new DirectoryInfo(diskCachePath).GetFiles("*.tile");
+                if (files.Length >= DiskTileLimit)
+                {
+                    Array.Sort(files, (a, b) => a.LastAccessTimeUtc.CompareTo(b.LastAccessTimeUtc));
+                    for (int i = 0; i <= files.Length - DiskTileLimit; i++) files[i].Delete();
+                }
+                File.WriteAllBytes(temp, encoded);
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(temp, path);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            finally { try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+        }
+
+        private void AddTile(TileKey key, Texture2D image)
+        {
+            EvictForOneTile();
+            image.wrapMode = TextureWrapMode.Clamp;
+            image.filterMode = FilterMode.Trilinear;
+            image.anisoLevel = 4;
+            tiles.Add(key, BuildTile(key, image));
+            Status = key.Source == 1 ? "USDA / USGS aerial imagery near craft (source resolution varies)" : key.Source == 2 ? "NASA GIBS Blue Marble (MODIS)" : "NASA / USGS Landsat WELD 2000 (30 m source)";
         }
 
         private Tile BuildTile(TileKey key, Texture2D image)
