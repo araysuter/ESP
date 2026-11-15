@@ -27,7 +27,7 @@ namespace ESP.Presentation
         public bool ReentryActive => returnController != null;
         public bool ReturnNeedsRealTime => !IsPlanningReturn && returnController != null &&
             (returnController.Phase == StarshipReturnPhase.LandingFlip || returnController.Phase == StarshipReturnPhase.PoweredLanding);
-        public bool CanBeginReentry => !ReentryActive && !IsPaused && !MissionSession.BlocksInput &&
+        public bool CanBeginReentry => !ReentryActive && !LunarActive && !IsPaused && !MissionSession.BlocksInput &&
             director != null && (director.VehicleIndex == 1 || director.VehicleIndex == 3) && OrbitVerified && simulation != null &&
             simulation.Primary == CelestialPrimary.Earth &&
             simulation.State.StageIndex == 1 && !simulation.HasUsedCheats && !simulation.State.IsComplete;
@@ -91,7 +91,7 @@ namespace ESP.Presentation
             returnPlanningCancellation?.Dispose();
             returnPlanningCancellation = null; returnPlanning = null; returnPlanningError = null;
         }
-        void OnDestroy() => CancelReturnPlanning();
+        void OnDestroy() { CancelReturnPlanning(); ClearLunarGuidance(); }
         Vector3 InertialDirectionToRender(Vector3d direction, double lat, double lon)
         {
             var e = EarthFrames.InertialToEcef(direction,
