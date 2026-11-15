@@ -32,5 +32,10 @@ reset/site/vehicle changes, stable camera/render-texture counts, and 1440×900
 and 1280×720 layouts including the scrolling information panel. Screenshots
 are written alongside the game's persistent data and require visual review.
 
-This fixture has been authored; final integrated VM results are recorded after
-execution rather than inferred from the source.
+The macOS VM packaged fixture passed all of these checks. Captures confirmed
+both view directions and the bounded information panel at 720p. A separate
+actual Starship ascent also passed texture binding, staging, powered flight
+above 100 km, cutoff and reset with the new HUD. The optional
+`-espDaylightReview` flag labels its lighting-only UTC override; ordinary
+launches keep the current UTC clock. No Windows or frame-time benchmark claim
+is made.

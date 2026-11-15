@@ -138,8 +138,11 @@ namespace ESP.Presentation
             if (!Check(infoButton != null && infoButton.enabledInHierarchy, "information control retained")) yield break;
             Debug.Log("ESP_BROADCAST_INFO_BEFORE button=" + Describe(infoButton) +
                 " panel=" + Describe(ui.Q<VisualElement>("flight-information-panel")));
+            infoButton.Focus();
+            yield return null;
             using (var submit = NavigationSubmitEvent.GetPooled())
             {
+                submit.target = infoButton;
                 infoButton.SendEvent(submit);
                 Debug.Log("ESP_BROADCAST_INFO_SUBMIT stopped=" + submit.isPropagationStopped + " target=" +
                     (submit.target as VisualElement)?.name);
@@ -168,7 +171,9 @@ namespace ESP.Presentation
                 yield break;
             }
             Capture("broadcast-info-1280x720.png");
-            using (var submit = NavigationSubmitEvent.GetPooled()) close.SendEvent(submit);
+            close.Focus();
+            yield return null;
+            using (var submit = NavigationSubmitEvent.GetPooled()) { submit.target = close; close.SendEvent(submit); }
             yield return new WaitForSecondsRealtime(.3f);
             yield return new WaitForEndOfFrame();
             if (!Check(info.resolvedStyle.display == DisplayStyle.None, "information close control")) yield break;
