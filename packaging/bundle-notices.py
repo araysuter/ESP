@@ -20,3 +20,10 @@ for path in pathlib.Path("UnityProject/Assets").rglob("*"):
         shutil.copy2(path, target)
 (output / "build-info.json").write_text(json.dumps({"version": version, "commit": commit, "unity": "6000.6.9f1"}, indent=2) + "\n")
 shutil.copy2("packaging/README.txt", output / "README.txt")
+
+# Keep notices with the installed Mac app when users drag only ESP.app out of the DMG.
+resources = output / "ESP.app/Contents/Resources"
+if resources.is_dir():
+    shutil.copytree(notices, resources / "Notices", dirs_exist_ok=True)
+    shutil.copy2(output / "build-info.json", resources / "build-info.json")
+    shutil.copy2(output / "README.txt", resources / "README.txt")
