@@ -29,6 +29,7 @@ namespace ESP.Presentation
         private readonly Label[] orbitMarkers = new Label[3];
         private readonly Label[] transitionMarkers = new Label[6];
         private MissionDirector subscribedDirector;
+        private float countdownRemaining;
         private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
         private Button cameraToggle;
         private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
@@ -329,7 +330,7 @@ namespace ESP.Presentation
             var staging = Column(); staging.style.width = 83; staging.style.flexShrink = 0;
             action = Button("LAUNCH", () => {
                 if (director == null) return;
-                if (director.CanLaunch) director.Launch(); else director.Stage();
+                if (director.CanLaunch) countdownRemaining = 3f; else director.Stage();
                 Refresh();
             }, true, "launch-stage-action");
             action.style.height = 38;
@@ -430,15 +431,25 @@ namespace ESP.Presentation
 
         private void Update()
         {
+            if (countdownRemaining > 0 && director != null && !MissionSession.BlocksInput)
+            {
+                if (!director.CanLaunch) countdownRemaining = 0;
+                else
+                {
+                    countdownRemaining -= Time.unscaledDeltaTime;
+                    if (countdownRemaining <= 0) director.Launch();
+                }
+                Refresh();
+            }
             var focused = root?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
             if (!MissionSession.BlocksInput && !editingText && Application.isFocused && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
                 ToggleView();
             if (subscribedDirector != director)
             {
-                if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
+                if (subscribedDirector != null) { subscribedDirector.PointSelected -= OpenWeather; subscribedDirector.MissionReset -= CancelCountdown; }
                 subscribedDirector = director;
-                if (subscribedDirector != null) subscribedDirector.PointSelected += OpenWeather;
+                if (subscribedDirector != null) { subscribedDirector.PointSelected += OpenWeather; subscribedDirector.MissionReset += CancelCountdown; }
             }
             if (Time.unscaledTime >= nextMarkerRefresh)
             {
@@ -456,9 +467,11 @@ namespace ESP.Presentation
 
         private void OnDestroy()
         {
-            if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
+            if (subscribedDirector != null) { subscribedDirector.PointSelected -= OpenWeather; subscribedDirector.MissionReset -= CancelCountdown; }
             if (activeRoot == root) activeRoot = null;
         }
+
+        private void CancelCountdown() { countdownRemaining = 0; }
 
         /// <summary>Tests a screen point in Unity's bottom-left pixel coordinates.</summary>
         public static bool IsPointerOverUI(Vector2 screenBottomLeft)
@@ -693,8 +706,9 @@ namespace ESP.Presentation
                 stageFuel.text = "Unavailable";
                 boosterFuel.style.display = DisplayStyle.None;
             }
-            action.text = director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
-            action.SetEnabled(director.FlightDriver != null);
+            action.text = countdownRemaining > 0 ? "T−" + Mathf.CeilToInt(countdownRemaining) :
+                director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
+            action.SetEnabled(countdownRemaining <= 0 && director.FlightDriver != null);
             throttle.SetEnabled(director.FlightDriver != null);
             throttle.SetValueWithoutNotify(director.Throttle);
             throttleValue.text = (director.Throttle * 100).ToString("F0") + "%";
