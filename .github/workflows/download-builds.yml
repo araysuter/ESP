@@ -12,6 +12,11 @@ on:
         description: 'Publish packages as a GitHub release after both platforms pass'
         type: boolean
         default: false
+      platform:
+        description: 'Platforms to build (publishing requires both)'
+        type: choice
+        options: [both, windows, macos]
+        default: both
 permissions:
   contents: read
 concurrency:
@@ -31,6 +36,7 @@ jobs:
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
           PUBLISH: ${{ inputs.publish }}
+          PLATFORM: ${{ inputs.platform }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
@@ -38,6 +44,7 @@ jobs:
             const tag = context.eventName === 'release' ? context.payload.release.tag_name : 'v' + process.env.REQUESTED_VERSION;
             if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error('Use a version such as v0.1.0');
             if (!process.env.UNITY_EMAIL || !process.env.UNITY_PASSWORD) throw new Error('Set UNITY_EMAIL and UNITY_PASSWORD in repository Actions secrets. No UNITY_LICENSE file is needed.');
+            if (process.env.PUBLISH === 'true' && process.env.PLATFORM !== 'both') throw new Error('Publishing requires both platforms. Select both or disable publish.');
             const sha = context.sha;
             if (context.eventName === 'release' || process.env.PUBLISH === 'true') {
               const {data} = await github.rest.repos.compareCommitsWithBasehead({...context.repo, basehead: sha + '...main'});
@@ -49,14 +56,9 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 1
-      matrix:
-        include:
-          - target: StandaloneOSX
-            runner: macos-15-intel
-            output: ESP.app
-          - target: StandaloneWindows64
-            runner: ubuntu-24.04
-            output: ESP.exe
+      # A Windows-only rehearsal must not depend on a successful macOS build.
+      # Release events and the default dispatch still build both platforms.
+      matrix: ${{ fromJSON(inputs.platform == 'windows' && '{"include":[{"target":"StandaloneWindows64","runner":"ubuntu-24.04","output":"ESP.exe"}]}' || inputs.platform == 'macos' && '{"include":[{"target":"StandaloneOSX","runner":"macos-15-intel","output":"ESP.app"}]}' || '{"include":[{"target":"StandaloneOSX","runner":"macos-15-intel","output":"ESP.app"},{"target":"StandaloneWindows64","runner":"ubuntu-24.04","output":"ESP.exe"}]}') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:
@@ -132,6 +134,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
   windows-installer:
+    if: ${{ github.event_name == 'release' || inputs.platform != 'macos' }}
     needs: [prepare, build]
     runs-on: windows-2025
     timeout-minutes: 15

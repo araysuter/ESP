@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace ESP.Presentation
 {
@@ -56,10 +57,18 @@ namespace ESP.Presentation
             }
             director.ShowMap(); yield return null;
             var sky = director.mapCamera.GetComponentInChildren<StarField>();
-            if (!sky || !sky.GetComponent<MeshRenderer>().sharedMaterial.GetTexture("_Sky"))
+            var skySetup = director.mapCamera.GetComponent<StarFieldSetup>();
+            // The null graphics device does not retain material texture bindings.
+            // Check the serialized assets and created component there; with a real
+            // graphics device also verify the actual material binding.
+            bool hasGraphics = SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+            var skyRenderer = sky ? sky.GetComponent<MeshRenderer>() : null;
+            if (!sky || !skySetup || !skySetup.shader || !skySetup.sky || !skyRenderer ||
+                !skyRenderer.sharedMaterial || (hasGraphics && !skyRenderer.sharedMaterial.GetTexture("_Sky")))
             { Fail("missing offline celestial sky"); yield break; }
             Debug.Log("ESP_RELEASE_SMOKE_OK version=" + Application.version + " platform=" + Application.platform +
-                " graphics=" + SystemInfo.graphicsDeviceType + " vehicles=3 ascent/reset/map passed");
+                " graphics=" + SystemInfo.graphicsDeviceType + " sky=" + (hasGraphics ? "material-binding" : "asset-reference") +
+                " vehicles=3 ascent/reset/map passed");
             Application.Quit(0);
         }
     }
