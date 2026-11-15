@@ -396,7 +396,7 @@ namespace ESP.Presentation
                 if (!show) continue;
                 Vector2 point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
                 markers[i].style.left = point.x - 18; markers[i].style.top = point.y - 16;
-                markers[i].text = "●  " + (i == 0 ? "STARBASE" : "LC-39A");
+                markers[i].text = "●  " + (i == 0 ? "STARBASE" : "LC-39B");
             }
         }
 

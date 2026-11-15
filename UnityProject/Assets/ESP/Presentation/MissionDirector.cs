@@ -277,7 +277,7 @@ namespace ESP.Presentation
             yield return new WaitForSeconds(1); GoToLaunch(1);
             yield return new WaitForSeconds(2); ScreenCapture.CaptureScreenshot(Path.Combine(Application.persistentDataPath, "mission-kennedy.png"));
             yield return new WaitForSeconds(1); ShowMap();
-            picker.Select(28.608422, -80.604133);
+            picker.Select(LaunchSites.All[1].Latitude, LaunchSites.All[1].Longitude);
             yield return new WaitForSeconds(25);
             Debug.Log("ESP_MISSION_WEATHER " + WeatherSummary);
             ScreenCapture.CaptureScreenshot(Path.Combine(Application.persistentDataPath, "mission-weather.png"));

@@ -26,11 +26,15 @@ namespace ESP.Presentation
             float vHalf = (float)(1000.0 / 111320.0 / 0.2);
             float cosLatitude = Mathf.Max(0.01f, Mathf.Abs(Mathf.Cos((float)site.Latitude * Mathf.Deg2Rad)));
             float uHalf = Mathf.Min(0.5f, vHalf / cosLatitude);
+            // The offline Cape image was requested around LC-39A; shift the crop
+            // to the selected LC-39B coordinates within its 0.2-degree footprint.
+            float uCenter = site.Id == "kennedy" ? .5f + (float)((site.Longitude - -80.604333) / .2) : .5f;
+            float vCenter = site.Id == "kennedy" ? .5f + (float)((site.Latitude - 28.608389) / .2) : .5f;
             var mesh = new Mesh { name = "Visual ground mesh" };
             mesh.vertices = new[] { new Vector3(-1000, 0, -1000), new Vector3(-1000, 0, 1000),
                 new Vector3(1000, 0, 1000), new Vector3(1000, 0, -1000) };
-            mesh.uv = new[] { new Vector2(0.5f-uHalf, 0.5f-vHalf), new Vector2(0.5f-uHalf, 0.5f+vHalf),
-                new Vector2(0.5f+uHalf, 0.5f+vHalf), new Vector2(0.5f+uHalf, 0.5f-vHalf) };
+            mesh.uv = new[] { new Vector2(uCenter-uHalf, vCenter-vHalf), new Vector2(uCenter-uHalf, vCenter+vHalf),
+                new Vector2(uCenter+uHalf, vCenter+vHalf), new Vector2(uCenter+uHalf, vCenter-vHalf) };
             mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
             // URP Lit needs a tangent basis; missing tangents rendered the sunlit imagery black.
             mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();
