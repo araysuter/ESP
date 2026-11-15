@@ -85,7 +85,9 @@ Shader "ESP/Star Field"
                     float2 g2 = screen + sunScreen * .68;
                     float2 g3 = screen + sunScreen * 1.08;
                     float r1=length(g1), r2=length(g2), r3=length(g3);
-                    float ring=exp(-pow((r2-.12)/.015,2));
+                    // HLSL pow with a negative base can produce NaN even for exponent 2.
+                    float ringOffset = (r2 - .12) / .015;
+                    float ring = exp(-ringOffset * ringOffset);
                     float3 ghosts = float3(.20,.55,.40) * exp(-r1*r1/.003)
                         + float3(.55,.24,.12) * exp(-r2*r2/.008)
                         + float3(.12,.28,.60) * exp(-r3*r3/.012)
