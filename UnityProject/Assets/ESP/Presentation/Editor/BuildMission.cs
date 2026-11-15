@@ -92,6 +92,13 @@ public static class BuildMission
             settings = ScriptableObject.CreateInstance<PanelSettings>();
             AssetDatabase.CreateAsset(settings, panelPath);
         }
+        // Scale to the rendered viewport, not the host display's reported physical DPI.
+        // Expand keeps the complete cockpit available at different aspect ratios.
+        settings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+        settings.referenceResolution = new Vector2Int(1280, 720);
+        settings.screenMatchMode = PanelScreenMatchMode.Expand;
+        settings.scale = 1;
+        EditorUtility.SetDirty(settings);
         settings.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>("Assets/ESP/Art/MissionTheme.tss");
         if (!settings.themeStyleSheet) throw new Exception("Missing runtime theme");
         var uiObject = new GameObject("Mission UI"); var document = uiObject.AddComponent<UIDocument>(); document.panelSettings = settings;
