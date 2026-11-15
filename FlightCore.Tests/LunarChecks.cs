@@ -44,6 +44,19 @@ public static class LunarChecks
         rocket.Step();
         if(!rocket.State.IsLanded || !rocket.State.IsDestroyed || !rocket.State.Status.Contains("Moon")) throw new Exception("Moon impact not detected");
         if(Math.Abs(rocket.ImpactSpeedMetersPerSecond-1000)>2) throw new Exception("Moon impact velocity");
+        // Compare identical coast and powered states so gravity and the moving
+        // primary cancel, exposing the actual thrust direction after one step.
+        var localUp=new Vector3d(0,1,0);
+        var coast=new RocketSimulation(.02,StageDefinition.DemoStages(),atmosphere,0,0,0,null,epoch);
+        var powered=new RocketSimulation(.02,StageDefinition.DemoStages(),atmosphere,0,0,0,null,epoch);
+        foreach(var craft in new[] { coast, powered }) {
+            Set(craft,"position",moon+localUp*2000000); Set(craft,"velocity",moonV);
+            Set(craft,"commanded",true); Set(craft,"launched",true);
+        }
+        powered.Throttle=1; coast.Step(); powered.Step();
+        var thrustDelta=powered.State.Velocity-coast.State.Velocity;
+        if(thrustDelta.Magnitude()<.01 || (thrustDelta.Normalize()-localUp).Magnitude()>.001)
+            throw new Exception("Moon thrust does not follow local radial up");
         var sun=e.SunPosition(0); var sunV=e.SunVelocity(0);
         var sunRocket=new RocketSimulation(.02,StageDefinition.DemoStages(),atmosphere,0,0,0,null,epoch);
         Set(sunRocket,"position",sun+new Vector3d(LunarEphemeris.SunRadius+10,0,0));

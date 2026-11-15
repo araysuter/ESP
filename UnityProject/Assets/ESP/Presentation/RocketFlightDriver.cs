@@ -31,7 +31,8 @@ namespace ESP.Presentation
         public double ActualTimeRate => IsPaused || MissionSession.BlocksInput || simulation == null || simulation.State.IsLanded ? 0 : actualTimeRate;
         // Higher rates are only offered after the normal mission has verified
         // a sustained, unpowered orbit. Integration remains at the fixed step.
-        public bool CanHighWarp => simulation != null && simulation.State.AltitudeMeters > 120000 && !simulation.State.IsLanded &&
+        public bool CanHighWarp => simulation != null && (simulation.Primary != CelestialPrimary.Earth || OrbitVerified) &&
+            simulation.State.AltitudeMeters > 120000 && !simulation.State.IsLanded &&
             simulation.State.IsLaunched && !simulation.BoosterBurning && simulation.Throttle <= 0 &&
             !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight);
         public void ToggleAssistance() { if (IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
@@ -241,7 +242,7 @@ namespace ESP.Presentation
             if (simulation.HasUsedCheats || (MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight)) { InvalidateOrbitVerification(); return; }
             var state = simulation.State;
             bool unpowered = !simulation.BoosterBurning && (simulation.Throttle <= 0 || state.PropellantKg <= 0);
-            if (!state.IsLaunched || state.IsLanded || !unpowered)
+            if (simulation.Primary != CelestialPrimary.Earth || !state.IsLaunched || state.IsLanded || !unpowered)
             {
                 InvalidateOrbitVerification();
                 return;

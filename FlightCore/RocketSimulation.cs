@@ -156,12 +156,23 @@ namespace FlightCore
             double mass=Mass(Math.Max(0,y.f),Math.Max(0,y.b));
             var drag=Aerodynamics.Compute(y.v,air.velocity,air.sample.DensityKgPerCubicMeter,stages[stage].DragCoefficient,stages[stage].ReferenceAreaSquareMeters,mass);
             var gravity=celestial != null ? celestial.Acceleration(y.p,t,gravityMultiplier) : Gravity.Acceleration(y.p)*gravityMultiplier;
-            var acceleration=gravity+Direction(geo,t,actualPitch,actualHeading)*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
+            var acceleration=gravity+ThrustDirection(y.p,t,geo)*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
             return new ForceSample(geo,air.sample,gravity,acceleration,drag,thrust,coreThrust,engine.isp,mass);
         }
         (double thrust,double isp) Engine(double pressure){double f=Math.Max(0,Math.Min(1,pressure/101325));var s=stages[stage];return ((s.ThrustVacuumNewtons+(s.ThrustSeaLevelNewtons-s.ThrustVacuumNewtons)*f)*throttle,s.IspVacuumSeconds+(s.IspSeaLevelSeconds-s.IspVacuumSeconds)*f);}
         double Mass(double currentFuel,double currentBoosterFuel){double m=stages[stage].DryMassKg+currentFuel+(boosterAttached?booster!.DryMassKg+currentBoosterFuel:0);for(int i=stage+1;i<stages.Length;i++)m+=stages[i].DryMassKg+stages[i].PropellantKg;return m;}
         GeodeticPosition Geo(Vector3d p,double t)=>EarthFrames.EcefToGeodetic(EarthFrames.InertialToEcef(p,Omega*t));
+        // Earth keeps its WGS84 local frame. Other spherical primaries use their
+        // center-relative radial up and the inertial north pole for heading.
+        Vector3d ThrustDirection(Vector3d p,double t,GeodeticPosition earthGeo)
+        {
+            var primary=celestial?.Primary(p,t) ?? CelestialPrimary.Earth;
+            if(primary==CelestialPrimary.Earth) return Direction(earthGeo,t,actualPitch,actualHeading);
+            var relative=p-(primary==CelestialPrimary.Moon ? celestial!.MoonPosition(t) : celestial!.SunPosition(t));
+            double longitude=Math.Atan2(relative.Y,relative.X);
+            double latitude=Math.Atan2(relative.Z,Math.Sqrt(relative.X*relative.X+relative.Y*relative.Y));
+            return Direction(new GeodeticPosition(latitude,longitude,0),0,actualPitch,actualHeading);
+        }
         (AtmosphereSample sample,Vector3d velocity) Air(Vector3d p,double t,GeodeticPosition g){// Clamp only intermediate impact-bracketing samples below the atmosphere domain.
             var a=atmosphere.Sample(Math.Max(StandardAtmosphere.MinimumGeometricAltitudeMeters,g.AltitudeMeters));var w=Aerodynamics.WindToInertial(a.WindEastNorthUpMetersPerSecond,g.LatitudeRadians,g.LongitudeRadians+Omega*t);return (a,Aerodynamics.CorotatingAirVelocity(p,w));}
         static Vector3d Direction(GeodeticPosition location, double t, double pitchDegrees, double headingDegrees)
