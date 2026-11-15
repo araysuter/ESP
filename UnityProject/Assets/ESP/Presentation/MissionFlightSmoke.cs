@@ -49,16 +49,25 @@ namespace ESP.Presentation
                 yield return new WaitForSecondsRealtime(1);
             Debug.Log("ESP_FLIGHT_WEATHER " + (director.nasaWeather != null ? director.nasaWeather.Status : "missing"));
             director.Launch(offline);
-            // Offline smoke must run on the deterministic standard atmosphere; if a
-            // weather column still drove the launch, fail hard so the test is trustworthy.
-            if (offline && driver.LaunchUsesWeather)
-            {
-                Debug.LogError("ESP_FLIGHT_SMOKE_FAIL offline launch used a weather atmosphere source=" + driver.WeatherSourceLabel);
-                Application.Quit(1);
-                yield break;
-            }
+            // Offline smoke must run on the deterministic standard atmosphere with a
+            // live simulation. Fail hard on the first bad condition, logging the
+            // specific reason, and only emit the success marker once both pass.
             if (offline)
+            {
+                if (driver.Simulation == null)
+                {
+                    Debug.LogError("ESP_FLIGHT_SMOKE_FAIL offline simulation is null (launch did not start a flight)");
+                    Application.Quit(1);
+                    yield break;
+                }
+                if (driver.LaunchUsesWeather)
+                {
+                    Debug.LogError("ESP_FLIGHT_SMOKE_FAIL offline launch used a weather atmosphere source=" + driver.WeatherSourceLabel);
+                    Application.Quit(1);
+                    yield break;
+                }
                 Debug.Log("ESP_FLIGHT_OFFLINE_OK standard atmosphere source=" + driver.WeatherSourceLabel);
+            }
             driver.SetTimeRate(20);
             bool launchShot = false, stageShot = false;
             end = Time.realtimeSinceStartup + 240;
