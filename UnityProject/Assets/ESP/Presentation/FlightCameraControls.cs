@@ -16,9 +16,44 @@ namespace ESP.Presentation
         private Vector3 center;
         private float yaw, pitch, distance;
         private bool dragging;
+        private Transform onboardHull;
+        private Vector3 mountPosition;
+        private Vector3 chasePosition;
+        private Quaternion chaseRotation;
+        private float chaseFieldOfView;
+
+        public bool IsOnboardView => onboardHull != null;
+
+        public void ToggleOnboardView()
+        {
+            if (IsOnboardView)
+            {
+                RestoreChaseView();
+                return;
+            }
+            if (passiveView || director == null || director.IsMapView || director.RocketVisual == null) return;
+
+            var vehicle = director.RocketVisual;
+            var hull = vehicle.Find("UpperAssembly");
+            if (hull == null) hull = vehicle;
+            if (!TryHullBounds(hull, vehicle.GetComponent<RocketPresentation>(), out Bounds bounds)) return;
+
+            var camera = GetComponent<Camera>();
+            chasePosition = transform.position;
+            chaseRotation = transform.rotation;
+            chaseFieldOfView = camera.fieldOfView;
+            camera.fieldOfView = 62f;
+            onboardHull = hull;
+            // Aim past the nose, with the mount just outside the aft hull.
+            mountPosition = new Vector3(bounds.max.x + Mathf.Max(.5f, bounds.size.x * .09f),
+                bounds.min.y + bounds.size.y * .12f, bounds.center.z);
+            dragging = false;
+            ApplyOnboardPose();
+        }
 
         public void ResetFraming()
         {
+            if (IsOnboardView) RestoreChaseView();
             trackedVehicle = null;
             center = Vector3.zero;
             yaw = pitch = distance = 0;
@@ -28,6 +63,11 @@ namespace ESP.Presentation
         private void LateUpdate()
         {
             if (director == null || (director.IsMapView && !passiveView) || director.RocketVisual == null) { dragging = false; return; }
+            if (IsOnboardView)
+            {
+                ApplyOnboardPose();
+                return;
+            }
             Transform vehicle = director.RocketVisual;
             if (!TryVisibleBounds(vehicle, out Bounds bounds)) { dragging = false; return; }
             float radius = Mathf.Max(1f, bounds.extents.magnitude);
@@ -72,6 +112,45 @@ namespace ESP.Presentation
             transform.LookAt(center, Vector3.up);
         }
 
+        private void ApplyOnboardPose()
+        {
+            Vector3 outward = onboardHull.right;
+            Vector3 forward = (onboardHull.up + .28f * outward).normalized;
+            // Put the hull to the right of the lens and the Earth-facing side to its left.
+            Vector3 up = Vector3.Cross(outward, forward);
+            up = Quaternion.AngleAxis(-9f, forward) * up;
+            transform.SetPositionAndRotation(KeepAboveSurface(onboardHull.TransformPoint(mountPosition)),
+                Quaternion.LookRotation(forward, up));
+        }
+
+        private void RestoreChaseView()
+        {
+            onboardHull = null;
+            GetComponent<Camera>().fieldOfView = chaseFieldOfView;
+            transform.SetPositionAndRotation(chasePosition, chaseRotation);
+        }
+
+        private static bool TryHullBounds(Transform hull, RocketPresentation view, out Bounds bounds)
+        {
+            bounds = default;
+            bool found = false;
+            foreach (Renderer renderer in hull.GetComponentsInChildren<Renderer>())
+            {
+                if (!IsHullRenderer(renderer, view)) continue;
+                Bounds mesh = renderer.localBounds;
+                Matrix4x4 toHull = hull.worldToLocalMatrix * renderer.localToWorldMatrix;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 corner = new Vector3((i & 1) == 0 ? mesh.min.x : mesh.max.x,
+                        (i & 2) == 0 ? mesh.min.y : mesh.max.y, (i & 4) == 0 ? mesh.min.z : mesh.max.z);
+                    Vector3 point = toHull.MultiplyPoint3x4(corner);
+                    if (!found) { bounds = new Bounds(point, Vector3.zero); found = true; }
+                    else bounds.Encapsulate(point);
+                }
+            }
+            return found;
+        }
+
         private Vector3 KeepAboveSurface(Vector3 cameraPosition)
         {
             // Render coordinates are fixed-pad ENU (Unity east,up,north), based at
@@ -106,13 +185,16 @@ namespace ESP.Presentation
             var view = vehicle.GetComponent<RocketPresentation>();
             foreach (Renderer renderer in vehicle.GetComponentsInChildren<Renderer>())
             {
-                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || RocketPlume.IsExhaustRenderer(renderer) ||
-                    (view != null && view.exhaust != null && renderer.transform.IsChildOf(view.exhaust))) continue;
+                if (!IsHullRenderer(renderer, view)) continue;
                 if (!found) { bounds = renderer.bounds; found = true; }
                 else bounds.Encapsulate(renderer.bounds);
             }
             return found;
         }
+
+        private static bool IsHullRenderer(Renderer renderer, RocketPresentation view) =>
+            renderer.enabled && renderer.gameObject.activeInHierarchy && !RocketPlume.IsExhaustRenderer(renderer) &&
+            (view == null || view.exhaust == null || !renderer.transform.IsChildOf(view.exhaust));
 
         private void OnApplicationFocus(bool hasFocus) { if (!hasFocus) dragging = false; }
         private void OnDisable() { dragging = false; }

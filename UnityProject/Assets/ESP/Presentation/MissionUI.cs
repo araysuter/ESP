@@ -29,6 +29,9 @@ namespace ESP.Presentation
         private readonly Label[] orbitMarkers = new Label[3];
         private MissionDirector subscribedDirector;
         private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
+        private Button cameraToggle;
+        private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
+            ? director.launchCamera.GetComponent<FlightCameraControls>() : null;
         private readonly Button[] rateButtons = new Button[2];
         private static readonly int[] Rates = { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 };
         private Label warpValue;
@@ -77,6 +80,13 @@ namespace ESP.Presentation
             viewToggle = Button("LAUNCH VIEW  [M]", ToggleView, false, "view-toggle");
             Absolute(viewToggle, null, 16, 18, null);
             root.Add(viewToggle);
+            cameraToggle = Button("ONBOARD CAM", () =>
+            {
+                if (!MissionSession.BlocksInput) MainFlightCamera?.ToggleOnboardView();
+                Refresh();
+            }, false, "flight-camera-toggle");
+            Absolute(cameraToggle, null, 51, 18, null);
+            root.Add(cameraToggle);
             mapMission = Label("", 10, Text, FontStyle.Bold);
             mapMission.name = "map-mission-clock";
             mapMission.pickingMode = PickingMode.Ignore;
@@ -553,6 +563,13 @@ namespace ESP.Presentation
             weatherDetails.style.bottom = 292;
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
+            cameraToggle.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
+            var camera = isMap ? null : MainFlightCamera;
+            bool onboard = camera != null && camera.IsOnboardView;
+            cameraToggle.SetEnabled(camera != null && director.RocketVisual != null);
+            cameraToggle.text = onboard ? "CHASE CAM" : "ONBOARD CAM";
+            cameraToggle.tooltip = onboard ? "Return to the external chase camera" : "Look along the rocket from its hull";
+            Selected(cameraToggle, onboard);
             if (director != null && director.mapLayers != null) selectedLayer = director.mapLayers.SelectedIndex + 1;
             for (int i = 0; i < layers.Length; i++) Selected(layers[i], i == selectedLayer);
             Selected(weatherToggle, weatherOpen);
