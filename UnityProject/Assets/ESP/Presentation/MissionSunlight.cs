@@ -12,6 +12,7 @@ namespace ESP.Presentation
         public MissionDirector director;
         public RocketFlightDriver driver;
         public Light sun;
+        private Light mapSun;
         public float daylightIntensity = 1.5f;
         public DateTime CurrentUtc { get; private set; }
         public Vector3d SunEcef { get; private set; }
@@ -23,6 +24,33 @@ namespace ESP.Presentation
             (ReviewUtc.HasValue ? " · LIGHTING REVIEW OVERRIDE" : driver != null && driver.HasPosition ? " · SIMULATED" : " · LIVE") +
             (InEarthShadow ? " · NIGHT / EARTH SHADOW" : " · SUNLIT");
 
+        private Color flightAmbient;
+        private void OnEnable()
+        {
+            RenderPipelineManager.beginCameraRendering += BeginCamera;
+            RenderPipelineManager.endCameraRendering += EndCamera;
+        }
+        private void OnDisable()
+        {
+            RenderPipelineManager.beginCameraRendering -= BeginCamera;
+            RenderPipelineManager.endCameraRendering -= EndCamera;
+            if (mapSun != null) mapSun.enabled = false;
+        }
+        private void BeginCamera(ScriptableRenderContext context, Camera camera)
+        {
+            if (director == null) return;
+            var backdrop = director.GetComponent<FlightEarthBackdrop>();
+            bool isMap = camera == director.mapCamera || (director.Inset != null && camera == director.Inset.MapPreviewCamera);
+            // URP's main-light selection must use the coordinate frame of THIS
+            // camera, including the Base Earth / Overlay vehicle stack.
+            RenderSettings.sun = isMap ? mapSun : backdrop != null && camera == backdrop.BackgroundCamera ? backdrop.BackgroundSun : sun;
+            RenderSettings.ambientLight = isMap ? new Color(.025f, .03f, .045f) : flightAmbient;
+        }
+        private void EndCamera(ScriptableRenderContext context, Camera camera)
+        {
+            RenderSettings.sun = sun;
+            RenderSettings.ambientLight = flightAmbient;
+        }
         private void LateUpdate() { Apply(); }
 
         public void Apply()
@@ -43,14 +71,29 @@ namespace ESP.Presentation
             var location = EarthFrames.EcefToGeodetic(position);
             SolarElevationDegrees = SolarLighting.ElevationDegrees(SunEcef, location.LatitudeRadians, location.LongitudeRadians);
             InEarthShadow = SolarLighting.IsOccluded(position, SunEcef);
-            Vector3 direction = director.IsMapView ? new Vector3((float)SunEcef.X, (float)SunEcef.Z, (float)SunEcef.Y) : LocalSunDirection;
-            Aim(sun, direction);
-            sun.intensity = director.IsMapView || !InEarthShadow ? daylightIntensity : 0;
+            // Both coordinate spaces are rendered in the same frame. Keep separate,
+            // layer-isolated lights rather than rotating a shared Sun for the main view.
+            if (mapSun == null)
+            {
+                var lightObject = new GameObject("Map ECEF sunlight");
+                lightObject.transform.SetParent(transform, false);
+                mapSun = lightObject.AddComponent<Light>();
+                mapSun.type = LightType.Directional;
+                mapSun.shadows = LightShadows.None;
+                mapSun.cullingMask = 1 << MissionInsetView.MapLayer;
+            }
+            Aim(mapSun, new Vector3((float)SunEcef.X, (float)SunEcef.Z, (float)SunEcef.Y));
+            mapSun.enabled = true;
+            mapSun.color = sun.color;
+            mapSun.intensity = daylightIntensity;
+            sun.cullingMask &= ~((1 << MissionInsetView.MapLayer) | (1 << 31));
+            Aim(sun, LocalSunDirection);
+            sun.intensity = !InEarthShadow ? daylightIntensity : 0;
             RenderSettings.sun = sun;
             RenderSettings.ambientMode = AmbientMode.Flat;
             float daylight = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-6, 10, (float)SolarElevationDegrees));
-            RenderSettings.ambientLight = director.IsMapView ? new Color(.025f, .03f, .045f) :
-                Color.Lerp(new Color(.025f, .03f, .045f), new Color(.25f, .29f, .32f), daylight);
+            flightAmbient = Color.Lerp(new Color(.025f, .03f, .045f), new Color(.25f, .29f, .32f), daylight);
+            RenderSettings.ambientLight = flightAmbient;
             if (director.launchCamera != null)
             {
                 float air = 1 - Mathf.Clamp01((float)(director.AltitudeMeters / 120000));

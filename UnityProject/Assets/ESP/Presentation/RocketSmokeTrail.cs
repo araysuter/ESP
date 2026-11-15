@@ -120,7 +120,7 @@ namespace ESP.Presentation
             previousMissionTime = state.MissionTime; previousLaunched = state.IsLaunched;
             for (int i = 0; i < nozzleCount; ++i) previousNozzle[i] = currentNozzle[i];
             hasPrevious = nozzleCount > 0;
-            // Map view hides rendering only: emission, aging and capacity stay identical.
+            // Preview scheduling gates drawing only: emission, aging and capacity stay identical.
             ActiveParticleCount = 0;
             for (int i = 0; i < Capacity; ++i)
             {
@@ -128,8 +128,10 @@ namespace ESP.Presentation
                 if (visualTime - puffs[i].time >= LifetimeSeconds) { puffs[i].alive = false; continue; }
                 ActiveParticleCount++;
             }
-            if (smokeRenderer != null) smokeRenderer.enabled = ActiveParticleCount > 0 && !director.IsMapView;
-            if (ActiveParticleCount > 0 && director.launchCamera != null && !director.IsMapView && EnsureRenderer()) Draw(origin);
+            var camera = director.FlightRenderCamera;
+            bool draw = ActiveParticleCount > 0 && camera != null && camera.isActiveAndEnabled;
+            if (smokeRenderer != null) smokeRenderer.enabled = draw;
+            if (draw && EnsureRenderer()) Draw(origin, camera);
         }
 
         private static Vector3d Ecef(RocketSimulation simulation)
@@ -189,9 +191,8 @@ namespace ESP.Presentation
             depthComparison = (a, b) => depth[b].CompareTo(depth[a]);
             return true;
         }
-        private void Draw(Vector3d origin)
+        private void Draw(Vector3d origin, Camera camera)
         {
-            var camera = director.launchCamera;
             if (sunlight == null) sunlight = GetComponent<MissionSunlight>();
             float daylight;
             if (sunlight != null)

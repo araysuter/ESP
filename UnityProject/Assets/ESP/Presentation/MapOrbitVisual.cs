@@ -46,8 +46,7 @@ namespace ESP.Presentation
             var simulation = driver != null ? driver.Simulation : null;
             // Also sample immediately before drawing to keep the last endpoint authoritative.
             recorder?.RecordSimulation(simulation);
-            if (director == null || !director.IsMapView || director.mapCamera == null ||
-                !director.mapCamera.isActiveAndEnabled || simulation == null || orbitMaterial == null)
+            if (director == null || director.MapRenderCamera == null || simulation == null || orbitMaterial == null)
             { Clear(); return; }
             if (line == null) CreateLines();
             var state = simulation.State;
@@ -87,7 +86,7 @@ namespace ESP.Presentation
 
         private float LogicalPixelWidth(Vector3 anchor)
         {
-            var camera = director.mapCamera;
+            var camera = director.MapRenderCamera;
             float distance = Mathf.Max(.1f, Vector3.Distance(camera.transform.position, anchor));
             float height = camera.orthographic ? 2 * camera.orthographicSize : 2 * distance * Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
             if (missionDocument == null)
@@ -97,6 +96,7 @@ namespace ESP.Presentation
             }
             float logicalHeight = missionDocument != null ? missionDocument.rootVisualElement.resolvedStyle.height : 0;
             if (float.IsNaN(logicalHeight) || logicalHeight <= 0) logicalHeight = 800;
+            if (!director.IsMapView) logicalHeight = 216;
             return height / logicalHeight;
         }
 
