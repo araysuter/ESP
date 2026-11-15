@@ -44,7 +44,7 @@ namespace ESP.Presentation
                 playedLiftoff = false;
             }
 
-            if (mission != null && flight.director != null && flight.director.VehicleIndex == StarshipVehicleIndex)
+            if (mission != null && flight.director != null && (flight.director.VehicleIndex == StarshipVehicleIndex || flight.director.VehicleIndex == 3))
                 UpdateLiftoff();
 
             float target = liftoff.isPlaying ? DuckedMusicVolume : MusicVolume;

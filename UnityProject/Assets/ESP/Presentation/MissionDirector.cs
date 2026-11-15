@@ -45,7 +45,7 @@ namespace ESP.Presentation
         public GameObject rocketPrefab;
         public GameObject[] vehiclePrefabs;
         public int VehicleIndex { get; private set; }
-        public string VehicleLabel => VehicleIndex == 1 ? "STARSHIP · ESTIMATED SPECS" : VehicleIndex == 2 ? "SLS · ESTIMATED SPECS" : "ESP DEMO ROCKET";
+        public string VehicleLabel => VehicleIndex == 3 ? "SUPER STARSHIP · FICTIONAL" : VehicleIndex == 1 ? "STARSHIP · ESTIMATED SPECS" : VehicleIndex == 2 ? "SLS · ESTIMATED SPECS" : "ESP DEMO ROCKET";
         public void SelectVehicle(int index)
         {
             if (vehiclePrefabs == null || index < 0 || index >= vehiclePrefabs.Length || vehiclePrefabs[index] == null || !CanLaunch) return;
@@ -114,6 +114,11 @@ namespace ESP.Presentation
         private void Start()
         {
             CaptureLaunchCameraHome();
+            // Older serialized scenes contain the three original vehicle prefabs.
+            if (vehiclePrefabs != null && vehiclePrefabs.Length == 3 && vehiclePrefabs[1] != null)
+            {
+                Array.Resize(ref vehiclePrefabs, 4); vehiclePrefabs[3] = vehiclePrefabs[1];
+            }
             // Driver registers in Awake; choose the real model before any preflight view is built.
             if (vehiclePrefabs != null && vehiclePrefabs.Length > 1 && vehiclePrefabs[1] != null && CanLaunch)
                 SelectVehicle(1);

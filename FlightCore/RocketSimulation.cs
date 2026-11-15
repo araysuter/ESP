@@ -132,8 +132,8 @@ namespace FlightCore
         /// <summary>Instantaneous shared force evaluation at the current state. Net acceleration excludes pad/ground support; label it free-flight acceleration when constrained.</summary>
         public RocketPhysicsTelemetry Physics {get {
             var forces=CurrentForces();
-            double totalFuel=Math.Max(0,fuel)+(boosterAttached?Math.Max(0,boosterFuel):0);
-            for(int i=stage+1;i<stages.Length;i++)totalFuel+=stages[i].PropellantKg;
+            double totalFuel=Math.Max(0,fuel)*stages[stage].PropellantMassFraction+(boosterAttached?Math.Max(0,boosterFuel):0);
+            for(int i=stage+1;i<stages.Length;i++)totalFuel+=stages[i].PropellantKg*stages[i].PropellantMassFraction;
             return new RocketPhysicsTelemetry(forces.Gravity.Magnitude(),forces.Atmosphere.PressurePascals,forces.Atmosphere.DensityKgPerCubicMeter,
                 forces.Drag.ForceNewtons.Magnitude(),forces.Thrust,forces.Acceleration.Magnitude(),forces.Drag.AirSpeedMetersPerSecond,
                 totalFuel,forces.Atmosphere.TemperatureKelvin,forces.Drag.DynamicPressurePascals);
@@ -251,7 +251,7 @@ namespace FlightCore
             return new ForceSample(geo,air.sample,gravity,acceleration,drag,thrust,coreThrust,engine.isp,mass,heatFlux);
         }
         (double thrust,double isp) Engine(double pressure){double f=Math.Max(0,Math.Min(1,pressure/101325));var s=stages[stage];return ((s.ThrustVacuumNewtons+(s.ThrustSeaLevelNewtons-s.ThrustVacuumNewtons)*f)*throttle,s.IspVacuumSeconds+(s.IspSeaLevelSeconds-s.IspVacuumSeconds)*f);}
-        double Mass(double currentFuel,double currentBoosterFuel){double m=stages[stage].DryMassKg+currentFuel+(boosterAttached?booster!.DryMassKg+currentBoosterFuel:0);for(int i=stage+1;i<stages.Length;i++)m+=stages[i].DryMassKg+stages[i].PropellantKg;return m;}
+        double Mass(double currentFuel,double currentBoosterFuel){double m=stages[stage].DryMassKg+currentFuel*stages[stage].PropellantMassFraction+(boosterAttached?booster!.DryMassKg+currentBoosterFuel:0);for(int i=stage+1;i<stages.Length;i++)m+=stages[i].DryMassKg+stages[i].PropellantKg*stages[i].PropellantMassFraction;return m;}
         GeodeticPosition Geo(Vector3d p,double t)=>EarthFrames.EcefToGeodetic(EarthFrames.InertialToEcef(p,Omega*t));
         // Earth keeps its WGS84 local frame. Other spherical primaries use their
         // center-relative radial up and the inertial north pole for heading.
