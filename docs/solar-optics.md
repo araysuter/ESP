@@ -9,8 +9,10 @@ states approximately 0.53 degrees. This is a fixed representative Earth-distance
 size in flight, not a seasonal apparent-size ephemeris.
 
 The nearly white disc has a derivative-antialiased edge, mild limb darkening and
-linear HDR display values of 6–12. A compact bloom-like halo and faint horizontal
-camera streak make its brightness legible without enlarging the physical disc.
+linear HDR display values of 16–32. A bright halo, diffraction spikes and a
+horizontal streak add camera glare without enlarging the physical disc. Procedural
+colored ghost images appear along the line through the image center when the Sun
+is in view; these artistic optical effects are not calibrated lens simulation.
 These are original procedural camera appearance approximations, not calibrated
 solar radiometry, lux, or an optical instrument simulation. The map sphere uses
 the same near-white HDR appearance at the real display radius. Existing material
@@ -19,8 +21,8 @@ and shader references remain valid; there are no new binary or scene assets.
 The background draw precedes the opaque Earth and Moon, transparent cloud shell,
 and atmosphere, so those layers naturally cover or attenuate the disc and local
 optical glow. The cloud fraction layer remains a display approximation rather
-than measured cloud optical depth. No remote ghost images are drawn across
-unrelated pixels. Additionally, Earth-source occultation disables the camera
+than measured cloud optical depth. The ghost images are rendered in the background pass and are therefore occluded
+by foreground geometry. Additionally, Earth-source occultation disables the camera
 glow when the source center is below the WGS84 horizon, using the reconstructed
 camera ECEF position in double precision. The disc itself is clipped per pixel by
 the rendered globe. This binary center gate does not model fractional solar

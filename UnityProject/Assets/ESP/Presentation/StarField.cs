@@ -18,7 +18,7 @@ namespace ESP.Presentation
         public float SolarAngularDiameterDegrees { get; private set; }
         public float SolarFlareVisibility { get; private set; }
         public float StellarZenithVisibility { get; private set; } = 1;
-        public const float SolarDiscPeakDisplayRadiance = 12f;
+        public const float SolarDiscPeakDisplayRadiance = 32f;
         private Vector3d axisX, axisY, axisZ;
 
         public static StarField Create(Camera camera, Material material, int layer, Texture sky = null)

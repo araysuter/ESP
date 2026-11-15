@@ -55,7 +55,7 @@ Shader "ESP/Star Field"
                     float limb = sqrt(saturate(1 - angular * angular / (radius * radius)));
                     // Nearly white overexposed photosphere; mild limb darkening
                     // remains visible when exposure is reduced. Not radiometry.
-                    color += float3(1.0, .975, .92) * disc * (6 + 6 * limb);
+                    color += float3(1.0, .975, .92) * disc * (16 + 16 * limb);
                     float2 separation = float2(dot(ray - _SunSky.xyz, _RightSky.xyz), dot(ray - _SunSky.xyz, _UpSky.xyz));
                     float halo = exp(-angular / max(radius * 3, .001));
                     float coreBloom = exp(-angular * angular / max(radius * radius * 5, .000001));
@@ -63,8 +63,36 @@ Shader "ESP/Star Field"
                         exp(-abs(separation.x) / max(radius * 10, .004));
                     // Earth-source visibility gates all optical artifacts: a sun
                     // behind the planet cannot paint a halo around its far limb.
+                    // Diffraction spikes and a wider HDR shoulder are camera
+                    // effects; the photosphere itself retains its true angular radius.
+                    float theta = atan2(separation.y, separation.x);
+                    float spikes = pow(abs(cos(theta * 4)), 40) * exp(-angular / max(radius * 22, .008));
+                    float shoulder = exp(-angular / max(radius * 9, .003));
                     color += float3(1, .93, .80) * _SolarOptics.x *
-                        (halo * .36 + coreBloom * .8 + streak * .065);
+                        (halo * 2.2 + coreBloom * 4.0 + shoulder * .26 + streak * .32 + spikes * 1.8);
+                }
+                // Lens ghosts lie on the line through the optical center and
+                // the light source. Keep them in this background layer so opaque
+                // geometry still occludes them, and suppress them below the horizon.
+                float sunForward = dot(_SunSky.xyz, _ForwardSky.xyz);
+                if (_SunSky.w > 0 && _SolarOptics.x > 0 && sunForward > .001)
+                {
+                    float2 sunScreen = float2(dot(_SunSky.xyz, _RightSky.xyz) / (sunForward * _ViewParams.x),
+                        dot(_SunSky.xyz, _UpSky.xyz) / (sunForward * _ViewParams.x) * _ProjectionParams.x);
+                    float2 screen = float2(input.screen.x * _ViewParams.y, input.screen.y);
+                    float edge = 1 - smoothstep(.82, 1.22, max(abs(sunScreen.x / _ViewParams.y), abs(sunScreen.y)));
+                    float2 g1 = screen + sunScreen * .32;
+                    float2 g2 = screen + sunScreen * .68;
+                    float2 g3 = screen + sunScreen * 1.08;
+                    float r1=length(g1), r2=length(g2), r3=length(g3);
+                    // HLSL pow with a negative base can produce NaN even for exponent 2.
+                    float ringOffset = (r2 - .12) / .015;
+                    float ring = exp(-ringOffset * ringOffset);
+                    float3 ghosts = float3(.20,.55,.40) * exp(-r1*r1/.003)
+                        + float3(.55,.24,.12) * exp(-r2*r2/.008)
+                        + float3(.12,.28,.60) * exp(-r3*r3/.012)
+                        + float3(.22,.12,.30) * ring * .35;
+                    color += ghosts * edge * _SolarOptics.x;
                 }
                 return half4(color, 1);
             }
