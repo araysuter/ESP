@@ -14,7 +14,7 @@ namespace ESP.Presentation
         private Material material;
         private Renderer shellRenderer;
 
-        public bool Show(Texture density, Shader shader, float displayOpacity = .38f)
+        public bool Show(Texture density, Shader shader, float displayOpacity = .22f)
         {
             if (!density) { if (shell) shell.SetActive(false); return true; }
             if (!shell)
@@ -134,7 +134,7 @@ namespace ESP.Presentation
                 return selected;
             }
 
-            const int FeatherRadius = 8;
+            const int FeatherRadius = 16;
 
             // Latitude reflection continues over the pole on the opposite meridian.
             int Index(int x, int y)

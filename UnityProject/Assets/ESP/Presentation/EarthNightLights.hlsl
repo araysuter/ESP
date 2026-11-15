@@ -62,7 +62,7 @@ half4 EspLocalCloudLayer(float2 geographicUv, float cameraAltitudeMeters)
     half coverage = EspObservedCloudCoverage(geographicUv);
     half solar = EspSolarElevationSine(geographicUv);
     half night = 1 - smoothstep(-.1391731h, -.0174524h, solar);
-    half opacity = lerp(coverage * .30h, 1 - EspNightCloudTransmission(coverage), night);
+    half opacity = lerp(coverage * .22h, 1 - EspNightCloudTransmission(coverage), night);
     half above = smoothstep(9500, 10500, cameraAltitudeMeters);
     half illumination = lerp(.30h, .006h, night) + .70h * saturate(solar);
     return half4(half3(.94h,.97h,1) * illumination, opacity * above);
