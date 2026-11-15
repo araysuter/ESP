@@ -4,6 +4,7 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.Rendering.Universal;
 using ESP.Presentation;
 
 public static class BuildMission
@@ -14,8 +15,10 @@ public static class BuildMission
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
         WeatherHeightChecks.Validate();
+        ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
+        var nasaGantry = ImportLaunchStructures.Build();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/ESP/Art/Earth/EarthMesh.asset");
         // Regenerate the display ellipsoid at the qualified orbital-view tessellation.
@@ -43,10 +46,25 @@ public static class BuildMission
         var starShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/StarField.shader");
         if (!starShader) throw new Exception("Missing star field shader");
         // Serialized scene reference preserves the shader without runtime lookup.
-        var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader;
+        const string skyPath = "Assets/ESP/Art/Sky/CelestialSky.exr";
+        var skyImporter = (TextureImporter)AssetImporter.GetAtPath(skyPath);
+        if (!skyImporter) throw new Exception("Missing offline NASA sky texture");
+        skyImporter.textureShape = TextureImporterShape.Texture2D;
+        skyImporter.sRGBTexture = false; skyImporter.mipmapEnabled = true; skyImporter.isReadable = false;
+        skyImporter.maxTextureSize = 8192; skyImporter.alphaSource = TextureImporterAlphaSource.None;
+        skyImporter.wrapModeU = TextureWrapMode.Repeat; skyImporter.wrapModeV = TextureWrapMode.Clamp;
+        skyImporter.filterMode = FilterMode.Trilinear; skyImporter.anisoLevel = 1;
+        var skyPlatform = skyImporter.GetPlatformTextureSettings("Standalone");
+        skyPlatform.overridden = true; skyPlatform.maxTextureSize = 8192;
+        skyPlatform.format = TextureImporterFormat.BC6H;
+        skyImporter.SetPlatformTextureSettings(skyPlatform); skyImporter.SaveAndReimport();
+        var sky = AssetDatabase.LoadAssetAtPath<Texture2D>(skyPath);
+        if (!sky || sky.width != 8192 || sky.height != 4096) throw new Exception("Expected 8192x4096 NASA sky");
+        var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader; stars.sky = sky;
         var launch = new GameObject("Launch camera").AddComponent<Camera>();
         launch.transform.position = new Vector3(75, 38, -90); launch.transform.LookAt(new Vector3(0, 18, 0));
-        launch.nearClipPlane = .1f; launch.farClipPlane = 4000; launch.fieldOfView = 45;
+        launch.nearClipPlane = .1f; launch.farClipPlane = 300000; launch.fieldOfView = 45;
+        if (!launch.GetUniversalAdditionalCameraData().clearDepth) throw new Exception("Flight overlay must clear its depth buffer");
         launch.clearFlags = CameraClearFlags.SolidColor; launch.backgroundColor = new Color(.11f, .20f, .29f);
         var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.5f;
         sun.cullingMask = ~(1 << 31);
@@ -64,17 +82,36 @@ public static class BuildMission
         var spaceWeather = manager.AddComponent<NasaSpaceWeather>();
         var picker = map.gameObject.AddComponent<GlobePointPicker>(); picker.useMissionUI = true;
         var director = manager.AddComponent<MissionDirector>(); director.mapCamera = map; director.launchCamera = launch; director.mapRoot = globe;
+        // Historical Apollo/Shuttle geometry is an explicit asset-review option,
+        // never represented as the modern SLS mobile launcher in a normal build.
+        bool historicalGantryReview = Environment.GetEnvironmentVariable("ESP_HISTORICAL_GANTRY_REVIEW") == "1";
+        director.siteStructurePrefabs = new GameObject[] { null, historicalGantryReview ? nasaGantry : null };
         director.vehiclePrefabs = new[] { rocket, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-Starship.prefab"), AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-SLS.prefab") };
         foreach (var vehicle in director.vehiclePrefabs) if (!vehicle) throw new Exception("Missing vehicle prefab");
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
         manager.AddComponent<MissionFlightSmoke>();
         var flight = manager.AddComponent<RocketFlightDriver>(); flight.director = director; flight.nasaWeather = nasaWeather;
+        var explosion = manager.AddComponent<RocketExplosion>();
+        explosion.driver = flight; explosion.director = director;
+        explosion.effectShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketExplosion.shader");
+        if (!explosion.effectShader) throw new Exception("Missing impact effect shader");
+        manager.AddComponent<RocketExplosionSmoke>();
+        var smoke = manager.AddComponent<RocketSmokeTrail>();
+        smoke.driver = flight; smoke.director = director;
+        smoke.smokeShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketSmokeTrail.shader");
+        if (!smoke.smokeShader) throw new Exception("Missing SRB smoke shader");
         var backdrop = manager.AddComponent<FlightEarthBackdrop>();
         backdrop.driver = flight; backdrop.director = director; backdrop.globeMesh = mesh; backdrop.globeMaterial = earthMaterial;
-        backdrop.starShader = starShader; backdrop.earthSun = sun;
+        backdrop.atmosphereShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/ContinuousAtmosphere.shader");
+        backdrop.starShader = starShader; backdrop.celestialSky = sky; backdrop.earthSun = sun;
         var sunlight = manager.AddComponent<MissionSunlight>();
         sunlight.director = director; sunlight.driver = flight; sunlight.sun = sun;
+        smoke.sunlight = sunlight;
         backdrop.sunlight = sunlight;
+        var surface = manager.AddComponent<LocalSurfaceTiles>();
+        surface.driver = flight; surface.director = director; surface.surfaceSun = sun;
+        surface.surfaceShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/LocalSurface.shader");
+        if (!surface.surfaceShader || !backdrop.atmosphereShader) throw new Exception("Missing continuous Earth shaders");
         director.picker = picker; director.pointWeather = pointWeather; director.regional = regional;
         director.events = events; director.spaceWeather = spaceWeather;
         var groundPath = "Assets/ESP/Art/Sites/Ground.mat";

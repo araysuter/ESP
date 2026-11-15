@@ -63,7 +63,7 @@ namespace FlightCore
         {
             if(landed||!commanded)return;
             actualPitch=Move(actualPitch,pitch,5*step);double delta=((heading-actualHeading+540)%360)-180;actualHeading=(actualHeading+Math.Max(-5*step,Math.Min(5*step,delta))+360)%360;
-            if(!launched){var air=Air(position,time,Geo(position,time));var engine=Engine(air.sample.PressurePascals);double coreThrust=fuel>0?engine.thrust:0;double solidThrust=BoosterBurning?booster!.ThrustNewtons:0;double thrust=coreThrust+solidThrust;var up=Direction(position,time,90,0);var gravityVector=Gravity.Acceleration(position)*gravityMultiplier;double gravity=-(gravityVector.X*up.X+gravityVector.Y*up.Y+gravityVector.Z*up.Z);if(thrust*Math.Sin(actualPitch*Math.PI/180)<=Mass(fuel,boosterFuel)*gravity){
+            if(!launched){var padGeo=Geo(position,time);var air=Air(position,time,padGeo);var engine=Engine(air.sample.PressurePascals);double coreThrust=fuel>0?engine.thrust:0;double solidThrust=BoosterBurning?booster!.ThrustNewtons:0;double thrust=coreThrust+solidThrust;var up=Direction(padGeo,time,90,0);var gravityVector=Gravity.Acceleration(position)*gravityMultiplier;double gravity=-(gravityVector.X*up.X+gravityVector.Y*up.Y+gravityVector.Z*up.Z);if(thrust*Math.Sin(actualPitch*Math.PI/180)<=Mass(fuel,boosterFuel)*gravity){
                 // Hold-down burns both propellants; a mass-driven liftoff is checked next tick.
                 if(!infiniteFuel){fuel=Math.Max(0,fuel-coreThrust/(engine.isp*G0)*step);
                 boosterFuel=Math.Max(0,boosterFuel-(BoosterBurning?booster!.MassFlowKgPerSecond:0)*step);}
@@ -109,7 +109,7 @@ namespace FlightCore
             double mass=Mass(Math.Max(0,y.f),Math.Max(0,y.b));
             var drag=Aerodynamics.Compute(y.v,air.velocity,air.sample.DensityKgPerCubicMeter,stages[stage].DragCoefficient,stages[stage].ReferenceAreaSquareMeters,mass);
             var gravity=Gravity.Acceleration(y.p)*gravityMultiplier;
-            var acceleration=gravity+Direction(y.p,t,actualPitch,actualHeading)*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
+            var acceleration=gravity+Direction(geo,t,actualPitch,actualHeading)*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
             return new ForceSample(geo,air.sample,gravity,acceleration,drag,thrust,coreThrust,engine.isp,mass);
         }
         (double thrust,double isp) Engine(double pressure){double f=Math.Max(0,Math.Min(1,pressure/101325));var s=stages[stage];return ((s.ThrustVacuumNewtons+(s.ThrustSeaLevelNewtons-s.ThrustVacuumNewtons)*f)*throttle,s.IspVacuumSeconds+(s.IspSeaLevelSeconds-s.IspVacuumSeconds)*f);}
@@ -117,7 +117,14 @@ namespace FlightCore
         GeodeticPosition Geo(Vector3d p,double t)=>EarthFrames.EcefToGeodetic(EarthFrames.InertialToEcef(p,Omega*t));
         (AtmosphereSample sample,Vector3d velocity) Air(Vector3d p,double t,GeodeticPosition g){// Clamp only intermediate impact-bracketing samples below the atmosphere domain.
             var a=atmosphere.Sample(Math.Max(StandardAtmosphere.MinimumGeometricAltitudeMeters,g.AltitudeMeters));var w=Aerodynamics.WindToInertial(a.WindEastNorthUpMetersPerSecond,g.LatitudeRadians,g.LongitudeRadians+Omega*t);return (a,Aerodynamics.CorotatingAirVelocity(p,w));}
-        Vector3d Direction(Vector3d p,double t,double pitchDegrees,double headingDegrees){var g=Geo(p,t);double a=pitchDegrees*Math.PI/180,h=headingDegrees*Math.PI/180;return Aerodynamics.WindToInertial(new Vector3d(Math.Cos(a)*Math.Sin(h),Math.Cos(a)*Math.Cos(h),Math.Sin(a)),g.LatitudeRadians,g.LongitudeRadians+Omega*t);}
+        static Vector3d Direction(GeodeticPosition location, double t, double pitchDegrees, double headingDegrees)
+        {
+            double pitchRadians = pitchDegrees * Math.PI / 180;
+            double headingRadians = headingDegrees * Math.PI / 180;
+            var localDirection = new Vector3d(Math.Cos(pitchRadians) * Math.Sin(headingRadians),
+                Math.Cos(pitchRadians) * Math.Cos(headingRadians), Math.Sin(pitchRadians));
+            return Aerodynamics.WindToInertial(localDirection, location.LatitudeRadians, location.LongitudeRadians + Omega * t);
+        }
         static Vector3d Rotation(Vector3d p)=>new Vector3d(-Omega*p.Y,Omega*p.X,0);
         static double Move(double a,double b,double d)=>a+Math.Max(-d,Math.Min(d,b-a)); static bool Finite(double x)=>!double.IsNaN(x)&&!double.IsInfinity(x);static void Check(double v,double min,double max){if(!Finite(v)||v<min||v>max)throw new ArgumentOutOfRangeException(nameof(v));}
     }

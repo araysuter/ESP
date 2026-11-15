@@ -6,15 +6,17 @@ using UnityEngine.UIElements;
 
 namespace ESP.Presentation
 {
-    /// <summary>Map-only coast conic. Owns no flight state; parent UI owns marker labels.</summary>
+    /// <summary>Actual flown trajectory plus map-only coast conic; parent UI owns marker labels.</summary>
     public sealed class MapOrbitVisual : MonoBehaviour
     {
         [Tooltip("Serialized URP/Unlit material; keeps the depth-tested shader in packaged builds.")]
         public Material orbitMaterial;
         public OrbitProjectionResult Projection { get; private set; }
         private MissionDirector director;
-        private LineRenderer line;
-        private Material runtimeMaterial;
+        private LineRenderer line, trailLine;
+        private FlightTrailRecorder recorder;
+        public FlightTrail FlownTrail => recorder != null ? recorder.History : null;
+        private Material runtimeMaterial, trailMaterial;
         private float nextRefresh;
         private UIDocument missionDocument;
         private readonly Vector3[] vertices = new Vector3[OrbitProjection.MaximumSamples];
@@ -22,6 +24,12 @@ namespace ESP.Presentation
         public void Initialize(MissionDirector owner)
         {
             director = owner;
+            if (owner != null)
+            {
+                recorder = owner.GetComponent<FlightTrailRecorder>();
+                if (recorder == null) recorder = owner.gameObject.AddComponent<FlightTrailRecorder>();
+                recorder.Initialize(owner);
+            }
             nextRefresh = 0;
         }
 
@@ -34,17 +42,34 @@ namespace ESP.Presentation
 
         private void LateUpdate()
         {
-            if (!HasActiveFlight()) { Clear(); return; }
-            // No runtime Shader.Find: a material with its shader must be serialized by the scene builder.
-            if (orbitMaterial == null) { Clear(); return; }
-            if (line == null) CreateLine();
-            if (Time.unscaledTime >= nextRefresh)
+            var driver = director != null ? director.FlightDriver as RocketFlightDriver : null;
+            var simulation = driver != null ? driver.Simulation : null;
+            // Also sample immediately before drawing to keep the last endpoint authoritative.
+            recorder?.RecordSimulation(simulation);
+            if (director == null || director.MapRenderCamera == null || simulation == null || orbitMaterial == null)
+            { Clear(); return; }
+            if (line == null) CreateLines();
+            var state = simulation.State;
+            double earthAngle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime;
+            var history = FlownTrail;
+            trailLine.enabled = history != null && history.Count >= 2;
+            if (trailLine.enabled)
+            {
+                trailLine.positionCount = history.Count;
+                for (int i = 0; i < history.Count; i++)
+                    trailLine.SetPosition(i, ToMap(history.EcefPosition(i, earthAngle)));
+            }
+            if (!state.IsLaunched || state.IsLanded)
+            {
+                line.enabled = false;
+                Projection = null;
+                nextRefresh = 0;
+            }
+            else if (Time.unscaledTime >= nextRefresh)
             {
                 nextRefresh = Time.unscaledTime + .25f;
-                var state = ((RocketFlightDriver)director.FlightDriver).Simulation.State;
-                Projection = OrbitProjection.Build(state.Position, state.Velocity,
-                    Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime, OrbitProjection.MaximumSamples,
-                    Gravity.EarthGravitationalParameter * ((RocketFlightDriver)director.FlightDriver).Simulation.GravityMultiplier);
+                Projection = OrbitProjection.Build(state.Position, state.Velocity, earthAngle,
+                    OrbitProjection.MaximumSamples, Gravity.EarthGravitationalParameter * simulation.GravityMultiplier);
                 line.enabled = Projection.IsValid && Projection.EcefPoints.Count >= 2;
                 if (line.enabled)
                 {
@@ -54,45 +79,56 @@ namespace ESP.Presentation
                     line.SetPositions(vertices);
                 }
             }
-            if (line.enabled)
-            {
-                var camera = director.mapCamera;
-                float distance = Mathf.Max(.1f, Vector3.Distance(camera.transform.position, vertices[0]));
-                float height = camera.orthographic ? 2 * camera.orthographicSize : 2 * distance * Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
-                if (missionDocument == null)
-                {
-                    var ui = FindObjectOfType<MissionUI>();
-                    if (ui != null) missionDocument = ui.GetComponent<UIDocument>();
-                }
-                float logicalHeight = missionDocument != null ? missionDocument.rootVisualElement.resolvedStyle.height : 0;
-                if (float.IsNaN(logicalHeight) || logicalHeight <= 0) logicalHeight = 800;
-                line.widthMultiplier = height * 1.7f / logicalHeight;
-            }
+            float width = LogicalPixelWidth(ToMap(EarthFrames.InertialToEcef(state.Position, earthAngle)));
+            line.widthMultiplier = width * 1.7f;
+            trailLine.widthMultiplier = width * 1.4f;
         }
 
-        private void CreateLine()
+        private float LogicalPixelWidth(Vector3 anchor)
         {
-            var child = new GameObject("Instantaneous coast orbit");
+            var camera = director.MapRenderCamera;
+            float distance = Mathf.Max(.1f, Vector3.Distance(camera.transform.position, anchor));
+            float height = camera.orthographic ? 2 * camera.orthographicSize : 2 * distance * Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
+            if (missionDocument == null)
+            {
+                var ui = FindObjectOfType<MissionUI>();
+                if (ui != null) missionDocument = ui.GetComponent<UIDocument>();
+            }
+            float logicalHeight = missionDocument != null ? missionDocument.rootVisualElement.resolvedStyle.height : 0;
+            if (float.IsNaN(logicalHeight) || logicalHeight <= 0) logicalHeight = 800;
+            if (!director.IsMapView) logicalHeight = 216;
+            return height / logicalHeight;
+        }
+
+        private void CreateLines()
+        {
+            line = CreateLine("Instantaneous coast orbit", new Color(.18f, .86f, .96f, 1), out runtimeMaterial);
+            trailLine = CreateLine("Actual flown trajectory", new Color(.27f, .48f, .62f, 1), out trailMaterial);
+        }
+
+        private LineRenderer CreateLine(string label, Color color, out Material material)
+        {
+            var child = new GameObject(label);
             child.layer = gameObject.layer;
             child.transform.SetParent(transform, false);
-            line = child.AddComponent<LineRenderer>();
-            line.useWorldSpace = true;
-            line.loop = false; // Closed conic includes an exact duplicate endpoint.
-            line.alignment = LineAlignment.View;
-            line.numCornerVertices = 0;
-            line.numCapVertices = 2;
-            line.shadowCastingMode = ShadowCastingMode.Off;
-            line.receiveShadows = false;
-            runtimeMaterial = new Material(orbitMaterial);
-            runtimeMaterial.mainTexture = null;
-            var cyan = new Color(.18f, .86f, .96f, 1);
-            if (runtimeMaterial.HasProperty("_BaseColor")) runtimeMaterial.SetColor("_BaseColor", cyan);
-            if (runtimeMaterial.HasProperty("_Color")) runtimeMaterial.SetColor("_Color", cyan);
-            // URP/Unlit defaults to ZTest LEqual; never use an overlay/Always shader.
-            if (runtimeMaterial.HasProperty("_ZTest")) runtimeMaterial.SetInt("_ZTest", (int)CompareFunction.LessEqual);
-            line.sharedMaterial = runtimeMaterial;
-            line.startColor = line.endColor = Color.white;
-            line.enabled = false;
+            var renderer = child.AddComponent<LineRenderer>();
+            renderer.useWorldSpace = true;
+            renderer.loop = false;
+            renderer.alignment = LineAlignment.View;
+            renderer.numCornerVertices = 0;
+            renderer.numCapVertices = 2;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            material = new Material(orbitMaterial);
+            material.mainTexture = null;
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            // The serialized URP/Unlit material supplies normal depth-tested globe occlusion.
+            if (material.HasProperty("_ZTest")) material.SetInt("_ZTest", (int)CompareFunction.LessEqual);
+            renderer.sharedMaterial = material;
+            renderer.startColor = renderer.endColor = Color.white;
+            renderer.enabled = false;
+            return renderer;
         }
 
         /// <summary>Returns bottom-left-origin screen pixels. Rejects offscreen and globe-occluded markers.</summary>
@@ -128,10 +164,11 @@ namespace ESP.Presentation
         private void Clear()
         {
             if (line != null) line.enabled = false;
+            if (trailLine != null) trailLine.enabled = false;
             Projection = null;
             nextRefresh = 0;
         }
         private void OnDisable() { Clear(); }
-        private void OnDestroy() { if (runtimeMaterial != null) Destroy(runtimeMaterial); }
+        private void OnDestroy() { if (runtimeMaterial != null) Destroy(runtimeMaterial); if (trailMaterial != null) Destroy(trailMaterial); }
     }
 }

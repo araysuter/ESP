@@ -118,6 +118,9 @@ namespace ESP.Presentation
             simulation = new RocketSimulation(StepSeconds, preset.Stages, atmosphere,
                 site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180, site.ElevationMeters, preset.Boosters);
             MissionSession.Instance?.ConfigureSimulation(simulation);
+            director.GetComponent<RocketExplosion>()?.Arm(simulation);
+            director.GetComponent<RocketSmokeTrail>()?.Arm(simulation);
+            director.GetComponent<FlightTrailRecorder>()?.RecordSimulation(simulation);
             if (simulation.GravityMultiplier != 1) AssistanceEnabled = false;
             guidance = new AssistedAscent(director.VehicleIndex == 1 ? 220000 : director.VehicleIndex == 2 ? 120000 : 160000, director.VehicleIndex == 2 ? 3 : 2);
             simulation.Throttle = pendingThrottle;
@@ -128,8 +131,11 @@ namespace ESP.Presentation
         private static bool Fresh(DateTime time, DateTime now, TimeSpan age) => time.Kind == DateTimeKind.Utc && time <= now && now - time <= age;
         public void ResetMission()
         {
+            if (director != null) director.GetComponent<RocketSmokeTrail>()?.Clear();
             simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
-            pendingThrottle = 1; AssistanceEnabled = true; TimeRate = 1;
+            pendingThrottle = 0; AssistanceEnabled = true; TimeRate = 1;
+            LatitudeDegrees = LongitudeDegrees = 0;
+            LaunchUtc = default;
             weatherSource = "Standard atmosphere (no launch yet)";
             if (director != null && director.EnvironmentRoot != null) director.EnvironmentRoot.position = Vector3.zero;
             if (director != null && director.RocketVisual != null)
@@ -141,6 +147,7 @@ namespace ESP.Presentation
                 foreach (string name in new[] { "LeftSRB", "RightSRB" }) { var solid = director.RocketVisual.Find(name); if (solid != null) solid.gameObject.SetActive(true); }
                 if (view != null) { view.SetThrottle(0); if (view.booster != null) view.booster.gameObject.SetActive(true); }
             }
+            if (director != null) { director.ResetLaunchFraming(); director.RefreshFlightBackdrop(); }
         }
         public void Stage() { if (IsPaused || simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
         public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
@@ -148,6 +155,7 @@ namespace ESP.Presentation
         private void Update()
         {
             if (simulation == null || IsPaused || MissionSession.BlocksInput) return;
+            if (simulation.State.IsLanded) { accumulator = 0; return; }
             Keyboard keyboard = Keyboard.current;
             var focused = missionDocument?.rootVisualElement?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
@@ -172,6 +180,14 @@ namespace ESP.Presentation
             {
                 if (AssistanceEnabled && guidance != null) guidance.Update(simulation);
                 simulation.Step(); UpdateOrbitVerification(); accumulator -= StepSeconds; steps++;
+                if (simulation.State.IsLanded)
+                {
+                    // Impact is terminal. Stop the controls and work backlog immediately;
+                    // the final finite pose is still rendered below and reset stays available.
+                    simulation.Throttle = 0; pendingThrottle = 0;
+                    AssistanceEnabled = false; TimeRate = 1; accumulator = 0;
+                    break;
+                }
             }
             RenderState();
         }

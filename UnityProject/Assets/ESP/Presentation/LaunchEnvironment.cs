@@ -8,7 +8,7 @@ namespace ESP.Presentation
         /// <summary>Rocket base-origin height placing the placeholder engine bottoms on the mount.</summary>
         public const float RocketBaseHeightMeters = 2.4f;
 
-        public static GameObject Build(LaunchSite site, Material groundMaterial)
+        public static GameObject Build(LaunchSite site, Material groundMaterial, GameObject importedStructure = null)
         {
             var root = new GameObject("Launch environment — " + site.Name);
             var owned = root.AddComponent<LaunchEnvironmentResources>();
@@ -42,6 +42,16 @@ namespace ESP.Presentation
             Box(root, "Approach road", new Vector3(0, 0.025f, -300), new Vector3(14, 0.05f, 600), dark);
             Box(root, "Pad deck", new Vector3(0, 0.5f, 0), new Vector3(35, 1, 35), concrete);
             Box(root, "Launch mount", new Vector3(0, 1.1f, 0), new Vector3(8, 0.2f, 8), dark);
+            if (importedStructure != null)
+            {
+                // Historical LC-39 scenery, with an illustrative offset from the
+                // existing mission pad. It is not collision or surveyed placement.
+                var structure = Object.Instantiate(importedStructure, root.transform);
+                structure.name = "NASA historical LC-39 gantry";
+                structure.transform.localPosition = new Vector3(-75, 0, 0);
+                structure.transform.localRotation = Quaternion.identity;
+                return root;
+            }
             // Open tower skeleton, deliberately offset from the rocket's 4 m body.
             foreach (float x in new[] { 12f, 18f })
                 foreach (float z in new[] { -3f, 3f })

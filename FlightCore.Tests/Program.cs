@@ -22,6 +22,7 @@ namespace FlightCore.Tests
         static void RunTests()
         {
             SolarLightingTests.Run();
+            CelestialFramesTests.Run();
             TestAtEarthSurface();
             TestOffAxisPosition();
             TestDistanceDoubling();

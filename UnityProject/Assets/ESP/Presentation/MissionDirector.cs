@@ -24,6 +24,9 @@ namespace ESP.Presentation
     {
         public Camera mapCamera, launchCamera;
         public GameObject mapRoot;
+        public MissionInsetView Inset { get; private set; }
+        public Camera MapRenderCamera => IsMapView ? mapCamera : Inset != null ? Inset.MapPreviewCamera : null;
+        public Camera FlightRenderCamera => IsMapView ? (Inset != null ? Inset.FlightPreviewCamera : null) : launchCamera;
         public NasaMapLayers mapLayers;
         public LaunchWeatherProfile weather;
         public NasaWeatherProfile nasaWeather;
@@ -43,11 +46,16 @@ namespace ESP.Presentation
             if (vehiclePrefabs == null || index < 0 || index >= vehiclePrefabs.Length || vehiclePrefabs[index] == null || !CanLaunch) return;
             VehicleIndex = index; rocketPrefab = vehiclePrefabs[index];
             FlightDriver?.ResetMission();
-            if (environment) Destroy(environment);
-            environment = null; RocketVisual = null;
-            if (!IsMapView) GoToLaunch(SelectedSiteIndex);
+            ReleaseEnvironment();
+            if (Inset != null || !IsMapView)
+            {
+                bool wasMap = IsMapView;
+                GoToLaunch(SelectedSiteIndex);
+                if (wasMap) ShowMap();
+            }
         }
         public Texture[] siteGroundTextures;
+        public GameObject[] siteStructurePrefabs;
         public Material siteGroundTemplate;
         public IMissionFlightDriver FlightDriver { get; set; }
         public Transform RocketVisual { get; private set; }
@@ -89,9 +97,14 @@ namespace ESP.Presentation
         private Material groundMaterial;
         public Material orbitMaterial;
         public MapOrbitVisual OrbitVisual { get; private set; }
+        private Vector3 launchCameraHomePosition;
+        private Quaternion launchCameraHomeRotation;
+        private float launchCameraHomeFieldOfView;
+        private bool hasLaunchCameraHome;
 
         private void Start()
         {
+            CaptureLaunchCameraHome();
             // Driver registers in Awake; choose the real model before any preflight view is built.
             if (vehiclePrefabs != null && vehiclePrefabs.Length > 1 && vehiclePrefabs[1] != null && CanLaunch)
                 SelectVehicle(1);
@@ -103,6 +116,9 @@ namespace ESP.Presentation
             }
             if (picker != null) picker.PointSelected += OnPointSelected;
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
+            Inset = gameObject.AddComponent<MissionInsetView>();
+            Inset.Initialize(this);
+            GoToLaunch(SelectedSiteIndex);
             ShowMap();
             RequestWeather();
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-espMissionCapture") >= 0) StartCoroutine(Capture());
@@ -114,7 +130,9 @@ namespace ESP.Presentation
             if (mapRoot) mapRoot.SetActive(true);
             if (mapCamera) mapCamera.gameObject.SetActive(true);
             if (launchCamera) launchCamera.gameObject.SetActive(false);
-            if (environment) environment.SetActive(false);
+            if (environment) environment.SetActive(true);
+            Inset?.SynchronizeView();
+            RefreshFlightBackdrop();
         }
 
         public void GoToLaunch(int siteIndex)
@@ -129,8 +147,7 @@ namespace ESP.Presentation
                 SetLaunchView();
                 return;
             }
-            if (environment) Destroy(environment);
-            if (groundMaterial) Destroy(groundMaterial);
+            ReleaseEnvironment();
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             // Use fresh Lit defaults: the unlit orbit template carries incompatible shader properties.
             groundMaterial = new Material(shader);
@@ -138,19 +155,21 @@ namespace ESP.Presentation
             groundMaterial.SetFloat("_Smoothness", 0);
             if (siteGroundTextures != null && siteIndex < siteGroundTextures.Length && siteGroundTextures[siteIndex]) { groundMaterial.mainTexture = siteGroundTextures[siteIndex]; }
             else groundMaterial.color = new Color(.22f, .29f, .24f);
-            environment = LaunchEnvironment.Build(LaunchSites.All[siteIndex], groundMaterial);
+            var structure = siteStructurePrefabs != null && siteIndex < siteStructurePrefabs.Length ? siteStructurePrefabs[siteIndex] : null;
+            environment = LaunchEnvironment.Build(LaunchSites.All[siteIndex], groundMaterial, structure);
             if (rocketPrefab)
             {
                 GameObject rocket = Instantiate(rocketPrefab, environment.transform);
                 rocket.transform.localPosition = Vector3.up * LaunchEnvironment.RocketBaseHeightMeters;
                 RocketVisual = rocket.transform;
             }
+            ResetLaunchFraming();
             SetLaunchView();
         }
         private void SetLaunchView()
         {
             IsMapView = false;
-            if (mapRoot) mapRoot.SetActive(false);
+            if (mapRoot) mapRoot.SetActive(true);
             if (mapCamera) mapCamera.gameObject.SetActive(false);
             if (launchCamera) launchCamera.gameObject.SetActive(true);
             if (launchCamera)
@@ -159,6 +178,38 @@ namespace ESP.Presentation
                 if (!controls) controls = launchCamera.gameObject.AddComponent<FlightCameraControls>();
                 controls.director = this;
             }
+            Inset?.SynchronizeView();
+            RefreshFlightBackdrop();
+        }
+        private void CaptureLaunchCameraHome()
+        {
+            if (hasLaunchCameraHome || launchCamera == null) return;
+            launchCameraHomePosition = launchCamera.transform.position;
+            launchCameraHomeRotation = launchCamera.transform.rotation;
+            launchCameraHomeFieldOfView = launchCamera.fieldOfView;
+            hasLaunchCameraHome = true;
+        }
+        public void ResetLaunchFraming()
+        {
+            CaptureLaunchCameraHome();
+            if (launchCamera == null) return;
+            launchCamera.transform.SetPositionAndRotation(launchCameraHomePosition, launchCameraHomeRotation);
+            launchCamera.fieldOfView = launchCameraHomeFieldOfView;
+            launchCamera.GetComponent<FlightCameraControls>()?.ResetFraming();
+            Inset?.ResetFraming();
+        }
+        public void RefreshFlightBackdrop()
+        {
+            GetComponent<FlightEarthBackdrop>()?.Apply(FlightDriver as RocketFlightDriver, this);
+        }
+        private void ReleaseEnvironment()
+        {
+            // Destroy is deferred: hide the previous site immediately so it cannot render
+            // over the replacement or keep obsolete bounds alive for the camera.
+            if (environment) { environment.SetActive(false); Destroy(environment); }
+            environment = null; RocketVisual = null;
+            if (groundMaterial) Destroy(groundMaterial);
+            groundMaterial = null;
         }
         private void OnPointSelected(double lat, double lon)
         {
