@@ -13,6 +13,7 @@ namespace ESP.Presentation
         private VisualElement mapControls, flightControls, weatherDetails, flightDetails;
         private Label site, status, altitude, speed, missionTime, weather, mapCredit, nasaStatus, flightDetailText;
         private Label throttleValue, vehicleNote, mapVehicleNote;
+        private Label stageFuel, boosterFuel;
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
         private Label rocketMarker, mapMission;
         private readonly Label[] orbitMarkers = new Label[3];
@@ -200,6 +201,17 @@ namespace ESP.Presentation
             telemetry.style.flexGrow = 1; telemetry.style.justifyContent = Justify.SpaceAround;
             altitude = Metric(telemetry, "ALTITUDE", "altitude-readout");
             speed = Metric(telemetry, "SURFACE SPEED", "speed-readout");
+            var fuel = Column();
+            fuel.name = "fuel-readout";
+            fuel.Add(Label("PROPELLANT", 9, Muted, FontStyle.Bold));
+            stageFuel = Label("", 11, Text, FontStyle.Bold);
+            stageFuel.name = "stage-fuel-readout";
+            fuel.Add(stageFuel);
+            boosterFuel = Label("", 10, Muted, FontStyle.Normal);
+            boosterFuel.name = "booster-fuel-readout";
+            boosterFuel.style.display = DisplayStyle.None;
+            fuel.Add(boosterFuel);
+            telemetry.Add(fuel);
             left.Add(telemetry); dock.Add(left);
 
             navballHousing = Column(); navballHousing.name = "navball-housing";
@@ -455,6 +467,19 @@ namespace ESP.Presentation
             }
             altitude.text = Distance(director.AltitudeMeters);
             speed.text = director.SpeedMetersPerSecond.ToString("N0") + " m/s";
+            if (flight != null)
+            {
+                var fuel = flight.FuelTelemetry;
+                stageFuel.text = $"Stage {fuel.StageNumber} · {fuel.StageKg:N0} kg";
+                boosterFuel.style.display = fuel.BoosterKg.HasValue ? DisplayStyle.Flex : DisplayStyle.None;
+                if (fuel.BoosterKg.HasValue)
+                    boosterFuel.text = $"SRBs · {fuel.BoosterKg.Value:N0} kg";
+            }
+            else
+            {
+                stageFuel.text = "Unavailable";
+                boosterFuel.style.display = DisplayStyle.None;
+            }
             action.text = director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
             action.SetEnabled(director.FlightDriver != null);
             throttle.SetEnabled(director.FlightDriver != null);
