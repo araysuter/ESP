@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Collections.Generic;
+using System.Reflection;
 using FlightCore;
 using UnityEngine;
 
@@ -14,8 +16,39 @@ namespace ESP.Presentation
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Bootstrap()
         {
-            if (Debug.isDebugBuild && Array.IndexOf(Environment.GetCommandLineArgs(), "-espReentrySmoke") >= 0)
+            if (Debug.isDebugBuild && (Array.IndexOf(Environment.GetCommandLineArgs(), "-espReentrySmoke") >= 0 ||
+                Array.IndexOf(Environment.GetCommandLineArgs(), "-espReentryReady") >= 0))
                 new GameObject("Physical Starship return review").AddComponent<ReentrySmoke>();
+        }
+        [Serializable] sealed class ReturnFixture
+        {
+            public double missionTime, fuel, dryMass;
+            public double[] position, velocity;
+            public string weatherSource, weatherValidUtc;
+            public double[] weatherAltitude, weatherTemperature, weatherPressure, windEast, windNorth;
+        }
+        void RecordFixture(RocketSimulation sim)
+        {
+            var state = sim.State;
+            var atmosphere = (WeatherAtmosphere)typeof(RocketFlightDriver).GetField("launchAtmosphere", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(flight);
+            var profile = (WeatherProfile)typeof(WeatherAtmosphere).GetField("profile", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(atmosphere);
+            var fixture = new ReturnFixture { missionTime = state.MissionTime, fuel = state.PropellantKg, dryMass = state.MassKg-state.PropellantKg,
+                position = new[] { state.Position.X, state.Position.Y, state.Position.Z }, velocity = new[] { state.Velocity.X, state.Velocity.Y, state.Velocity.Z },
+                weatherSource = atmosphere.SourceDescription, weatherValidUtc = profile?.ValidTimeUtc.ToString("O") };
+            if (profile != null)
+            {
+                int n = profile.Levels.Count;
+                fixture.weatherAltitude = new double[n]; fixture.weatherTemperature = new double[n]; fixture.weatherPressure = new double[n];
+                fixture.windEast = new double[n]; fixture.windNorth = new double[n];
+                for (int i = 0; i < n; i++)
+                {
+                    var level = profile.Levels[i]; fixture.weatherAltitude[i] = level.GeometricAltitudeMeters;
+                    fixture.weatherTemperature[i] = level.Atmosphere.TemperatureKelvin; fixture.weatherPressure[i] = level.Atmosphere.PressurePascals;
+                    fixture.windEast[i] = level.Atmosphere.WindEastNorthUpMetersPerSecond.X; fixture.windNorth[i] = level.Atmosphere.WindEastNorthUpMetersPerSecond.Y;
+                }
+            }
+            File.WriteAllText(Path.Combine(directory, "return-fixture.json"), JsonUtility.ToJson(fixture, true));
+            Debug.Log("ESP_REENTRY_ATMOSPHERE " + atmosphere.SourceDescription);
         }
         void Fail(string reason) { Debug.LogError("ESP_REENTRY_FAIL " + reason); Application.Quit(1); }
         IEnumerator Shot(string name)
@@ -42,28 +75,52 @@ namespace ESP.Presentation
             while (!flight.OrbitVerified && !flight.Simulation.State.IsComplete && Time.realtimeSinceStartup < deadline) yield return null;
             if (!flight.CanBeginReentry) { Fail("nominal Starship did not verify orbit"); yield break; }
             yield return Shot("01-orbit-ready");
+            var cameraControls = director.launchCamera.GetComponent<FlightCameraControls>();
+            cameraControls.ToggleOnboardView();
+            if (!cameraControls.IsOnboardView) { Fail("onboard camera did not engage"); yield break; }
+            yield return Shot("02-orbit-onboard");
+            cameraControls.ToggleOnboardView();
+            if (cameraControls.IsOnboardView) { Fail("chase camera did not restore"); yield break; }
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-espReentryReady") >= 0)
+            {
+                flight.SetTimeRate(1);
+                Debug.Log("ESP_REENTRY_QA_READY verified orbit from actual pad launch; controls released to user");
+                yield break;
+            }
             var original = flight.Simulation;
             double fuel = original.State.PropellantKg;
+            RecordFixture(original);
             flight.BeginReentry();
             if (!flight.ReentryActive || original != flight.Simulation || original.State.PropellantKg != fuel)
             { Fail("return changed simulation identity or fuel"); yield break; }
             deadline = Time.realtimeSinceStartup + 1100;
             StarshipReturnPhase last = StarshipReturnPhase.Idle;
-            bool plasmaCaptured = false;
-            while (!flight.ReturnController.IsComplete && Time.realtimeSinceStartup < deadline)
+            int plasmaAltitudeIndex = 0;
+            double[] plasmaAltitudes = { 60000, 50000, 40000, 30000, 20000 };
+            while ((flight.IsPlanningReturn || !flight.ReturnController.IsComplete) && Time.realtimeSinceStartup < deadline)
             {
-                var phase = flight.ReturnController.Phase;
+                if (flight.ReturnPlanningFailed) { Fail(flight.ReentryStatus); yield break; }
+                var phase = flight.IsPlanningReturn ? StarshipReturnPhase.Planning : flight.ReturnController.Phase;
                 if (phase != last)
                 {
                     Debug.Log("ESP_REENTRY_PHASE " + phase + " t=" + flight.MissionTimeSeconds + " altitude=" + flight.AltitudeMeters +
-                        " miss=" + flight.ReturnController.TargetDistanceMeters + " fuel=" + flight.Simulation.State.PropellantKg);
+                        " miss=" + (flight.IsPlanningReturn ? 0 : flight.ReturnController.TargetDistanceMeters) + " fuel=" + flight.Simulation.State.PropellantKg);
                     last = phase; yield return Shot("phase-" + phase);
                 }
                 flight.SetTimeRate(flight.CanHighWarp ? 1000 : 20);
-                if (!plasmaCaptured && flight.Simulation.Physics.AirSpeedMetersPerSecond > 2000 && flight.AltitudeMeters < 60000)
-                { plasmaCaptured = true; yield return Shot("plasma-entry"); }
+                if (plasmaAltitudeIndex < plasmaAltitudes.Length && phase == StarshipReturnPhase.AtmosphericEntry &&
+                    flight.AltitudeMeters < plasmaAltitudes[plasmaAltitudeIndex])
+                {
+                    Debug.Log("ESP_REENTRY_PLASMA altitude=" + flight.AltitudeMeters + " airspeed=" + flight.Simulation.Physics.AirSpeedMetersPerSecond);
+                    yield return Shot("plasma-" + (plasmaAltitudes[plasmaAltitudeIndex++] / 1000) + "km");
+                    if (plasmaAltitudeIndex == 2)
+                    {
+                        cameraControls.ToggleOnboardView(); yield return Shot("plasma-onboard"); cameraControls.ToggleOnboardView();
+                    }
+                }
                 yield return null;
             }
+            if (flight.IsPlanningReturn) { Fail("return planning timed out"); yield break; }
             Debug.Log("ESP_REENTRY_TERMINAL phase=" + flight.ReturnController.Phase +
                 " lugMiss=" + flight.ReturnController.CatchLugDistanceMeters +
                 " lugHeight=" + flight.ReturnController.CatchLugAltitudeErrorMeters +

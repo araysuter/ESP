@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FlightCore;
 using UnityEngine;
 
@@ -8,6 +10,11 @@ namespace ESP.Presentation
     {
         public Shader reentryShader;
         StarshipReturnController returnController;
+        Task<Exception> returnPlanning;
+        CancellationTokenSource returnPlanningCancellation;
+        string returnPlanningError;
+        public bool IsPlanningReturn => returnPlanning != null;
+        public bool ReturnPlanningFailed => returnPlanningError != null;
         ReentryPlasma reentryPlasma;
         TowerCatchAnimator catchTower;
         string returnNotice;
@@ -18,10 +25,11 @@ namespace ESP.Presentation
         public bool ReentryActive => returnController != null;
         public bool CanBeginReentry => !ReentryActive && !IsPaused && !MissionSession.BlocksInput &&
             director != null && director.VehicleIndex == 1 && OrbitVerified && simulation != null &&
+            simulation.Primary == CelestialPrimary.Earth &&
             simulation.State.StageIndex == 1 && !simulation.HasUsedCheats && !simulation.State.IsComplete;
-        public string ReentryStatus => returnController != null ? (returnController.Phase == StarshipReturnPhase.Planning ? "Planning return · simulation time paused" : returnController.Status) :
-            returnNotice ?? "Return to Starbase requires verified Starship orbit. Propellant, approach speed and alignment constrain the catch.";
-        public StarshipReturnController ReturnController => returnController;
+        public string ReentryStatus => (simulation != null && simulation.HasUsedCheats ? "Modified flight · " : "") + (returnPlanningError ?? (IsPlanningReturn ? "Planning return · simulation time paused" : returnController != null ? returnController.Status :
+            returnNotice ?? "Return to Starbase requires verified Starship orbit. Propellant, approach speed and alignment constrain the catch."));
+        public StarshipReturnController ReturnController => IsPlanningReturn ? null : returnController;
 
         public void BeginReentry()
         {
@@ -38,21 +46,44 @@ namespace ESP.Presentation
             catchTower = TowerCatchAnimator.Attach(tower);
             reentryPlasma = ReentryPlasma.Create(director.RocketVisual, Vector3.up * ShipMeshCenter,
                 4.65f, 52.37f, reentryShader);
+            returnPlanningCancellation = new CancellationTokenSource();
+            var cancellation = returnPlanningCancellation.Token;
+            // One worker owns this controller and its private clones. It never touches
+            // Unity objects or the authoritative simulation. Task completion publishes
+            // the complete plan back to the main thread before flight advances.
+            returnPlanning = Task.Run(() =>
+            {
+                try
+                {
+                    while (!cancellation.IsCancellationRequested && controller.Phase == StarshipReturnPhase.Planning)
+                        controller.AdvancePlanning();
+                    return (Exception)null;
+                }
+                catch (Exception error) { return error; }
+            });
         }
         bool AdvanceReturnPlanning()
         {
-            if (returnController == null || returnController.Phase != StarshipReturnPhase.Planning) return false;
-            // The explicitly labelled planning interval holds simulation time, so
-            // a trajectory search cannot leave its own scheduled burn in the past.
-            long started = System.Diagnostics.Stopwatch.GetTimestamp();
-            long budget = System.Diagnostics.Stopwatch.Frequency / 200; // 5 ms per rendered frame.
-            for (int i = 0; i < 500 && returnController.Phase == StarshipReturnPhase.Planning; i++)
+            if (returnPlanningError != null) return true;
+            if (returnPlanning == null) return false;
+            if (!returnPlanning.IsCompleted) return true;
+            Exception error = returnPlanning.GetAwaiter().GetResult();
+            returnPlanning = null;
+            returnPlanningCancellation.Dispose(); returnPlanningCancellation = null;
+            if (error != null)
             {
-                returnController.Update(simulation);
-                if (System.Diagnostics.Stopwatch.GetTimestamp() - started >= budget) break;
+                Debug.LogException(error);
+                returnPlanningError = "Return planning failed · reset the mission to retry";
             }
             return true;
         }
+        void CancelReturnPlanning()
+        {
+            returnPlanningCancellation?.Cancel();
+            returnPlanningCancellation?.Dispose();
+            returnPlanningCancellation = null; returnPlanning = null; returnPlanningError = null;
+        }
+        void OnDestroy() => CancelReturnPlanning();
         Vector3 InertialDirectionToRender(Vector3d direction, double lat, double lon)
         {
             var e = EarthFrames.InertialToEcef(direction,
@@ -80,10 +111,11 @@ namespace ESP.Presentation
                 reentryPlasma.SetConditions((float)simulation.Physics.AirSpeedMetersPerSecond,
                     (float)simulation.Physics.DensityKgPerCubicMeter,
                     director.RocketVisual.InverseTransformDirection(flow), !simulation.State.IsComplete);
-            if (catchTower) catchTower.SetSimulationPose((float)returnController.CatchArmClosure01, 0);
+            if (catchTower) catchTower.SetSimulationPose((IsPlanningReturn ? 0 : (float)returnController.CatchArmClosure01), 0);
         }
         void ClearReentry()
         {
+            CancelReturnPlanning();
             if (reentryPlasma) Destroy(reentryPlasma.gameObject);
             if (catchTower) catchTower.SetTarget(0, 0);
             reentryPlasma = null; catchTower = null; returnController = null; returnNotice = null; returnVisualBlend = 0;

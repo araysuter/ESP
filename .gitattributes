@@ -33,3 +33,6 @@ AssetsSource/ThirdParty/Waterfall/*.dds -filter -diff -merge -text
 
 # Small offline NASA city-light atlas (under 1 MB), bundled like the Earth fallback.
 UnityProject/Assets/ESP/Art/Earth/BlackMarble2016Lights.png -filter -diff -merge -text
+
+# Small offline NASA lunar globe, bundled directly for clean clones.
+UnityProject/Assets/ESP/Resources/MoonSurface.jpg -filter -diff -merge -text

@@ -28,7 +28,8 @@ namespace ESP.Presentation
         public double FrameLatitudeRadians { get; private set; }
         public double FrameLongitudeRadians { get; private set; }
         private Camera launch, background;
-        private GameObject backdropRoot, globe;
+        private GameObject backdropRoot, globe, moon;
+        private Material moonMaterial;
         private CloudShell cloudShell;
         private ContinuousAtmosphere atmosphere;
         private Material starMaterial;
@@ -81,6 +82,17 @@ namespace ESP.Presentation
                 (float)(-Math.Sin(lat) * Math.Sin(lon)));
             globe.transform.rotation = Quaternion.LookRotation(sourceZ, sourceY);
 
+            if (moon != null)
+            {
+                var celestial = flight != null && flight.Simulation != null ? flight.Simulation.Celestial : null;
+                double missionTime = flight != null && flight.Simulation != null ? flight.Simulation.State.MissionTime : 0;
+                if (celestial == null) celestial = new LunarEphemeris(DateTime.UtcNow);
+                var moonEcef = EarthFrames.InertialToEcef(celestial.MoonPosition(missionTime),
+                    Aerodynamics.EarthAngularVelocityRadiansPerSecond * missionTime);
+                moon.transform.position = CameraRelativeCoordinates.FromEcef(moonEcef.X, moonEcef.Y, moonEcef.Z,
+                    origin.X, origin.Y, origin.Z, lat, lon) / 1000000f;
+                moon.transform.LookAt(globe.transform.position, Vector3.up);
+            }
             var selectedMaterial = mission.mapLayers != null && mission.mapLayers.earth != null
                 ? mission.mapLayers.earth.sharedMaterial : globeMaterial;
             if (selectedMaterial != null && globeRenderer.sharedMaterial != selectedMaterial)
@@ -146,6 +158,15 @@ namespace ESP.Presentation
             globeRenderer.sharedMaterial = globeMaterial;
             globeRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             globeRenderer.receiveShadows = false;
+            moon = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            moon.name = "Moon backdrop"; moon.layer = backdropLayer;
+            moon.transform.SetParent(backdropRoot.transform, false);
+            moon.transform.localScale = Vector3.one * (float)(2*LunarEphemeris.MoonRadius/1000000);
+            var moonCollider = moon.GetComponent<Collider>(); if (moonCollider != null) Destroy(moonCollider);
+            var moonShader = Shader.Find("Universal Render Pipeline/Lit");
+            moonMaterial = moonShader != null ? new Material(moonShader) : new Material(globeMaterial);
+            moonMaterial.mainTexture = Resources.Load<Texture2D>("MoonSurface");
+            moon.GetComponent<Renderer>().sharedMaterial = moonMaterial;
             var sunObject = new GameObject("Earth backdrop sunlight");
             sunObject.transform.SetParent(backdropRoot.transform, false);
             backgroundSun = sunObject.AddComponent<Light>();
@@ -154,6 +175,7 @@ namespace ESP.Presentation
             backgroundSun.shadows = LightShadows.None;
             backgroundSun.enabled = false;
             cloudShell = globe.AddComponent<CloudShell>();
+            PolarAurora.Create(globe.transform);
             if (atmosphereShader != null && atmosphereShader.isSupported)
                 atmosphere = ContinuousAtmosphere.Create(background, atmosphereShader, backdropLayer);
             else Debug.LogWarning("ESP continuous Earth: atmosphere shader unavailable; globe retained.");
@@ -210,7 +232,8 @@ namespace ESP.Presentation
             Suspend();
             if (backdropRoot != null) Destroy(backdropRoot);
             if (starMaterial != null) Destroy(starMaterial);
-            backdropRoot = null; background = null; globe = null; cloudShell = null;
+            if (moonMaterial != null) Destroy(moonMaterial);
+            backdropRoot = null; background = null; globe = null; moon = null; moonMaterial = null; cloudShell = null;
             atmosphere = null; globeRenderer = null; backgroundSun = null; starMaterial = null;
             launch = null; launchData = null; backgroundData = null;
         }

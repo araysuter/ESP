@@ -87,7 +87,7 @@ During `Planning`, call `Update` in bounded slices without calling `simulation.S
 
 The return-only inertial thrust/body axis slews at an estimated 10 degrees/second. The atmospheric body command stays broadside to relative airflow and banks toward the rotating target; bank is limited to 60 degrees and slewed at 5 degrees/second. Projected body area varies between 63.62 and 450 m² with estimated Cd=1.2 and L/D=0.25. Lift uses the commanded bank angle while body orientation follows its finite slew: this is a point-mass approximation, not a rigid-body moment/flap model. Rarefied flow, structural failure and TPS temperature/damage are omitted. Heating telemetry is the accepted-state Sutton-Graves Earth-entry proxy `1.74153e-4 sqrt(rho / 4.5) v³` W/m², with a 4.5 m effective nose radius. Force evaluations are pure, and discarded RK samples never update heating peaks.
 
-Landing uses actual thrust, mass and propellant, an energy-based descent schedule, limited lateral steering, and rotating-frame centripetal/Coriolis feedforward. Engine pressure interpolation and fuel consumption are shared with ascent. Continuous throttle down to zero, all upper-stage engines, instant ignition, and no engine restart limits are disclosed approximations. A burn that runs out of propellant without obtaining an atmospheric intercept fails explicitly while the vehicle physically continues coasting.
+Landing uses actual thrust, mass and propellant, an energy-based descent schedule, limited lateral steering, and accepted-state aerodynamic plus rotating-frame centripetal/Coriolis feedforward. The target COM position is the tower lug position minus the actual finite body axis times 21 m, so a wind-balanced tilt does not leave a capture-lug bias. Velocity feedback uses COM motion; actual axis-rate contribution is included in the physical lug-speed gate rather than fed through an unsmoothed derivative into attitude demand. Aerodynamic feedforward assumes the guidance knows the current flight-model forces, a disclosed control approximation; it commands ordinary engines and does not assign acceleration or velocity. Engine pressure interpolation and fuel consumption are shared with ascent. Continuous throttle down to zero, all upper-stage engines, instant ignition, and no engine restart limits are disclosed approximations. A burn that runs out of propellant without obtaining an atmospheric intercept fails explicitly while the vehicle physically continues coasting.
 
 Activation preserves the existing authoritative position anchor, treated as a point-mass center of mass for return. The presentation places the capture lug 21 m along the actual body axis. For the authored Starbase tower, pass a 50 m anchor target so the vertical lug target is 71 m. Arms close at 0.18/s only within 50 m horizontally, anchor altitude 47–150 m (a 3 m lower approach margin) and ground-relative speed <30 m/s. Capture requires arms >=99% closed, actual lug horizontal miss <0.35 m, lug altitude error <0.5 m, lug ground-relative speed including body-axis motion <3 m/s, and body tilt <5 degrees. The tower constraint then sets the current point's velocity to corotation; position is never snapped. This is an explicitly approximate mechanical constraint, not a full contact solver. A miss continues through ordinary WGS84 impact/destruction; a surface landing elsewhere is not a catch.
 
@@ -101,11 +101,24 @@ On the project macOS ARM VM using Unity's bundled .NET SDK 8.0.318, the measured
 
 | Step | Capture fuel | Actual lug horizontal miss | Lug altitude error | Lug ground-relative speed | Arms |
 | --- | --- | --- | --- | --- | --- |
-| 0.02 s | 65,116.3 kg | 0.3492 m | -0.1863 m | 0.0562 m/s | 100% |
-| 0.01 s | 68,259.4 kg | 0.0476 m | -0.4997 m | 0.0773 m/s | 100% |
+| 0.02 s | 65,544.5 kg | 0.3494 m | -0.1580 m | 0.0611 m/s | 100% |
+| 0.01 s | 67,894.3 kg | 0.3496 m | -0.4024 m | 0.0818 m/s | 100% |
 
-The independently planned approach-footprint estimates were 0.7 m and 26.1 m. Peak accepted-state heating proxies were 521,457 and 521,517 W/m². These are independently guided missions at two step sizes, not a claim that their discrete guidance/capture events occur at identical times. Their capture-fuel difference is approximately 4.8%.
+The independently planned approach-footprint estimates were 0.7 m and 26.1 m. Peak accepted-state heating proxies were 521,457 and 521,517 W/m². These are independently guided missions at two step sizes, not a claim that their discrete guidance/capture events occur at identical times. Their capture-fuel difference is approximately 3.6%.
 
-`--force-depletion` removed remaining propellant at landing flip as an explicitly injected failure fixture, then continued the same physics. It produced a 147.95 m/s ground impact 675.6 m from Starbase, with arms at 0% and no catch. Unsupported-stage and empty-orbit-tank request rejection also passed. The existing `FlightCore.Tests` suite passed on the final source: gravity, failed-step state preservation, orbit energy/angular-momentum drift and coarse-to-fine position error ratio 3.9999, solar lighting, and celestial frame checks.
+`--force-depletion` removed remaining propellant at landing flip as an explicitly injected failure fixture, then continued the same physics. It produced a 133.82 m/s ground impact 702.7 m from Starbase, with arms at 0% and no catch. Unsupported-stage and empty-orbit-tank request rejection also passed. The existing `FlightCore.Tests` suite passed on the final source: gravity, failed-step state preservation, orbit energy/angular-momentum drift and coarse-to-fine position error ratio 3.9999, solar lighting, and celestial frame checks.
 
 These checks qualify the pure C# offline point-mass route, not the rendered vehicle/tower alignment, live weather route, packaged application, Windows target, or a rigid-body contact model. Those integration/target checks are separate evidence.
+
+### Wind and initiation-time robustness checks
+
+The earlier calm-only controller could hover with the COM near the tower yet miss the actual lug under steady crosswind, eventually exhausting fuel. The final guidance above compensates model aerodynamic forces and targets the lug's actual tilted position. The following additional pure C# cases passed the same capture envelope without changing its limits:
+
+| Fixture | Capture fuel | Lug horizontal miss | Lug altitude error | Lug speed |
+| --- | --- | --- | --- | --- |
+| 10 m/s east, 5 m/s north wind | 65,063.5 kg | 0.3496 m | -0.0478 m | 0.0571 m/s |
+| 15 m/s east, -5 m/s north wind | 64,167.1 kg | 0.3491 m | -0.0007 m | 0.0579 m/s |
+| Return requested after 45 s orbit coast | 65,544.5 kg | 0.3494 m | -0.1580 m | 0.0611 m/s |
+| Return requested after 90 s orbit coast | 53,462.1 kg | 0.3494 m | -0.2023 m | 0.0639 m/s |
+
+Wind fixtures are synthetic validation columns: surface ENU wind tapers linearly to zero at 20 km; supplied temperature and pressure are sampled from the standard-atmosphere model. They are not recorded NASA weather. The 90 s coast case selects a different physical arc and reaches a higher heating proxy peak (840,979 W/m²); no trajectory is hardcoded. Each successful headless case completed in approximately 27–35 wall seconds on the qualified VM, including ascent, planning and the entire return. The recorded packaged NASA-weather failure still requires a new packaged rehearsal with this corrected guidance; these synthetic tests do not substitute for that integration proof.

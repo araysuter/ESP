@@ -16,11 +16,16 @@ namespace ESP.Presentation
         private MissionDirector director;
         private MissionSunlight sunlight;
         private LineRenderer orbit;
-        private Transform sunObject;
+        private Transform sunObject, moonObject;
+        public Vector3 SunPosition => sunObject != null ? sunObject.position : Vector3.zero;
+        public Vector3 MoonPosition => moonObject != null ? moonObject.position : Vector3.zero;
+        private LineRenderer moonOrbit;
+        private Material moonMaterial;
         private Material material, sunMaterial;
 
         public void Initialize(MissionDirector owner)
         {
+            CelestialAssets.EnsureLoaded();
             director = owner;
             sunlight = owner.GetComponent<MissionSunlight>();
             if (owner.mapRoot == null || owner.orbitMaterial == null) return;
@@ -54,6 +59,23 @@ namespace ESP.Presentation
             if (sunMaterial.HasProperty("_Color")) sunMaterial.SetColor("_Color", new Color(1, .93f, .76f));
             renderer.sharedMaterial = sunMaterial;
             sunObject = sphere.transform;
+            var moon = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            moon.name = "Moon"; moon.layer = MissionInsetView.MapLayer;
+            moon.transform.SetParent(owner.mapRoot.transform, false);
+            moon.transform.localScale = Vector3.one * (2f * (float)(LunarEphemeris.MoonRadius / 1000000));
+            var moonCollider = moon.GetComponent<Collider>(); if (moonCollider != null) Destroy(moonCollider);
+            var moonRenderer = moon.GetComponent<MeshRenderer>();
+            var lit = Shader.Find("Universal Render Pipeline/Lit");
+            moonMaterial = lit != null ? new Material(lit) : new Material(owner.orbitMaterial);
+            moonMaterial.mainTexture = Resources.Load<Texture2D>("MoonSurface");
+            moonRenderer.sharedMaterial = moonMaterial;
+            moonObject = moon.transform;
+            var lunarLine = new GameObject("Approximate Moon orbit");
+            lunarLine.layer = MissionInsetView.MapLayer; lunarLine.transform.SetParent(owner.mapRoot.transform, false);
+            moonOrbit = lunarLine.AddComponent<LineRenderer>(); moonOrbit.useWorldSpace = true;
+            moonOrbit.positionCount = 97; moonOrbit.alignment = LineAlignment.View;
+            moonOrbit.shadowCastingMode = ShadowCastingMode.Off; moonOrbit.receiveShadows = false;
+            moonOrbit.sharedMaterial = material;
         }
 
         public static Vector3 EclipticPole(DateTime utc)
@@ -87,7 +109,26 @@ namespace ESP.Presentation
             if (orbit == null || director == null || director.mapCamera == null || sunlight == null) return;
             var controls = director.mapCamera.GetComponent<GlobeCameraControls>();
             Vector3 towardSun = new Vector3((float)sunlight.SunEcef.X, (float)sunlight.SunEcef.Z, (float)sunlight.SunEcef.Y).normalized;
-            Vector3 sunPosition = towardSun * AstronomicalUnit;
+            var driver = director.FlightDriver as RocketFlightDriver;
+            var simulation = driver != null ? driver.Simulation : null;
+            var ephemeris = simulation != null ? simulation.Celestial : new LunarEphemeris(sunlight.CurrentUtc == default ? DateTime.UtcNow : sunlight.CurrentUtc);
+            double missionTime = simulation != null ? simulation.State.MissionTime : 0;
+            double angle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * missionTime;
+            Vector3 sunPosition = ephemeris != null ? ToMap(EarthFrames.InertialToEcef(ephemeris.SunPosition(missionTime), angle)) : towardSun * AstronomicalUnit;
+            if (moonObject != null && ephemeris != null)
+            {
+                moonObject.position = ToMap(EarthFrames.InertialToEcef(ephemeris.MoonPosition(missionTime), angle));
+                moonObject.LookAt(Vector3.zero, Vector3.up);
+            }
+            if (moonOrbit != null && ephemeris != null)
+            {
+                moonOrbit.enabled = director.IsMapView && controls != null && controls.Distance < 10000;
+                if (moonOrbit.enabled)
+                {
+                    for (int k=0; k<=96; k++) moonOrbit.SetPosition(k, ToMap(EarthFrames.InertialToEcef(ephemeris.MoonPosition(missionTime+(k-48)*27.321661*86400/96),angle)));
+                    moonOrbit.widthMultiplier = Mathf.Max(.015f, controls.Distance * .001f);
+                }
+            }
             if (sunObject != null) sunObject.position = sunPosition;
             orbit.enabled = director.IsMapView && controls != null && controls.Distance >= 1000 && sunlight.CurrentUtc != default;
             if (!orbit.enabled) return;
@@ -95,17 +136,25 @@ namespace ESP.Presentation
             Vector3 tangent = Vector3.Cross(EclipticPole(sunlight.CurrentUtc), radial).normalized;
             for (int i = 0; i <= Segments; i++)
             {
-                float angle = 2 * Mathf.PI * i / Segments;
-                points[i] = sunPosition + AstronomicalUnit * (radial * Mathf.Cos(angle) + tangent * Mathf.Sin(angle));
+                if (ephemeris != null)
+                    points[i] = sunPosition - ToMap(EarthFrames.InertialToEcef(ephemeris.SunPosition(missionTime + i * 365.256363004 * 86400 / Segments), angle));
+                else
+                {
+                    float orbitAngle = 2 * Mathf.PI * i / Segments;
+                    points[i] = sunPosition + AstronomicalUnit * (radial * Mathf.Cos(orbitAngle) + tangent * Mathf.Sin(orbitAngle));
+                }
             }
             orbit.SetPositions(points);
             orbit.widthMultiplier = Mathf.Max(.1f, controls.Distance * .0014f);
         }
 
+        private static Vector3 ToMap(Vector3d p) => new Vector3((float)(p.X/1000000),(float)(p.Z/1000000),(float)(p.Y/1000000));
+
         private void OnDestroy()
         {
             if (material != null) Destroy(material);
             if (sunMaterial != null) Destroy(sunMaterial);
+            if (moonMaterial != null) Destroy(moonMaterial);
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlightCore;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -14,6 +15,9 @@ namespace ESP.Presentation
         public OrbitProjectionResult Projection { get; private set; }
         private MissionDirector director;
         private LineRenderer line;
+        private readonly List<LineRenderer> patchLines = new List<LineRenderer>();
+        private readonly List<Material> patchMaterials = new List<Material>();
+        private readonly List<(Vector3 position, CelestialPrimary primary)> transitions = new List<(Vector3, CelestialPrimary)>();
         private FlightTrailRecorder recorder;
         public FlightTrail FlownTrail => recorder != null ? recorder.History : null;
         private Material runtimeMaterial;
@@ -47,8 +51,6 @@ namespace ESP.Presentation
             // Also sample immediately before drawing to keep the last endpoint authoritative.
             recorder?.RecordSimulation(simulation);
             var mapControls = director != null && director.mapCamera != null ? director.mapCamera.GetComponent<GlobeCameraControls>() : null;
-            if (director != null && director.IsMapView && mapControls != null && mapControls.Distance >= 1000)
-            { Clear(); return; }
             if (director == null || director.MapRenderCamera == null || simulation == null || orbitMaterial == null)
             { Clear(); return; }
             if (line == null)
@@ -58,12 +60,23 @@ namespace ESP.Presentation
             if (!state.IsLaunched || state.IsLanded)
             {
                 line.enabled = false;
+                HidePatches();
                 Projection = null;
                 nextRefresh = 0;
             }
             else if (Time.unscaledTime >= nextRefresh)
             {
                 nextRefresh = Time.unscaledTime + .25f;
+                bool distant = simulation.Celestial != null && (simulation.Primary != CelestialPrimary.Earth ||
+                    OrbitDiagnostics.Compute(state.Position, state.Velocity).ApogeeRadiusMeters > 250000000);
+                if (distant)
+                {
+                    Projection = null; line.enabled = false;
+                    DrawPatches(simulation, earthAngle);
+                }
+                else
+                {
+                HidePatches();
                 Projection = OrbitProjection.Build(state.Position, state.Velocity, earthAngle,
                     OrbitProjection.MaximumSamples, Gravity.EarthGravitationalParameter * simulation.GravityMultiplier);
                 line.enabled = Projection.IsValid && Projection.EcefPoints.Count >= 2;
@@ -74,9 +87,77 @@ namespace ESP.Presentation
                     line.positionCount = count;
                     line.SetPositions(vertices);
                 }
+                }
             }
             float width = LogicalPixelWidth(ToMap(EarthFrames.InertialToEcef(state.Position, earthAngle)));
             line.widthMultiplier = width * 1.7f;
+            foreach (var patch in patchLines) patch.widthMultiplier = width * 1.7f;
+        }
+
+        private void DrawPatches(RocketSimulation simulation, double earthAngle)
+        {
+            var state = simulation.State;
+            var points = PatchedConicProjection.Build(simulation.Celestial, state.Position, state.Velocity,
+                state.MissionTime, simulation.GravityMultiplier);
+            transitions.Clear();
+            int segment = -1; CelestialPrimary last = (CelestialPrimary)(-1);
+            var verticesForSegment = new List<Vector3>();
+            for (int i = 0; i < points.Count; i++)
+            {
+                var point = points[i];
+                if (point.Primary != last)
+                {
+                    if (segment >= 0)
+                    {
+                        var transitionPosition=ToPatchMap(point, last, simulation.Celestial, state.MissionTime, earthAngle);
+                        transitions.Add((transitionPosition, point.Primary));
+                        verticesForSegment.Add(transitionPosition);
+                        patchLines[segment].positionCount = verticesForSegment.Count;
+                        patchLines[segment].SetPositions(verticesForSegment.ToArray());
+                        verticesForSegment.Clear();
+                    }
+                    segment++;
+                    while (patchLines.Count <= segment)
+                    {
+                        var renderer = CreateLine("Patched trajectory", Color.white, out var mat);
+                        patchLines.Add(renderer); patchMaterials.Add(mat);
+                    }
+                    var color = point.Primary == CelestialPrimary.Moon ? new Color(.95f,.69f,.25f) :
+                        point.Primary == CelestialPrimary.Sun ? new Color(.72f,.48f,.98f) : new Color(.18f,.86f,.96f);
+                    var material = patchMaterials[segment];
+                    if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor",color);
+                    if (material.HasProperty("_Color")) material.SetColor("_Color",color);
+                    patchLines[segment].enabled = true; last = point.Primary;
+                }
+                verticesForSegment.Add(ToPatchMap(point, point.Primary, simulation.Celestial, state.MissionTime, earthAngle));
+            }
+            if (segment >= 0)
+            {
+                patchLines[segment].positionCount = verticesForSegment.Count;
+                patchLines[segment].SetPositions(verticesForSegment.ToArray());
+            }
+            for (int i=segment+1; i<patchLines.Count; i++) patchLines[i].enabled=false;
+        }
+        private static Vector3 ToPatchMap(PatchedPoint point, CelestialPrimary primary, LunarEphemeris ephemeris, double now, double earthAngle)
+        {
+            // Display each patch around its primary's current position, as in a
+            // conventional patched-conic map. Do not mix future body positions
+            // into the displayed osculating orbit of that body.
+            var position=point.Position;
+            if(primary==CelestialPrimary.Moon) position+=ephemeris.MoonPosition(now)-ephemeris.MoonPosition(point.Time);
+            else if(primary==CelestialPrimary.Sun) position+=ephemeris.SunPosition(now)-ephemeris.SunPosition(point.Time);
+            return ToMap(EarthFrames.InertialToEcef(position,earthAngle));
+        }
+        private void HidePatches() { foreach (var patch in patchLines) patch.enabled=false; transitions.Clear(); }
+        public bool TryGetTransitionScreenPosition(int index, out Vector2 screenPosition, out string label)
+        {
+            screenPosition=default; label="";
+            if (!HasActiveFlight() || index<0 || index>=transitions.Count) return false;
+            var transition=transitions[index]; var camera=director.mapCamera;
+            if(IsOccluded(transition.position,camera.transform.position)) return false;
+            Vector3 screen=camera.WorldToScreenPoint(transition.position);
+            if(screen.z<=0 || !camera.pixelRect.Contains(new Vector2(screen.x,screen.y))) return false;
+            screenPosition=new Vector2(screen.x,screen.y); label="→ " + transition.primary + " SOI"; return true;
         }
 
         private float LogicalPixelWidth(Vector3 anchor)
@@ -153,10 +234,11 @@ namespace ESP.Presentation
         private void Clear()
         {
             if (line != null) line.enabled = false;
+            HidePatches();
             Projection = null;
             nextRefresh = 0;
         }
         private void OnDisable() { Clear(); }
-        private void OnDestroy() { if (runtimeMaterial != null) Destroy(runtimeMaterial); }
+        private void OnDestroy() { if (runtimeMaterial != null) Destroy(runtimeMaterial); foreach (var material in patchMaterials) if (material != null) Destroy(material); }
     }
 }

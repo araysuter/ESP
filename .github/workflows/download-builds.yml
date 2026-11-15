@@ -125,7 +125,7 @@ jobs:
           SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
           python3 packaging/bundle-notices.py "build/$TARGET" "$VERSION" "$SOURCE_SHA"
-      - name: Package and check macOS DMG
+      - name: Build macOS DMG and smoke-test the installed copy
         shell: bash
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
@@ -287,7 +287,7 @@ jobs:
               created = true;
               release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, target_commitish: process.env.SOURCE_SHA,
                 name: 'ESP ' + tag, draft: true, prerelease: false,
-                body: `Download the macOS DMG or Windows installer below. A portable Windows ZIP is also included.\n\nBuilt from ${process.env.SOURCE_SHA} with Unity 6000.6.9f1 on standard GitHub-hosted runners. Packages include source/license notices. Packages are not Developer ID notarized or Windows Authenticode signed. CI checks package installation and headless startup/ascent on both platforms; graphical macOS acceptance is separate on Studio, and Windows still needs an interactive PC playtest.\n\nmacOS: open the DMG and drag ESP to Applications. Windows: run the Setup.exe, or extract the entire portable ZIP and run ESP.exe. Checksums are in SHA256SUMS.txt.`})).data;
+                body: `Download the macOS DMG or Windows installer below. A portable Windows ZIP is also included.\n\nBuilt from ${process.env.SOURCE_SHA} with Unity 6000.6.9f1 on standard GitHub-hosted runners. Packages include source/license notices. Packages are not Developer ID notarized or Windows Authenticode signed. CI checks package installation and headless startup/ascent on both platforms; graphical macOS acceptance is separate on Studio, and Windows still needs an interactive PC playtest.\n\nmacOS: open the DMG, drag ESP to Applications, eject the image, then launch ESP from Applications. Windows: run the Setup.exe, or extract the entire portable ZIP and run ESP.exe. Checksums are in SHA256SUMS.txt.`})).data;
             }
             if (!created) {
               const {data: commit} = await github.rest.repos.getCommit({...context.repo, ref: tag});

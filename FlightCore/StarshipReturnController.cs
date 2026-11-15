@@ -45,6 +45,7 @@ namespace FlightCore
         public bool TryStart(RocketSimulation simulation, out string reason)
         {
             if(simulation==null) throw new ArgumentNullException(nameof(simulation));
+            if(simulation.Primary!=CelestialPrimary.Earth){reason="Starship return requires Earth as the current primary";return false;}
             var s=simulation.State;var orbit=OrbitDiagnostics.Compute(s.Position,s.Velocity);
             if(!simulation.SupportsStarshipReturn){reason="This stage does not support Starship return";return false;}
             if(Phase!=StarshipReturnPhase.Idle) { reason="Return already requested";return false; }
@@ -59,9 +60,12 @@ namespace FlightCore
         {
             if(simulation==null) throw new ArgumentNullException(nameof(simulation));
             if(Phase==StarshipReturnPhase.Idle||IsComplete)return;
+            if(!RequireEarth(simulation))return;
             if(Phase==StarshipReturnPhase.Planning) { simulation.Throttle=0;PlanSlice();return; }
             AdvanceGuidance(simulation);
         }
+        /// <summary>Advance private prediction clones only. The caller must give this controller one owner until planning completes.</summary>
+        public void AdvancePlanning() { if(Phase==StarshipReturnPhase.Planning)PlanSlice(); }
         void PlanSlice()
         {
             // At most 48 prediction integration steps per caller tick; planning never owns an unbounded UI loop.
@@ -115,8 +119,14 @@ namespace FlightCore
                 }
             }
         }
+        bool RequireEarth(RocketSimulation sim)
+        {
+            if(sim.Primary==CelestialPrimary.Earth)return true;
+            sim.Throttle=0;Phase=StarshipReturnPhase.Failed;Status="Starship return stopped: current primary is not Earth";return false;
+        }
         void AdvanceGuidance(RocketSimulation sim)
         {
+            if(!RequireEarth(sim))return;
             var s=sim.State;var up=s.Position.Normalize();
             var axisRate=hasPreviousAxis&&s.MissionTime>previousAxisTime?(sim.ReturnAxis-previousAxis)*(1/(s.MissionTime-previousAxisTime)):Vector3d.Zero;
             previousAxis=sim.ReturnAxis;previousAxisTime=s.MissionTime;hasPreviousAxis=true;var air=s.Velocity-Aerodynamics.CorotatingAirVelocity(s.Position,Vector3d.Zero);
@@ -177,9 +187,16 @@ namespace FlightCore
             }
             if(Phase==StarshipReturnPhase.LandingFlip||Phase==StarshipReturnPhase.PoweredLanding)
             {
-                if(TargetDistanceMeters<50&&s.AltitudeMeters>=catchAltitude-3&&s.AltitudeMeters<=catchAltitude+100&&speed<30)CatchArmClosure01=Math.Min(1,CatchArmClosure01+.18*sim.FixedStep);
-                var target=EarthFrames.EcefToInertial(EarthFrames.GeodeticToEcef(latitude,longitude,catchAltitude),Omega*s.MissionTime);
-                var offset=target-s.Position;double h=s.AltitudeMeters-catchAltitude;
+                // Aim the physical lug, including its offset under the actual finite body tilt.
+                var targetLug=EarthFrames.EcefToInertial(EarthFrames.GeodeticToEcef(latitude,longitude,catchAltitude+21),Omega*s.MissionTime);
+                var lug=s.Position+sim.ReturnAxis*21;
+                var lugRelativeVelocity=s.Velocity+axisRate*21-Aerodynamics.CorotatingAirVelocity(lug,Vector3d.Zero);
+                var target=targetLug-sim.ReturnAxis*21;
+                TargetDistanceMeters=SurfaceDistance(lug,s.MissionTime);
+                if(TargetDistanceMeters<50&&s.AltitudeMeters>=catchAltitude-3&&s.AltitudeMeters<=catchAltitude+100&&lugRelativeVelocity.Magnitude()<30)CatchArmClosure01=Math.Min(1,CatchArmClosure01+.18*sim.FixedStep);
+                var offset=target-s.Position;double h=Dot(s.Position-target,up);
+                // Velocity feedback uses COM motion. Differenced attitude motion would feed
+                // an unsmoothed derivative back into the attitude command itself.
                 double vertical=Dot(air,up);var horizontal=air-up*vertical;var horizontalOffset=offset-up*Dot(offset,up);
                 // Spend real fuel holding a feasible approach height while correcting lateral error.
                 // This may run out of fuel; no target or descent-speed assignment is made.
@@ -189,16 +206,14 @@ namespace FlightCore
                 double desiredDown=h>approachHeight?-Math.Min(70,Math.Sqrt(2*brakingAcceleration*descentHeight)*.45):Math.Min(40,(approachHeight-h)/8);
                 var omega=new Vector3d(0,0,Omega);
                 var rotatingFeedForward=Cross(omega,Cross(omega,s.Position))+Cross(omega,air)*2;
-                var acceleration=Gravity.Acceleration(s.Position)*(-1)+rotatingFeedForward+up*((desiredDown-vertical)/1.2)
+                var acceleration=Gravity.Acceleration(s.Position)*(-1)-sim.ReturnAerodynamicAcceleration+rotatingFeedForward+up*((desiredDown-vertical)/1.2)
                     +horizontalOffset*.02-horizontal*.28;
                 // Limit steering to a 30 degree cone while landing; no unlimited lateral acceleration.
                 double axial=Math.Max(0,Dot(acceleration,up));var lateral=acceleration-up*axial;
                 if(lateral.Magnitude()>axial*.577&&lateral.Magnitude()>0)lateral=lateral.Normalize()*(axial*.577);
                 acceleration=up*axial+lateral;sim.ReturnCommand=acceleration.Magnitude()>0?acceleration.Normalize():up;
                 if(Dot(sim.ReturnAxis,sim.ReturnCommand)>.9) {Phase=StarshipReturnPhase.PoweredLanding;sim.Throttle=Math.Min(1,acceleration.Magnitude()*s.MassKg/sim.ReturnAvailableThrust);}
-                var lug=s.Position+sim.ReturnAxis*21;
                 var lugGeo=EarthFrames.EcefToGeodetic(EarthFrames.InertialToEcef(lug,Omega*s.MissionTime));
-                var lugRelativeVelocity=s.Velocity+axisRate*21-Aerodynamics.CorotatingAirVelocity(lug,Vector3d.Zero);
                 CatchLugDistanceMeters=SurfaceDistance(lug,s.MissionTime);CatchLugAltitudeErrorMeters=lugGeo.AltitudeMeters-(catchAltitude+21);CatchLugSpeedMetersPerSecond=lugRelativeVelocity.Magnitude();
                 if(CatchArmClosure01>=.99&&Math.Abs(CatchLugAltitudeErrorMeters)<.5&&CatchLugDistanceMeters<.35&&CatchLugSpeedMetersPerSecond<3&&Dot(sim.ReturnAxis,up)>Math.Cos(5*Math.PI/180))
                 {sim.CatchAtCurrentPosition();Phase=StarshipReturnPhase.Caught;Status="Caught at Starbase within physical envelope";return;}

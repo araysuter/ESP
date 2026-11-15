@@ -19,8 +19,20 @@ namespace FlightCore.Tests
             }
         }
 
+        static byte[] ReadCelestialData(string name)
+        {
+            var directory = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null)
+            {
+                string path = System.IO.Path.Combine(directory.FullName, "UnityProject", "Assets", "ESP", "Resources", name);
+                if (System.IO.File.Exists(path)) return System.IO.File.ReadAllBytes(path);
+                directory = directory.Parent;
+            }
+            throw new System.IO.FileNotFoundException("Cannot find celestial test data", name);
+        }
         static void RunTests()
         {
+            LunarChecks.Run(ReadCelestialData("MoonEphemeris.bytes"), ReadCelestialData("SunEphemeris.bytes"));
             SolarLightingTests.Run();
             CelestialFramesTests.Run();
             TestAtEarthSurface();

@@ -10,7 +10,7 @@ To publish, select `main`, choose `both`, and enable `publish`. The workflow bui
 
 Each release includes:
 
-- `ESP-VERSION-macOS.dmg`, containing ESP.app and an Applications shortcut.
+- `ESP-VERSION-macOS.dmg`, containing ESP.app, an Applications shortcut, and a short install guide.
 - `ESP-VERSION-Windows-Setup.exe`, a per-user installer without administrator requirements.
 - `ESP-VERSION-Windows.zip`, the complete portable player (extract all files before running ESP.exe).
 - `SHA256SUMS.txt` for the packages.
@@ -29,6 +29,6 @@ Unity 6000.6.9f1 is pinned in ProjectVersion.txt. Git LFS assets are hydrated an
 
 `BuildMission.Build` accepts `-espRelease -espVersion VERSION -espBuildPath PATH` and generates the scene and detailed prefabs before building. Relative output paths resolve against the repository root. Command-line parameters work both inside GameCI's Linux container and on the native macOS runner; custom environment variables are not assumed to cross a container boundary.
 
-The opt-in `-espReleaseSmoke` player probe checks scene components, all three vehicle meshes, actual ascent above 100 m, reset and the offline sky. It is disabled during normal play. macOS runs the release player headlessly before making and verifying the DMG. Windows silently installs the actual installer and runs its installed executable in headless mode. A missing marker, crash, nonzero exit or timeout fails packaging. Only successful packages reach the publishing job; logs remain as Actions artifacts.
+The opt-in `-espReleaseSmoke` player probe checks scene components, all three vehicle meshes, actual ascent above 100 m, reset and the offline sky. It is disabled during normal play. macOS mounts the finished DMG, checks the Applications shortcut, copies ESP.app to a temporary Applications folder, then ejects the image and verifies and runs the installed copy. Windows silently installs the actual installer and runs its installed executable in headless mode. A missing marker, crash, nonzero exit or timeout fails packaging. Only successful packages reach the publishing job; logs remain as Actions artifacts.
 
 The packages are not Apple Developer ID notarized or Windows Authenticode signed. Graphical acceptance of the downloaded macOS release runs separately on Studio. Native graphics and usability on Windows still need testing on an actual Windows PC: a headless CI smoke is not a graphical playtest. Existing Studio visual tests likewise do not substitute for testing the downloaded release build. No auto-updater is bundled; download and install a later release to update.
