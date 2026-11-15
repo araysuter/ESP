@@ -144,8 +144,14 @@ namespace ESP.Presentation
             surfaceRotation = Quaternion.FromToRotation(Vector3.up, up);
             // Include attached upper stages and SRBs, exclude discarded stages.
             double fuel = Math.Max(0, simulation.Physics.TotalPropellantKg);
-            fuelGlow = Mathf.Clamp01((float)(fuel / 120000));
-            float size = Mathf.Clamp(10f + (float)Math.Pow(fuel, 1.0 / 3.0) * .32f, 10f, 52f);
+            double capacity = 0;
+            for (int i = 0; i < driver.StageCount; i++) capacity += driver.StagePropellantCapacityKg(i);
+            capacity += driver.BoosterPropellantCapacityKg ?? 0;
+            fuelGlow = capacity > 0 ? Mathf.Clamp01((float)(fuel / capacity)) : 0;
+            // The flash billboard is 3 * size across. At full propellant its
+            // diameter is 3 * 124 m, the reference height of stacked Starship.
+            // A small empty-vehicle impact remains visible. Cosmetic only.
+            float size = Mathf.Lerp(8f, 124f, fuelGlow);
             float impulse = Mathf.Clamp((float)simulation.ImpactSpeedMetersPerSecond / 120f, .25f, 2f);
             Populate(size, impulse);
             effectRoot = new GameObject("Impact — cosmetic fire, dust and debris");
