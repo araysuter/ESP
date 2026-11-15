@@ -438,12 +438,13 @@ namespace ESP.Presentation
             status.text = isMap ? "EARTH / SELECT A LAUNCH SITE" : (director.FlightStatus ?? "READY").ToUpperInvariant();
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
-            string mapInfo = director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
+            string mapInfo = (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n" + director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
                 "\nOrbit line: coast prediction — engines cut now; ignores drag. Ap/Pe mark radial apsides with local WGS84 heights. Impact clips the path at the surface.";
             string steeringInfo = "Pitch: W/S or ↑/↓  ·  Heading: A/D  ·  Stage: Space  ·  Map: M\n" +
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
             string flightInfo = (director.FlightStatus ?? "READY") + "\n\n" +
-                (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") + "\n\n" + steeringInfo;
+                (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
+                "\n" + (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n\n" + steeringInfo;
             flightDetailText.text = isMap ? mapInfo + (mapFlying ? "\n\n" + flightInfo : "") : flightInfo + "\n\n" + vehicleInfo;
             assist.SetEnabled(flight != null);
             assist.text = flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";

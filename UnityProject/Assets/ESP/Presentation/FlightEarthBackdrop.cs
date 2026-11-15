@@ -16,6 +16,7 @@ namespace ESP.Presentation
         public Shader starShader;
         private Material starMaterial;
         public Light earthSun;
+        public MissionSunlight sunlight;
         // Reserve this layer for the backdrop; no other scene objects should use it.
         [Range(0, 31)] public int backdropLayer = 31;
         public double minimumAltitudeMeters = 120000;
@@ -55,7 +56,11 @@ namespace ESP.Presentation
                 ? mission.mapLayers.earth.sharedMaterial : globeMaterial;
             if (globeRenderer.sharedMaterial != selectedMaterial) globeRenderer.sharedMaterial = selectedMaterial;
             if (backgroundSun != null && earthSun != null)
-                backgroundSun.transform.rotation = globe.transform.rotation * earthSun.transform.rotation;
+            {
+                // Backdrop and vehicle share fixed-pad ENU; do not rotate the light twice.
+                backgroundSun.transform.rotation = earthSun.transform.rotation;
+                backgroundSun.intensity = sunlight != null ? sunlight.daylightIntensity : 1.5f;
+            }
             background.transform.position = mission.launchCamera.transform.position / 1000000f;
             background.transform.rotation = mission.launchCamera.transform.rotation;
             background.fieldOfView = mission.launchCamera.fieldOfView;
