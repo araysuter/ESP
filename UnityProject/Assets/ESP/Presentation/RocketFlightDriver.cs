@@ -22,8 +22,15 @@ namespace ESP.Presentation
         private UIDocument missionDocument;
         private float pendingThrottle = 1f;
         public bool AssistanceEnabled { get; private set; } = true;
+        public bool IsPaused { get; private set; }
+        private bool skipResumeFrame;
+        public void SetPaused(bool paused)
+        {
+            if (IsPaused && !paused) skipResumeFrame = true;
+            IsPaused = paused;
+        }
         public int TimeRate { get; private set; } = 1;
-        public void ToggleAssistance() { AssistanceEnabled = !AssistanceEnabled; }
+        public void ToggleAssistance() { if (!IsPaused) AssistanceEnabled = !AssistanceEnabled; }
         public void SetTimeRate(int rate)
         {
             if (rate != 1 && rate != 5 && rate != 20) throw new ArgumentOutOfRangeException(nameof(rate));
@@ -44,6 +51,7 @@ namespace ESP.Presentation
         public bool HasPosition => simulation != null;
         public void SetPitchTarget(double pitchDegrees)
         {
+            if (IsPaused) return;
             if (double.IsNaN(pitchDegrees) || double.IsInfinity(pitchDegrees)) throw new ArgumentOutOfRangeException(nameof(pitchDegrees));
             AssistanceEnabled = false;
             if (simulation != null) simulation.PitchDegrees = Math.Max(0, Math.Min(90, pitchDegrees));
@@ -58,7 +66,7 @@ namespace ESP.Presentation
         }
         public void Launch(LaunchSite site, WeatherSnapshot weather)
         {
-            if (started || site == null) return;
+            if (IsPaused || started || site == null) return;
             DateTime now = DateTime.UtcNow;
             WeatherProfile profile = null;
             TimeSpan maxAge = TimeSpan.FromHours(12);
@@ -96,7 +104,7 @@ namespace ESP.Presentation
         public void ResetMission()
         {
             simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
-            pendingThrottle = 1; AssistanceEnabled = true; TimeRate = 1;
+            pendingThrottle = 1; AssistanceEnabled = true; TimeRate = 1; IsPaused = false; skipResumeFrame = false;
             weatherSource = "Standard atmosphere (no launch yet)";
             if (director != null && director.EnvironmentRoot != null) director.EnvironmentRoot.position = Vector3.zero;
             if (director != null && director.RocketVisual != null)
@@ -109,11 +117,13 @@ namespace ESP.Presentation
                 if (view != null) { view.SetThrottle(0); if (view.booster != null) view.booster.gameObject.SetActive(true); }
             }
         }
-        public void Stage() { if (simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
-        public void SetThrottle(float value) { AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
+        public void Stage() { if (IsPaused || simulation == null) return; if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
+        public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; }
 
         private void Update()
         {
+            if (IsPaused) return;
+            if (skipResumeFrame) { skipResumeFrame = false; return; }
             if (simulation == null) return;
             Keyboard keyboard = Keyboard.current;
             var focused = missionDocument?.rootVisualElement?.panel?.focusController?.focusedElement as VisualElement;

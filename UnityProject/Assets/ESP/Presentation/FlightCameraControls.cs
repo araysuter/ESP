@@ -15,7 +15,7 @@ namespace ESP.Presentation
 
         private void LateUpdate()
         {
-            if (director == null || director.IsMapView || director.RocketVisual == null) { dragging = false; return; }
+            if (MissionUI.IsPaused || director == null || director.IsMapView || director.RocketVisual == null) { dragging = false; return; }
             Transform vehicle = director.RocketVisual;
             if (!TryVisibleBounds(vehicle, out Bounds bounds)) { dragging = false; return; }
             float radius = Mathf.Max(1f, bounds.extents.magnitude);

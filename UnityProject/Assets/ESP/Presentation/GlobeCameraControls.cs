@@ -33,6 +33,7 @@ namespace ESP.Presentation
 
         private void Update()
         {
+            if (MissionUI.IsPaused) { dragging = false; return; }
             Mouse mouse = Mouse.current;
             if (mouse == null) { dragging = false; return; }
             Vector2 pointer = mouse.position.ReadValue();

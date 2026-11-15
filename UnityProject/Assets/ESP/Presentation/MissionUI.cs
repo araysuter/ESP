@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 namespace ESP.Presentation
 {
     /// <summary>Compact cockpit instruments and map controls. Authoritative telemetry comes from the flight driver.</summary>
+    [DefaultExecutionOrder(-100)]
     [RequireComponent(typeof(UIDocument))]
     public sealed class MissionUI : MonoBehaviour
     {
@@ -23,7 +24,8 @@ namespace ESP.Presentation
         private Slider throttle;
         private NavballElement navball;
         private float nextRefresh, nextMarkerRefresh;
-        private VisualElement root;
+        private VisualElement root, pauseOverlay;
+        public static bool IsPaused { get; private set; }
         private static VisualElement activeRoot;
         private readonly Button[] markers = new Button[2];
         private bool weatherOpen, detailsOpen;
@@ -100,6 +102,17 @@ namespace ESP.Presentation
 
             BuildMapControls();
             BuildFlightControls();
+            pauseOverlay = new VisualElement { name = "pause-overlay" };
+            pauseOverlay.style.position = Position.Absolute;
+            pauseOverlay.style.left = pauseOverlay.style.right = pauseOverlay.style.top = pauseOverlay.style.bottom = 0;
+            pauseOverlay.style.backgroundColor = new Color(0, 0, 0, .75f);
+            pauseOverlay.style.alignItems = Align.Center;
+            pauseOverlay.style.justifyContent = Justify.Center;
+            pauseOverlay.Add(Label("PAUSED", 28, Text, FontStyle.Bold));
+            var resume = Button("RESUME  [ESC]", () => SetPaused(false), true, "resume-mission");
+            resume.style.width = 180;
+            pauseOverlay.Add(resume);
+            root.Add(pauseOverlay);
             Resize();
             Refresh();
         }
@@ -303,7 +316,11 @@ namespace ESP.Presentation
         {
             var focused = root?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
-            if (!editingText && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
+            var flight = director?.FlightDriver as RocketFlightDriver;
+            if (Application.isFocused && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame && (IsPaused || !editingText))
+                SetPaused(!IsPaused);
+            if (IsPaused && (flight == null || !flight.IsPaused)) SetPaused(false);
+            if (!IsPaused && !editingText && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
                 ToggleView();
             if (subscribedDirector != director)
             {
@@ -325,8 +342,21 @@ namespace ESP.Presentation
             }
         }
 
+        private void SetPaused(bool paused)
+        {
+            var flight = director?.FlightDriver as RocketFlightDriver;
+            if (flight == null) paused = false;
+            flight?.SetPaused(paused);
+            IsPaused = paused;
+            if (root != null && pauseOverlay != null)
+                foreach (var child in root.Children())
+                    if (child != pauseOverlay) child.SetEnabled(!paused);
+            if (pauseOverlay != null) pauseOverlay.style.display = paused ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
         private void OnDestroy()
         {
+            SetPaused(false);
             if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
             if (activeRoot == root) activeRoot = null;
         }
@@ -391,6 +421,7 @@ namespace ESP.Presentation
         private void Refresh()
         {
             if (mapControls == null) return;
+            if (pauseOverlay != null) pauseOverlay.style.display = IsPaused ? DisplayStyle.Flex : DisplayStyle.None;
             bool available = director != null;
             bool isMap = !available || director.IsMapView;
             var flight = available ? director.FlightDriver as RocketFlightDriver : null;

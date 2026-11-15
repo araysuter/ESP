@@ -27,6 +27,7 @@ namespace ESP.Presentation
 
         private void Update()
         {
+            if (MissionUI.IsPaused) return;
             Mouse mouse = Mouse.current;
             if (mouse == null || !mouse.rightButton.wasPressedThisFrame) return;
             Vector2 pointer = mouse.position.ReadValue();
