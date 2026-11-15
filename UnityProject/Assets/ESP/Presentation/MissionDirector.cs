@@ -196,6 +196,7 @@ namespace ESP.Presentation
             launchCamera.transform.SetPositionAndRotation(launchCameraHomePosition, launchCameraHomeRotation);
             launchCamera.fieldOfView = launchCameraHomeFieldOfView;
             launchCamera.GetComponent<FlightCameraControls>()?.ResetFraming();
+            Inset?.ResetFraming();
         }
         public void RefreshFlightBackdrop()
         {

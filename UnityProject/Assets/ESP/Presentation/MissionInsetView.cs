@@ -77,7 +77,7 @@ namespace ESP.Presentation
 
         public void SynchronizeView()
         {
-            if (director == null || mapPreview == null) return;
+            if (!isActiveAndEnabled || director == null || mapPreview == null) return;
             previousMapView = director.IsMapView;
             HasPreview = false;
             HasMarker = false;
@@ -88,6 +88,22 @@ namespace ESP.Presentation
             flightPreview.enabled = director.IsMapView;
             AssignMapLayers();
             UpdateMapPose();
+        }
+
+        public void ResetFraming()
+        {
+            if (flightPreview == null || director == null || director.launchCamera == null) return;
+            var home = director.launchCamera;
+            flightPreview.transform.SetPositionAndRotation(home.transform.position, home.transform.rotation);
+            flightPreview.fieldOfView = home.fieldOfView;
+            flightPreview.GetComponent<FlightCameraControls>()?.ResetFraming();
+            HasPreview = false;
+            nextFrame = 0;
+        }
+
+        private void OnEnable()
+        {
+            if (director != null) SynchronizeView();
         }
 
         private void LateUpdate()
@@ -148,8 +164,8 @@ namespace ESP.Presentation
 
         private void OnDisable()
         {
-            if (mapPreview != null) mapPreview.enabled = false;
-            if (flightPreview != null) flightPreview.enabled = false;
+            if (mapPreview != null) { mapPreview.enabled = false; mapPreview.gameObject.SetActive(false); }
+            if (flightPreview != null) { flightPreview.enabled = false; flightPreview.gameObject.SetActive(false); }
             HasPreview = false;
             director?.RefreshFlightBackdrop();
         }
