@@ -126,6 +126,20 @@ namespace ESP.Presentation
             pitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(direction.y, -1, 1)) * Mathf.Rad2Deg, -85, 85);
         }
 
+        // The WGS84 surface normal differs from the radial direction. Correct
+        // against its tangent plane so oblate-Earth views remain unobstructed.
+        public static Vector3 KeepEarthVisible(Vector3 center, Vector3 offset)
+        {
+            float length = offset.magnitude;
+            if (length < 1e-8f || center.sqrMagnitude < 1e-8f ||
+                !SolarSystemMap.EarthOccludes(center, center + offset)) return offset;
+            const float a = 6.378137f, b = 6.3567523f;
+            Vector3 normal = new Vector3(center.x / (a * a), center.y / (b * b), center.z / (a * a)).normalized;
+            float inward = Vector3.Dot(offset, normal);
+            Vector3 tangent = offset - Mathf.Min(0, inward) * normal;
+            return (tangent + normal * .1f).normalized * length;
+        }
+
         private void ApplyPose()
         {
             float yawRadians = yaw * Mathf.Deg2Rad;
@@ -137,10 +151,7 @@ namespace ESP.Presentation
             // obscuring the vehicle when the user rotates around it.
             if (useMissionUI && distance < 100 && center.sqrMagnitude > 1e-8f)
             {
-                Vector3 radial = center.normalized;
-                Vector3 candidate = center + offset;
-                if (SolarSystemMap.EarthOccludes(center, candidate))
-                    offset -= 2 * Mathf.Min(0, Vector3.Dot(offset, radial)) * radial;
+                offset = KeepEarthVisible(center, offset);
             }
             transform.position = center + offset;
             Vector3 up = Vector3.up;

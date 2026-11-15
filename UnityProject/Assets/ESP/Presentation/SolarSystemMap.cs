@@ -67,11 +67,14 @@ namespace ESP.Presentation
 
         public static bool EarthOccludes(Vector3 point, Vector3 camera)
         {
-            Vector3 delta = point - camera;
+            // Promote before subtracting/multiplying: float quadratic terms lose
+            // enough precision to report false occlusion near a surface target.
+            double x = camera.x, y = camera.y, z = camera.z;
+            double dx = (double)point.x - x, dy = (double)point.y - y, dz = (double)point.z - z;
             const double a = 6.378137, b = 6.356752314245;
-            double aa = (delta.x * delta.x + delta.z * delta.z) / (a * a) + delta.y * delta.y / (b * b);
-            double bb = 2 * ((camera.x * delta.x + camera.z * delta.z) / (a * a) + camera.y * delta.y / (b * b));
-            double cc = (camera.x * camera.x + camera.z * camera.z) / (a * a) + camera.y * camera.y / (b * b) - 1;
+            double aa = (dx * dx + dz * dz) / (a * a) + dy * dy / (b * b);
+            double bb = 2 * ((x * dx + z * dz) / (a * a) + y * dy / (b * b));
+            double cc = (x * x + z * z) / (a * a) + y * y / (b * b) - 1;
             if (cc < 0) return true;
             double discriminant = bb * bb - 4 * aa * cc;
             if (aa <= 0 || discriminant < 0) return false;
