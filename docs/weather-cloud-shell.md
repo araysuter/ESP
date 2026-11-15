@@ -123,14 +123,17 @@ credit tooltip and mission information expose fuller provenance/fetch status.
 `CloudShell` clones the WGS84 display mesh, preserving UVs, normals, winding and
 ECEF X,Z,Y → Unity X,Y,Z axes. It offsets along the geodetic normal by 10,000 m
 at 1,000,000 m/unit. This is a representative visual altitude, not measured
-cloud-top height or a terrain/collision surface. Cloud fraction controls visual
-opacity, not measured optical depth. Map and close-flight daytime opacity are
-both 0.22, reducing the previous opaque appearance while keeping the surface
-legible. The existing night opacity/illumination treatment is preserved. These opacity values are visual choices, not calibrated optical
-properties. The shell has no procedural weather,
-wind advection, ray marching or volumetric physics. Night transmission and
-illumination are visual approximations. Scene builders serialize the cloud
-shader so player stripping retains it; map and flight use the same texture.
+cloud-top height or a terrain/collision surface. During daylight, four shader
+samples across an apparent 5 km layer give nearby clouds view-dependent depth.
+Object-space noise adds billows, and shading from the noise gradient gives them
+white lit surfaces and softer undersides. The shader fades subpixel detail
+into a single averaged column. NASA fraction and validity still control where
+clouds appear. The shader leaves clear and missing observations transparent
+and retains the night transmission curve for city lights. The texture provides
+cloud fraction, so layer thickness and shading are artistic approximations.
+The scene builder serializes the shader, and the map and flight views use the
+same observation texture. Unity compilation, visual review and frame timing
+for this shader revision are pending.
 
 ## Verification and pending combined QA
 
