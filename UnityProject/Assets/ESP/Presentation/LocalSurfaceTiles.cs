@@ -26,7 +26,7 @@ namespace ESP.Presentation
         public int ResidentTileCount => tiles.Count;
         public int ActiveRequestCount => requests.Count;
         private const int CacheLimit = 48, ConcurrentRequests = 2, Subdivisions = 16;
-        private const double MaximumAltitude = 400000, MercatorLimit = 85.05112878;
+        private const double MaximumAltitude = 60000, MercatorLimit = 85.05112878;
         private const string Landsat = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/2000-12-01/GoogleMapsCompatible_Level12/";
         private const string Usgs = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/";
         private readonly Dictionary<TileKey, Tile> tiles = new Dictionary<TileKey, Tile>();
@@ -127,7 +127,7 @@ namespace ESP.Presentation
                 SelectTiles(latitude, longitude, Math.Max(0, geo.AltitudeMeters));
                 nextSelection = Time.unscaledTime + .35f;
             }
-            float altitudeFade = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(300000, (float)MaximumAltitude, (float)geo.AltitudeMeters));
+            float altitudeFade = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(45000, (float)MaximumAltitude, (float)geo.AltitudeMeters));
             foreach (var entry in tiles)
             {
                 Tile tile = entry.Value;
@@ -177,7 +177,7 @@ namespace ESP.Presentation
         {
             wanted.Clear(); ordered.Clear();
             double localScale = Math.Max(.09, Math.Cos(latitude * Math.PI / 180));
-            int coarseZoom = Math.Max(5, Math.Min(12, (int)Math.Floor(Math.Log(40075016.686 * localScale / Math.Max(9000, altitude * 1.6), 2))));
+            int coarseZoom = Math.Max(8, Math.Min(12, (int)Math.Floor(Math.Log(40075016.686 * localScale / Math.Max(9000, altitude * 1.6), 2))));
             coarseGrid = MakeGrid(0, coarseZoom, latitude, longitude, 1);
             // Deliberately exclude Alaska/Hawaii and other countries: their imagery
             // provenance/rights differ. Global public NASA imagery remains available.

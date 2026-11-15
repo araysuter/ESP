@@ -10,7 +10,7 @@ Pinned SHA-256: `d3af75412a54f1d15d644cce56e895fe6813452b49dc0558b4b2ddfb484844a
 
 Suggested credit: **SLS Block 1 geometry: NASA 3D Resources. Adaptation for ESP: connected-part separation, print-stand exclusion, uniform scale, smooth shading and original visualization materials.** Link the source and NASA usage guidance alongside the credit.
 
-The STL contains no materials, textures or UV coordinates. Our orange foam, white exterior and dark nozzle materials are visualization choices, not materials supplied by NASA. No logos, decals, decorative markings, extra engines or other rocket geometry are invented. A studio ground plane and lights are preview assets only and never enter the rocket OBJ.
+The STL contains no materials, textures or UV coordinates. Our orange foam, white exterior and dark nozzle materials are visualization choices, not materials supplied by NASA. The original adaptation did not invent additional rocket geometry; the later Unity-only ICPS approximation is described below. A studio ground plane and lights are preview assets only and never enter the rocket OBJ.
 
 ## Direct geometry inspection
 
@@ -53,7 +53,7 @@ Outputs:
 
 The Blender model uses X right, Y depth, Z up. OBJ export maps Blender `(x,y,z)` to `(x,z,-y)`. All flight object origins share the bottom-center frame and all vertices are already in meters. Apply no additional scale in Unity. Import the OBJ/MTL into the SLS vehicle art folder, with its Unity `.meta` files, rather than importing the `.blend` and its studio/archive.
 
-Names begin `CoreAssembly__`, `UpperAssembly__`, `LeftSRB__` or `RightSRB__`, matching `ImportDetailedVehicles.cs`. Material names match its existing URP palette. That importer currently groups SRBs together with the core for the two-stage game approximation; independent booster separation is not implied by the visual grouping.
+Names begin `CoreAssembly__`, `UpperAssembly__`, `LeftSRB__` or `RightSRB__`, matching `ImportDetailedVehicles.cs`. Material names match its existing URP palette. The importer creates independent SRB groups. The flight core burns the solids in parallel with the liquid core and jettisons them before core separation.
 
 ## Geometry-derived integration anchors
 
@@ -73,3 +73,7 @@ The upper component begins at **64.995970 m**. This differs from the old procedu
 ## Verification status
 
 Source checksum, binary STL structure, connectivity, component grouping, triangle accounting, scale, nozzle positions, manifest generation and Python syntax have been checked locally. The coordinator ran the adaptation in the VM and supplied the rendered 900 × 1200 studio PNG; visual review confirms the sourced rocket silhouette, original surface detail, stage materials, clean print-stand exclusion and ground contact. Actual Unity import, exhaust alignment and packaged-game performance still require integration verification. The 274,420-triangle source is retained until profiling justifies LOD work.
+
+## Unity ICPS presentation approximation
+
+The source STL does not model the ICPS and its engine within the orange launch vehicle stage adapter (LVSA). NASA states the LVSA stays attached to the core during separation, while the ICPS continues with Orion; NASA lists the ICPS diameter as approximately 5.1 m ([SLS reference guide](https://www.nasa.gov/wp-content/uploads/2022/03/sls_reference_guide_2022_web.pdf), [ICPS description](https://www.nasa.gov/reference/icps/)). The Unity importer assigns the orange LVSA submesh to the core. It adds an original, deliberately simplified 4.8 m diameter cylinder from y=67.5 to 72.29 m and a tapered engine bell from y=65.5 to 67.5 m to the upper assembly, wholly inside the adapter's visible envelope on the pad. The cosmetic upper plume begins at the bell lip, y=65.5 m. These shapes and dimensions are visual approximations, not a measured ICPS, RL10, or verified engine exit; they do not affect mass, thrust, or staging physics. The source's abort tower remains fused to the upper mesh and does not jettison. The generated approximation and separation passed packaged Unity rendering review; see [validation](visual-polish-validation.md).
