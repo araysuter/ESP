@@ -53,6 +53,10 @@ namespace ESP.Presentation
         private (StageDefinition[] Stages, SolidBoosterDefinition Boosters) SelectedPreset =>
             VehiclePresets[director != null ? director.VehicleIndex : 0];
 
+        public int StageCount => SelectedPreset.Stages.Length;
+        public double StagePropellantCapacityKg(int stageIndex) => SelectedPreset.Stages[stageIndex].PropellantKg;
+        public double? BoosterPropellantCapacityKg => SelectedPreset.Boosters?.PropellantKg;
+
         public (int StageNumber, double StageKg, double? BoosterKg) FuelTelemetry
         {
             get
