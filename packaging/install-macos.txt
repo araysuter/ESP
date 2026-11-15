@@ -1,0 +1,12 @@
+Install ESP on macOS
+
+1. Drag ESP.app onto the Applications shortcut in this window.
+2. When the copy finishes, eject the ESP disk image.
+3. Open ESP from Applications. To update ESP, repeat these steps and choose
+   Replace when Finder asks.
+
+This build is not Apple Developer ID signed or notarized. macOS may show a
+security warning when you first open ESP.
+
+To read source and license notices, Control-click ESP in Applications,
+select Show Package Contents, and open Contents/Resources/Notices.
