@@ -45,15 +45,21 @@ Shader "ESP/Local Surface Imagery"
             half4 Frag(Varyings input) : SV_Target
             {
                 half4 imagery = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
-                // Empty satellite cells must reveal the bundled globe, not black squares.
-                clip(max(imagery.r, max(imagery.g, imagery.b)) - .0003);
+                // Black no-data pixels are common in the Landsat composite. Feather
+                // their boundary instead of turning filtered pixels into hard holes.
+                float coverage = smoothstep(.002, .025, max(imagery.r, max(imagery.g, imagery.b)));
                 float2 patchUv = (input.uv + _PatchUv.xy) * _PatchUv.z;
                 float edge = min(min(patchUv.x, patchUv.y), min(1 - patchUv.x, 1 - patchUv.y));
-                half alpha = imagery.a * _Opacity * smoothstep(0, .08, edge);
-                clip(alpha - .002);
                 float3 normal = normalize(input.normalWS);
                 float sun = dot(normal, normalize(_SunDirection.xyz));
                 half daylight = smoothstep(-.08, .15, sun);
+                // This daytime imagery has no night lights. Reveal the continuous
+                // backdrop at night and blend through twilight, avoiding dark tile
+                // rectangles over the globe's city lights and atmospheric limb.
+                float orbitalBlend = smoothstep(20000, 60000, _CameraAltitude);
+                half alpha = imagery.a * _Opacity * smoothstep(0, .08, edge) *
+                    lerp(step(.0003, max(imagery.r, max(imagery.g, imagery.b))), coverage * daylight, orbitalBlend);
+                clip(alpha - .002);
                 half3 color = imagery.rgb * (.015 + _SunColor.rgb * max(0, sun));
                 // Presentation-only aerial perspective, not sampled visibility/weather.
                 // The overlay runs after Base-camera atmosphere, so its distant
@@ -61,13 +67,19 @@ Shader "ESP/Local Surface Imagery"
                 // opaque: fading alpha would expose the same aliased globe below.
                 float3 towardCamera = _WorldSpaceCameraPos - input.positionWS;
                 float distanceMeters = length(towardCamera);
-                float airDensity = exp(-max(_CameraAltitude, 0) / 18000);
-                float baseHaze = (1 - exp(-distanceMeters / 60000)) * airDensity;
+                // Approximate the average density along a path from the surface
+                // to the camera, using an exponential atmosphere. Sampling only
+                // at camera altitude incorrectly removes all haze from orbit.
+                float heightInScaleHeights = max(_CameraAltitude, 0) / 18000;
+                float meanDensity = heightInScaleHeights < .001 ? 1 :
+                    (1 - exp(-heightInScaleHeights)) / heightInScaleHeights;
+                float airColumnMeters = distanceMeters * meanDensity;
+                float baseHaze = 1 - exp(-airColumnMeters / 60000);
                 float viewElevation = saturate(dot(normal, towardCamera / max(distanceMeters, .001)));
                 float grazing = 1 - smoothstep(.015, .12, viewElevation);
                 // No added horizon haze inside 400 m. It becomes strong only
                 // beyond the detailed pad footprint and near the visual horizon.
-                float horizonHaze = grazing * smoothstep(400, 3500, distanceMeters) * airDensity;
+                float horizonHaze = grazing * smoothstep(400, 3500, distanceMeters) * meanDensity;
                 half haze = daylight * min(.985, 1 - (1 - baseHaze) * (1 - horizonHaze));
                 color = lerp(color, half3(.26, .48, .90), haze);
                 // The global satellite night composite cannot resolve individual
