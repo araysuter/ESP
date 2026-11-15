@@ -2,20 +2,20 @@
 
 CLOUDS renders a **dated NASA cloud-fraction composite**, choosing each pixel's
 newest valid observation from at most three advertised daily rasters. Clear-sky
-zero is a valid observation: it prevents an older cloudy pixel from showing
-through. Missing/fill pixels can use an older valid day within that bounded
-window. Regions with no valid observation remain missing in the source coverage
-mask; only a narrow display feather may extend into adjacent missing pixels.
-This is not
+zero is a valid observation and wins in newest-valid interiors. Missing/fill
+pixels can use an older valid day within that bounded window. The display
+crossfade near a date join uses only actual overlapping observations; it does
+not create valid pixels in missing regions. This is not
 instantaneous global weather, a forecast, measured cloud-top geometry or a
 volumetric reconstruction. It does not affect flight forces.
 
 The newest-valid selector replaces the earlier weighted temporal blend and
 broad CPU smoothing, which could spread intermediate cloud fractions into a
 blanket. The current visual treatment preserves these newest-valid interiors
-and feathers only near date/missing-data boundaries. It does not reintroduce
-averaging across the full daily fields. The Integration owner is qualifying the
-combined border-feather revision; earlier passes are identified below.
+and crossfades only within real overlap at a date boundary. It does not
+reintroduce averaging across the full daily fields or a spatial blur of cloud
+features. The Integration owner is qualifying the combined overlap-crossfade
+revision; earlier passes are identified below.
 One daytime Terra sensor's daily swaths still do not establish a simultaneous
 global weather field. Adjacent swaths can have different acquisition days;
 feathering softens their presentation without making them simultaneous.
@@ -48,27 +48,33 @@ feathering softens their presentation without making them simultaneous.
   observations. Transparent areas can mean clear sky or no observation; dates
   and missingness remain part of the provenance.
 
-## Bounded display feather
+## Bounded overlap crossfade
 
-After selecting the newest valid pixel, `ObservationBlend.Finish` detects
-boundaries where a pixel's selected observation day differs from a neighbor,
-including transitions to missing data. It filters fraction × support and
-support together using separable running sums with radius eight pixels
-(a 17×17 neighborhood). Boundary influence is calculated separately; pixels
-away from those boundaries keep their original newest-valid values. Longitude
-wraps across the antimeridian. Latitude sampling reflects over a pole and
-shifts longitude by 180°, rather than clamping to an unrelated row.
+For each pixel, `ObservationBlend` retains both the newest valid sample and its
+nearest older valid sample, when one exists. `Finish` seeds only the newer side
+of a date join where that pixel's older sample has the same observation day as
+the adjacent older region. A breadth-first traversal expands at most 32 pixels
+inward, and only through pixels with that same selected-day/fallback-day pair.
+Longitude wraps at the antimeridian; latitude sampling reflects across a pole
+with a 180° longitude shift.
 
-This is local display interpolation across adjacent selected days or missing
-support, not a broad temporal average of three daily rasters. The shader divides
-the premultiplied fraction by filtered support after texture sampling. Missing
-data is not substituted with zero cloud fraction. The feather can extend narrow
-visual support into a neighboring no-data strip; broad gaps remain transparent.
-The original per-pixel observation mask, contributing dates and reported
-coverage remain unchanged. Feathered support is not counted as observed Earth
-area or presented as a new NASA measurement. At the 4096×2048 request scale the
-radius is approximately 0.70° in raster coordinates; its physical width varies
-with latitude and is a visual choice, not an uncertainty estimate.
+Within that bounded overlap strip, smoothstep weights crossfade the newer
+sample toward its actual older sample at the join. Beyond the strip, newest
+interior values stay unchanged. No neighboring cloud fractions are blurred or
+averaged together, and pixels without an older overlapping observation are not
+eligible. A join lacking matching real overlap may therefore remain visible.
+This is a display interpolation between two real dates, not simultaneous weather
+or a newly observed cloud field. The radius is a visual choice, not an accuracy
+or uncertainty estimate; its physical width varies with latitude.
+
+Fraction × support and support are crossfaded together. The shader divides
+them after texture filtering, preserving the distinction between measured
+clear sky and missing observations. The crossfade does not extend the validity
+mask into gaps: narrow and broad missing regions retain their original missing
+samples. The raw observation mask, contributing dates and reported coverage
+remain unchanged. Normal texture filtering does not count as new observations.
+This replaces the intermediate border-running-sum blur, which could extend
+visual support into missing pixels.
 
 Cloud mode uses cloud-free Blue Marble underneath the shell. Satellite mode
 has its own dated true-color mosaic, which already includes clouds and uses a
@@ -118,10 +124,9 @@ credit tooltip and mission information expose fuller provenance/fetch status.
 ECEF X,Z,Y → Unity X,Y,Z axes. It offsets along the geodetic normal by 10,000 m
 at 1,000,000 m/unit. This is a representative visual altitude, not measured
 cloud-top height or a terrain/collision surface. Cloud fraction controls visual
-opacity, not measured optical depth. Default map daytime opacity is 0.38,
-reduced from 0.68 so the surface remains more legible; close-flight uses its
-existing 0.35 opacity. The existing night opacity/illumination treatment is
-preserved. These opacity values are visual choices, not calibrated optical
+opacity, not measured optical depth. Map and close-flight daytime opacity are
+both 0.22, reducing the previous opaque appearance while keeping the surface
+legible. The existing night opacity/illumination treatment is preserved. These opacity values are visual choices, not calibrated optical
 properties. The shell has no procedural weather,
 wind advection, ray marching or volumetric physics. Night transmission and
 illumination are visual approximations. Scene builders serialize the cloud
@@ -162,11 +167,19 @@ restoration. The 4K data had 8,372,683 valid pixels, 15,925 missing pixels,
 revision. These passes validate the earlier newest-valid/cache combination,
 not the subsequent feather appearance.
 
-PR #56's 1e57aa6 adds the bounded border feather and lower default daytime
-opacity described above. The Integration owner reported build 4 and its
-CloudBlendChecks passed. The new night/map, both-pad captures and real-ascent
-run remain in progress at this documentation update; do not claim the latest
-rendered appearance has passed before inspecting those results. The Integration
-owner retains the VM lease and will record final visual/package evidence.
-Windows, the complete 15-minute refresh interval and injected metadata transport
-failure have not been exercised for this revision.
+Intermediate PR #56 revision 1e57aa6 used an eight-pixel border-running-sum
+feather and 0.38 map opacity. The Integration owner reported build 4,
+CloudBlendChecks and CloudNightSmoke passed, including both pads in daylight
+and night and a NASA-profile ascent through 12 km and 150 km. Later iterations
+changed both the border algorithm and opacity; those earlier captures do not
+qualify the final settings.
+
+Current PR #56 revision cc7d790 replaces the spatial blur with the 32-pixel
+real-overlap crossfade and uses 0.22 daytime opacity for map and close flight.
+The Integration owner reported build 6 and CloudBlendChecks passed. Global,
+polar, night and pad/ascent rendered checks remain in progress at this
+documentation update. Do not claim final appearance has passed until those
+captures are inspected. The Integration owner retains the VM lease and will
+record final visual/package evidence. Windows, the complete 15-minute refresh
+interval and injected metadata transport failure have not been exercised for
+this revision.
