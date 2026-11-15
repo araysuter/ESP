@@ -283,7 +283,6 @@ namespace ESP.Presentation
             double lat = launchSite.Latitude * Math.PI / 180, lon = launchSite.Longitude * Math.PI / 180;
             var pad = EarthFrames.GeodeticToEcef(lat, lon, launchSite.ElevationMeters);
             director.EnvironmentRoot.position = CameraRelativeCoordinates.FromEcef(pad.X, pad.Y, pad.Z, ecef.X, ecef.Y, ecef.Z, lat, lon);
-            RenderSeparatedStages(ecef, lat, lon, state.MissionTime);
             if (director.RocketVisual != null)
             {
                 director.RocketVisual.position = Vector3.up * director.RocketBaseHeightMeters;
@@ -316,6 +315,10 @@ namespace ESP.Presentation
                 else director.RocketVisual.rotation = Quaternion.FromToRotation(Vector3.up, direction);
                 RenderReentry(ecef, lat, lon);
             }
+            // EnvironmentRoot movement temporarily displaces its RocketVisual child.
+            // Debris must use the final vessel origin, after normal/reentry framing,
+            // or it inherits that transient displacement and visibly jitters.
+            RenderSeparatedStages(ecef, lat, lon, state.MissionTime);
 
         }
     }
