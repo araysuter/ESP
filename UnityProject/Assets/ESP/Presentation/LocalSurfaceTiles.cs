@@ -124,7 +124,7 @@ namespace ESP.Presentation
             }
             if (Time.unscaledTime >= nextSelection)
             {
-                SelectTiles(latitude, longitude, Math.Max(0, geo.AltitudeMeters));
+                SelectTiles(latitude, longitude, Math.Max(0, geo.AltitudeMeters), camera);
                 nextSelection = Time.unscaledTime + .35f;
             }
             float altitudeFade = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(300000, (float)MaximumAltitude, (float)geo.AltitudeMeters));
@@ -173,11 +173,19 @@ namespace ESP.Presentation
             }
         }
 
-        private void SelectTiles(double latitude, double longitude, double altitude)
+        private void SelectTiles(double latitude, double longitude, double altitude, Camera camera)
         {
             wanted.Clear(); ordered.Clear();
             double localScale = Math.Max(.09, Math.Cos(latitude * Math.PI / 180));
-            int coarseZoom = Math.Max(5, Math.Min(12, (int)Math.Floor(Math.Log(40075016.686 * localScale / Math.Max(9000, altitude * 1.6), 2))));
+            // Approximate the horizontal ground footprint of a nadir-facing camera.
+            // Three tiles span the coarse grid; bounds keep the selection stable for
+            // very narrow or wide views and avoid unbounded imagery requests.
+            // Oblique views and relief are approximations and retain the globe fallback.
+            double verticalHalfAngle = Math.Min(80, Math.Max(1, camera.fieldOfView * .5)) * Math.PI / 180;
+            double aspect = Math.Max(.5, Math.Min(3, camera.aspect));
+            double footprintFactor = Math.Max(.5, Math.Min(2, 2 * Math.Tan(verticalHalfAngle) * aspect / 3));
+            double targetTileWidth = Math.Max(9000, altitude * footprintFactor);
+            int coarseZoom = Math.Max(5, Math.Min(12, (int)Math.Floor(Math.Log(40075016.686 * localScale / targetTileWidth, 2))));
             coarseGrid = MakeGrid(0, coarseZoom, latitude, longitude, 1);
             // Deliberately exclude Alaska/Hawaii and other countries: their imagery
             // provenance/rights differ. Global public NASA imagery remains available.
