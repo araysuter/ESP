@@ -225,6 +225,21 @@ namespace ESP.Presentation
 
         private void BuildSettings(MissionSession session)
         {
+            var panel = GetComponent<UIDocument>().panelSettings;
+            if (panel != null)
+            {
+                menuScroll.Add(Label("INTERFACE", 10, Muted, true));
+                var scaleLabel = Label("GUI scale: " + Mathf.RoundToInt(panel.scale * 100) + "%", 11, Text);
+                menuScroll.Add(scaleLabel);
+                var scale = new Slider(.75f, 1.25f) { name = "gui-scale" };
+                scale.SetValueWithoutNotify(panel.scale);
+                scale.RegisterValueChangedCallback(evt => {
+                    panel.scale = Mathf.Round(evt.newValue * 20) / 20;
+                    scale.SetValueWithoutNotify(panel.scale);
+                    scaleLabel.text = "GUI scale: " + Mathf.RoundToInt(panel.scale * 100) + "%";
+                });
+                menuScroll.Add(scale);
+            }
             menuScroll.Add(Label("KEYBOARD INPUT", 10, Muted, true));
             var keyboardHelp = Note("W / S — pitch down / up\nA / D — turn left / right\nShift / Ctrl — increase / decrease throttle\nSpace — stage\nM — map / flight view\nEsc — pause / back\n\nSteering uses a simplified attitude controller; engine thrust follows the commanded orientation. It is not a physical gimbal simulation.");
             keyboardHelp.name = "keyboard-input-reference";

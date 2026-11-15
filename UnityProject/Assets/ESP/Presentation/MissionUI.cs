@@ -17,6 +17,9 @@ namespace ESP.Presentation
         private VisualElement telemetry, inputStrip, previewHousing;
         private ScrollView informationBody;
         private Image previewImage;
+        private bool previewMinimized;
+        private string previewExpandedCaption = "LIVE  ·  ALTERNATE VIEW";
+        private Button previewMinimize;
         private Label previewCaption, previewMarker;
         private Label throttleValue, vehicleNote, mapVehicleNote;
         private Label stageFuel, boosterFuel;
@@ -428,9 +431,18 @@ namespace ESP.Presentation
             previewHousing.Add(previewMarker);
             previewCaption = Label("LIVE  ·  ALTERNATE VIEW", 9, Text, FontStyle.Normal);
             previewCaption.name = "live-preview-caption";
-            previewCaption.style.paddingLeft = 8; previewCaption.style.height = 21;
+            previewCaption.style.paddingLeft = 8; previewCaption.style.paddingRight = 30;
+            previewCaption.style.height = 21; previewCaption.style.flexShrink = 0;
+            Ellipsis(previewCaption);
             previewCaption.style.unityTextAlign = TextAnchor.MiddleLeft;
             previewHousing.Add(previewCaption);
+            previewMinimize = Button("−", () => { previewMinimized = !previewMinimized; ApplyPreviewSize(); }, false, "live-preview-minimize");
+            previewMinimize.tooltip = "Minimize or restore the live preview";
+            previewMinimize.style.position = Position.Absolute;
+            previewMinimize.style.right = 0; previewMinimize.style.bottom = 0;
+            previewMinimize.style.width = 28; previewMinimize.style.height = 21;
+            previewMinimize.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+            previewHousing.Add(previewMinimize);
             dock.Add(previewHousing);
             flightControls.Add(dock); root.Add(flightControls);
         }
@@ -486,8 +498,9 @@ namespace ESP.Presentation
             float navSize = narrow ? 92 : 120;
             navball.style.width = navSize; navball.style.height = navSize;
             navballHousing.style.height = navSize + 25;
-            previewHousing.style.width = narrow ? 160 : compact ? 220 : 280;
-            previewHousing.style.height = (narrow ? 160 : compact ? 220 : 280) * 9f / 16f + 21;
+            float previewWidth = narrow ? 160 : compact ? 220 : 280;
+            previewHousing.style.width = previewMinimized ? 130 : previewWidth;
+            previewHousing.style.height = previewMinimized ? 21 : previewWidth * 9f / 16f + 21;
             inputStrip.style.top = 0;
             flightControls.style.height = narrow ? 252 : 268;
 
@@ -694,7 +707,7 @@ namespace ESP.Presentation
             if (!available) return;
             var inset = director.GetComponent<MissionInsetView>();
             SetPreview(inset != null && inset.HasPreview ? inset.PreviewTexture : null, inset != null && inset.PreviewIsMap);
-            bool showPreviewMarker = inset != null && inset.HasPreview && inset.PreviewIsMap && inset.HasMarker;
+            bool showPreviewMarker = !previewMinimized && inset != null && inset.HasPreview && inset.PreviewIsMap && inset.HasMarker;
             previewMarker.style.display = showPreviewMarker ? DisplayStyle.Flex : DisplayStyle.None;
             if (showPreviewMarker)
             {
@@ -810,7 +823,16 @@ namespace ESP.Presentation
         {
             if (previewImage == null) return;
             if (previewImage.image != texture) previewImage.image = texture;
-            previewCaption.text = texture == null ? "PREVIEW UNAVAILABLE" : isMap ? "LIVE  ·  EARTH MAP  ↗" : "LIVE  ·  FLIGHT  ↗";
+            previewExpandedCaption = texture == null ? "PREVIEW UNAVAILABLE" : isMap ? "LIVE  ·  EARTH MAP  ↗" : "LIVE  ·  FLIGHT  ↗";
+            previewCaption.text = previewMinimized ? "LIVE PREVIEW" : previewExpandedCaption;
+        }
+        private void ApplyPreviewSize()
+        {
+            previewImage.style.display = previewMinimized ? DisplayStyle.None : DisplayStyle.Flex;
+            previewMarker.style.display = DisplayStyle.None;
+            previewMinimize.text = previewMinimized ? "+" : "−";
+            previewCaption.text = previewMinimized ? "LIVE PREVIEW" : previewExpandedCaption;
+            Resize();
         }
         private static void Selected(Button button, bool selected)
         {
