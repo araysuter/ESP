@@ -12,7 +12,7 @@ namespace ESP.Presentation
     {
         public MissionDirector director;
         private VisualElement mapControls, flightControls, weatherDetails, flightDetails;
-        private Label site, status, missionTime, weather, mapCredit, nasaStatus, flightDetailText;
+        private Label site, status, headerMissionTime, missionTime, weather, mapCredit, nasaStatus, flightDetailText;
         private BroadcastGauge speedGauge, altitudeGauge;
         private VisualElement telemetry, inputStrip, previewHousing;
         private ScrollView informationBody;
@@ -63,6 +63,10 @@ namespace ESP.Presentation
             header.pickingMode = PickingMode.Ignore;
             site = Label("", 11, Text, FontStyle.Normal); site.name = "launch-site";
             header.Add(site);
+            headerMissionTime = Label("T+ 00:00:00", 11, Cyan, FontStyle.Bold);
+            headerMissionTime.name = "header-mission-time";
+            headerMissionTime.style.marginTop = 2;
+            header.Add(headerMissionTime);
             status = Label("", 10, Cyan, FontStyle.Normal); status.name = "flight-status";
             status.style.maxWidth = 380;
             Ellipsis(status);
@@ -534,7 +538,7 @@ namespace ESP.Presentation
             mapControls.style.display = isMap ? DisplayStyle.Flex : DisplayStyle.None;
             flightControls.style.display = DisplayStyle.Flex;
             // Map layers stay above the shared broadcast instruments in both preflight and flight.
-            mapControls.style.top = 48;
+            mapControls.style.top = 70;
             mapControls.style.bottom = new StyleLength(StyleKeyword.Auto);
             mapControls.style.right = new StyleLength(StyleKeyword.Auto);
             mapControls.style.width = 350;
@@ -568,6 +572,8 @@ namespace ESP.Presentation
             // The shared dock carries mission time/rate in both views; avoid duplicate clocks.
             mapMission.style.display = DisplayStyle.None;
             double seconds = Math.Max(0, director.MissionTimeSeconds);
+            headerMissionTime.text = string.Format("T+ {0:00}:{1:00}:{2:00}",
+                (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60);
             string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  / requested {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
             if (flight != null)
