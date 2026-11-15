@@ -32,7 +32,7 @@ namespace ESP.Presentation
         private Button roadsterMarker;
         private VisualElement roadsterCard;
         private bool roadsterOpen;
-        private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
+        private Button viewToggle, action, reentry, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
         private Button cameraToggle;
         private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
             ? director.launchCamera.GetComponent<FlightCameraControls>() : null;
@@ -75,11 +75,15 @@ namespace ESP.Presentation
             headerMissionTime.style.marginTop = 2;
             header.Add(headerMissionTime);
             status = Label("", 10, Cyan, FontStyle.Normal); status.name = "flight-status";
-            status.style.maxWidth = 380;
-            Ellipsis(status);
+            status.style.whiteSpace = WhiteSpace.Normal;
+            status.style.unityTextAlign = TextAnchor.UpperCenter;
+            status.style.position = Position.Absolute;
+            status.style.left = Length.Percent(27);
+            status.style.width = Length.Percent(46);
+            status.style.top = 18;
             status.style.display = DisplayStyle.None;
-            header.Add(status);
             root.Add(header);
+            root.Add(status);
 
             viewToggle = Button("LAUNCH VIEW  [M]", ToggleView, false, "view-toggle");
             Absolute(viewToggle, null, 16, 18, null);
@@ -380,6 +384,13 @@ namespace ESP.Presentation
             throttleBox.Add(throttle); right.Add(throttleBox);
 
             var staging = Column(); staging.style.width = 83; staging.style.flexShrink = 0;
+            reentry = Button("RE-ENTRY", () => {
+                if (director?.FlightDriver is RocketFlightDriver f) f.BeginReentry();
+                Refresh();
+            }, false, "starship-reentry-action");
+            reentry.style.height = 25;
+            reentry.style.fontSize = 10;
+            staging.Add(reentry);
             action = Button("LAUNCH", () => {
                 if (director == null) return;
                 if (director.CanLaunch) director.Launch(); else director.Stage();
@@ -687,7 +698,8 @@ namespace ESP.Presentation
             missionTime.text = clock; mapMission.text = clock;
             if (flight != null)
             {
-                string actual = string.Format(" · actual avg {0:F1}×{1}", flight.ActualTimeRate, flight.SimulationCatchingUp ? " (limited)" : "");
+                string actual = flight.IsPlanningReturn ? " · planning return — simulation time paused" :
+                    string.Format(" · actual avg {0:F1}×{1}", flight.ActualTimeRate, flight.SimulationCatchingUp ? " (limited)" : "");
                 missionTime.text += actual; mapMission.text += actual;
             }
             weather.text = director.WeatherSummary ?? "Weather unavailable";
@@ -713,7 +725,9 @@ namespace ESP.Presentation
             modelCredit.text = mapModelCredit.text = director.VehicleIndex == 1 ? "Clarence365 · CC BY 4.0 ↗" : "NASA · adapted ↗";
             modelCredit.tooltip = mapModelCredit.tooltip = director.VehicleIndex == 1 ? "Starship model by Clarence365, CC BY 4.0; adapted for ESP. Open source model." : "NASA SLS model adapted for ESP. Open source model.";
             site.text = (director.SiteName ?? "Launch site").Replace(" (approximate)", "").Replace(" (Approximate)", "").ToUpperInvariant();
-            status.text = isMap ? "EARTH / SELECT A LAUNCH SITE" : (director.FlightStatus ?? "READY").ToUpperInvariant();
+            status.text = (director.FlightStatus ?? "READY").ToUpperInvariant();
+            status.style.display = flight != null && flight.ReentryActive ? DisplayStyle.Flex : DisplayStyle.None;
+            status.tooltip = director.FlightStatus ?? "";
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
             string mapInfo = (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n" + director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
@@ -739,12 +753,13 @@ namespace ESP.Presentation
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
                 "\n" + (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n\n" + steeringInfo;
             flightDetailText.text = isMap ? mapInfo + (mapFlying ? "\n\n" + flightInfo : "") + surfaceInfo : flightInfo + "\n\n" + vehicleInfo + surfaceInfo;
-            assist.SetEnabled(flight != null);
-            assist.text = flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
+            assist.SetEnabled(flight != null && !flight.ReentryActive);
+            assist.text = flight != null && flight.IsPlanningReturn ? "PLANNING" : flight != null && flight.ReentryActive ? "RETURN AUTO" : flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
             Selected(assist, flight != null && flight.AssistanceEnabled);
             for (int i = 0; i < rateButtons.Length; i++)
             {
-                rateButtons[i].SetEnabled(flight != null);
+                rateButtons[i].SetEnabled(flight != null && !flight.IsPlanningReturn && !flight.ReturnNeedsRealTime);
+                rateButtons[i].tooltip = flight != null && flight.ReturnNeedsRealTime ? "Final approach runs at 1× so you can watch the powered flip and catch" : "Change simulation speed";
             }
             if (warpValue != null) warpValue.text = (flight != null ? flight.TimeRate : 1) + "×";
             altitudeGauge.SetValue((director.AltitudeMeters / 1000).ToString(Math.Abs(director.AltitudeMeters) < 10000 ? "N2" : "N1"));
@@ -764,8 +779,12 @@ namespace ESP.Presentation
                 boosterFuel.style.display = DisplayStyle.None;
             }
             action.text = director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
-            action.SetEnabled(director.FlightDriver != null);
-            throttle.SetEnabled(director.FlightDriver != null);
+            action.SetEnabled(director.FlightDriver != null && !(flight?.ReentryActive ?? false));
+            reentry.style.display = director.VehicleIndex == 1 ? DisplayStyle.Flex : DisplayStyle.None;
+            reentry.SetEnabled(flight != null && flight.CanBeginReentry);
+            reentry.text = flight != null && flight.IsPlanningReturn ? "SEARCHING" : flight?.Simulation?.IsCaught == true ? "CAUGHT" : flight != null && flight.ReentryActive ? "RETURNING" : "RE-ENTRY";
+            reentry.tooltip = flight != null ? flight.ReentryStatus : "Starship return to Starbase";
+            throttle.SetEnabled(director.FlightDriver != null && !(flight?.ReentryActive ?? false));
             throttle.SetValueWithoutNotify(director.Throttle);
             throttleValue.text = (director.Throttle * 100).ToString("F0") + "%";
             throttleValue.style.color = director.Throttle > 0 ? Text : Muted;

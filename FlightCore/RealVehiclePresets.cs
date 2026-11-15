@@ -7,7 +7,7 @@ namespace FlightCore
         public static StageDefinition[] BuildStarshipStages() => new[]
         {
             new StageDefinition(250000, 3650000, 80.8e6, 88e6, 320, 350, .5, 63.62),
-            new StageDefinition(150000, 1600000, 11e6, 15.83e6, 320, 360, .5, 63.62)
+            new StageDefinition(150000, 1600000, 11e6, 15.83e6, 320, 360, .5, 63.62, supportsStarshipReturn: true)
         };
 
         // The SRBs are not included here: they must burn in parallel with the core.
