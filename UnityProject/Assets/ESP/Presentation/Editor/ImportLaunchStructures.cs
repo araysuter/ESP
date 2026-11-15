@@ -20,6 +20,10 @@ public static class ImportLaunchStructures
     private const float ExpectedHeightMeters = 105.7f;
     private const float HeightToleranceMeters = .2f;
     private const float BaseToleranceMeters = .02f;
+    // VM qualification of this exact, hash-verified source OBJ found ten zero-area triangles
+    // after float32 coordinate conversion, all in material 02. Unity removes exactly those ten.
+    // No count tolerance or degenerate-face exception applies to any other source revision.
+    private const string QualifiedDegenerateObjSha256 = "ba7a87fc059cd3fabbf07dfc4810a371d7bae1c36d95102b51cefcd03c8da113";
 
     [Serializable] private sealed class Manifest
     {
@@ -66,6 +70,7 @@ public static class ImportLaunchStructures
         importer.importBlendShapes = false;
         importer.preserveHierarchy = true;
         importer.meshCompression = ModelImporterMeshCompression.Off;
+        importer.generateMeshLods = false;
         importer.isReadable = true;
         importer.indexFormat = ModelImporterIndexFormat.UInt32;
         importer.importNormals = ModelImporterNormals.Import;
@@ -106,10 +111,7 @@ public static class ImportLaunchStructures
             ValidateBounds(combined.bounds, "combined prefab mesh");
             if (combined.vertexCount == 0 || combined.subMeshCount != materials.Count)
                 throw new InvalidDataException("NASA gantry combined mesh is empty or lost a source material group");
-            long combinedIndices = 0;
-            for (int i = 0; i < combined.subMeshCount; i++) combinedIndices += combined.GetIndexCount(i);
-            if (manifest.triangles > 0 && combinedIndices != (long)manifest.triangles * 3)
-                throw new InvalidDataException("NASA gantry Unity import changed the source triangle count");
+            ValidateImportedTriangleCounts(combined, manifest);
             var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
             if (savedMesh)
             {
@@ -279,12 +281,56 @@ public static class ImportLaunchStructures
         for (int i = 0; i < faceCounts.Length; i++)
         {
             if (faceCounts[i] == 0) throw new InvalidDataException("NASA gantry source group contains no faces: " + manifest.materialNames[i]);
+            if (HasQualifiedDegenerates(manifest) && faceCounts[i] != QualifiedSourceTriangles(manifest.materialNames[i]))
+                throw new InvalidDataException("NASA gantry source material count differs from its checksum-qualified diagnostic: " + manifest.materialNames[i]);
             triangles += faceCounts[i];
         }
         if (manifest.triangles > 0 && triangles != manifest.triangles)
             throw new InvalidDataException("NASA gantry OBJ triangle count differs from manifest");
         if (new FileInfo(stagedPath).Length > MaximumObjBytes)
             throw new InvalidDataException("NASA gantry generated OBJ exceeds 32 MiB");
+    }
+
+    private static bool HasQualifiedDegenerates(Manifest manifest) =>
+        string.Equals(manifest.objSha256, QualifiedDegenerateObjSha256, StringComparison.OrdinalIgnoreCase);
+
+    private static int QualifiedSourceTriangles(string material)
+    {
+        switch (material)
+        {
+            case "NASA_Gantry_Material_00": return 99660;
+            case "NASA_Gantry_Material_01": return 20952;
+            case "NASA_Gantry_Material_02": return 51990;
+            default: throw new InvalidDataException("Unknown checksum-qualified NASA material: " + material);
+        }
+    }
+
+    private static void ValidateImportedTriangleCounts(Mesh combined, Manifest manifest)
+    {
+        long totalIndices = 0;
+        bool qualified = HasQualifiedDegenerates(manifest);
+        for (int i = 0; i < combined.subMeshCount; i++)
+        {
+            long indices = combined.GetIndexCount(i);
+            totalIndices += indices;
+            if (indices % 3 != 0) throw new InvalidDataException("NASA gantry imported submesh is not triangulated");
+            if (!qualified) continue;
+            string material = manifest.materialNames[i];
+            int removed = material == "NASA_Gantry_Material_02" ? 10 : 0;
+            int expected = QualifiedSourceTriangles(material) - removed;
+            if (indices / 3 != expected)
+                throw new InvalidDataException("NASA gantry triangle preservation failed for " + material +
+                    ": imported=" + (indices / 3) + " expected=" + expected + " qualifiedZeroAreaRemoved=" + removed);
+        }
+        if (qualified)
+        {
+            Debug.Log("ESP_NASA_GANTRY_DEGENERATES_REMOVED count=10 material=NASA_Gantry_Material_02" +
+                " reason=checksum-qualified_zero-area_after_float32 sourceTriangles=172602 importedTriangles=" + (totalIndices / 3) +
+                " sourceObjSha256=" + QualifiedDegenerateObjSha256);
+        }
+        else if (manifest.triangles > 0 && totalIndices != (long)manifest.triangles * 3)
+            throw new InvalidDataException("NASA gantry Unity import changed the source triangle count: imported=" + (totalIndices / 3) +
+                " source=" + manifest.triangles + "; this source revision has no qualified degenerate-face exception");
     }
 
     private static void ValidateObjBounds(string path, Manifest manifest)

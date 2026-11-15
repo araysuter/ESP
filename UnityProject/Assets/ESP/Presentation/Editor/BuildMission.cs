@@ -82,7 +82,10 @@ public static class BuildMission
         var spaceWeather = manager.AddComponent<NasaSpaceWeather>();
         var picker = map.gameObject.AddComponent<GlobePointPicker>(); picker.useMissionUI = true;
         var director = manager.AddComponent<MissionDirector>(); director.mapCamera = map; director.launchCamera = launch; director.mapRoot = globe;
-        director.siteStructurePrefabs = new GameObject[] { null, nasaGantry };
+        // Historical Apollo/Shuttle geometry is an explicit asset-review option,
+        // never represented as the modern SLS mobile launcher in a normal build.
+        bool historicalGantryReview = Environment.GetEnvironmentVariable("ESP_HISTORICAL_GANTRY_REVIEW") == "1";
+        director.siteStructurePrefabs = new GameObject[] { null, historicalGantryReview ? nasaGantry : null };
         director.vehiclePrefabs = new[] { rocket, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-Starship.prefab"), AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-SLS.prefab") };
         foreach (var vehicle in director.vehiclePrefabs) if (!vehicle) throw new Exception("Missing vehicle prefab");
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;

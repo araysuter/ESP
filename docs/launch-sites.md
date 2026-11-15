@@ -8,7 +8,7 @@ An optional ground material can carry regional imagery, but texture orientation 
 
 ## Imported Kennedy structure
 
-The Kennedy selection now instantiates NASA / Michael D. Carbajal's historical
+An optional asset-review build instantiates NASA / Michael D. Carbajal's historical
 LC-39 gantry beside the existing mount. The NASA geometry is preserved, with
 three original material groups, a 105.7 m overall height normalization, and
 an illustrative 75 m west offset. It is a historical shuttle-era structure,
@@ -18,3 +18,5 @@ the earlier representative pad. Neither structure supplies collision geometry.
 Source/hash/conversion details: [NASA gantry preparation](nasa-gantry-preparation.md).
 The packaged macOS VM review passed model presence, height/base bounds,
 map/reset persistence and isolation from Starbase (`-espGantryReview`).
+
+The normal build deliberately excludes this historical gantry while the modern SLS mobile launcher is sourced. Set `ESP_HISTORICAL_GANTRY_REVIEW=1` only when building the documented historical asset review. Do not describe that review as modern SLS infrastructure.

@@ -89,8 +89,10 @@ submeshes and 144,945 imported vertices. Unity's OBJ importer requires explicit
 `g` groups; the importer verifies the original compressed and expanded hashes,
 then rewrites only object/group records in the generated derivative. Coordinates,
 normals, UVs and triangle records remain unchanged. Both source and staged bounds
-are checked, and the combined mesh must retain all 172,602 source triangles.
+are checked, and the combined mesh validates the source triangle groups, accounting explicitly for ten zero-area source triangles removed by Unity.
 
 The macOS packaged review passed structure presence, height/base, map/reset
 persistence, and absence at Starbase. Screenshot inspection confirmed the
 historical model beside SLS; its offset is illustrative, not a survey alignment.
+
+The model is retained as an explicitly historical source/reference and optional build review (`ESP_HISTORICAL_GANTRY_REVIEW=1`). It is excluded from normal SLS gameplay builds; modern SLS uses a different mobile launcher.
