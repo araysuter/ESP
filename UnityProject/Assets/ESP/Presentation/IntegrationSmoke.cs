@@ -59,6 +59,54 @@ namespace ESP.Presentation
             return Check(false, "surface tile request/cache bounds exceeded");
         }
 
+        private IEnumerator MeasureOrbitFrames(string label)
+        {
+            var samples = new List<float>();
+            float until = Time.realtimeSinceStartup + 3;
+            while (Time.realtimeSinceStartup < until) { yield return null; samples.Add(Time.unscaledDeltaTime * 1000); }
+            samples.Sort();
+            if (samples.Count > 0)
+                Debug.Log("ESP_INTEGRATION_FRAME_TIMING " + label + " samples=" + samples.Count +
+                    " p50_ms=" + samples[samples.Count / 2].ToString("F2") +
+                    " p95_ms=" + samples[Mathf.Clamp(Mathf.CeilToInt(samples.Count * .95f)-1,0,samples.Count-1)].ToString("F2") +
+                    " (1x, capped wall-frame intervals, not GPU timings)");
+        }
+
+        private IEnumerator ReviewOrbitalGround(LocalSurfaceTiles tiles)
+        {
+            var camera = director.launchCamera;
+            var controls = camera.GetComponent<FlightCameraControls>();
+            controls.enabled = false;
+            var state = flight.Simulation.State;
+            var ecef = FlightCore.EarthFrames.InertialToEcef(state.Position,
+                FlightCore.Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+            var site = LaunchSites.All[director.SelectedSiteIndex];
+            var up = CameraRelativeCoordinates.FromEcef(ecef.X, ecef.Y, ecef.Z, 0, 0, 0,
+                site.Latitude * Math.PI / 180, site.Longitude * Math.PI / 180).normalized;
+            var tangent = Vector3.Cross(up, Vector3.right).normalized;
+            if (tangent.sqrMagnitude < .1f) tangent = Vector3.forward;
+            camera.transform.position = director.RocketVisual.position + up * 250 + tangent * 160;
+            camera.transform.LookAt(director.RocketVisual.position - up * 100000, tangent);
+            yield return new WaitForSecondsRealtime(1);
+            int active = 0;
+            foreach (Transform child in tiles.transform)
+                if (child.gameObject.activeInHierarchy && (child.name.StartsWith("NASA Landsat ") || child.name.StartsWith("USGS ortho "))) active++;
+            if (!Check(active > 0, "current orbital surface tiles active")) yield break;
+            yield return Shot("orbit-ground-detail");
+            yield return MeasureOrbitFrames("orbit-detail");
+            // Oblique view checks the curved terrain-to-globe horizon transition.
+            camera.transform.LookAt(director.RocketVisual.position + tangent * 600000 - up * 200000, up);
+            yield return new WaitForSecondsRealtime(1);
+            yield return Shot("orbit-oblique-detail");
+            tiles.networkEnabled = false;
+            tiles.ClearTiles();
+            yield return new WaitForSecondsRealtime(1);
+            yield return Shot("orbit-oblique-offline");
+            yield return MeasureOrbitFrames("orbit-offline");
+            controls.enabled = true;
+            controls.ResetFraming();
+        }
+
         private IEnumerator Start()
         {
             yield return null;
@@ -199,6 +247,7 @@ namespace ESP.Presentation
             yield return Shot("orbit-verified");
             Debug.Log("ESP_INTEGRATION_TILES orbit resident=" + tiles.ResidentTileCount + " requests=" + tiles.ActiveRequestCount + " status=" + tiles.Status);
             if (!Check(tiles.ResidentTileCount > 0, "surface tile cache populated at orbit")) yield break;
+            yield return ReviewOrbitalGround(tiles);
             // Reset only imagery ownership to exercise an empty offline cache at the real orbit.
             tiles.networkEnabled = false;
             tiles.ClearTiles();
