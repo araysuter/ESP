@@ -76,7 +76,11 @@ public static class BuildMission
         AssetDatabase.SaveAssets(); PlayerSettings.productName = "ESP";
         PlayerSettings.runInBackground = true;
         PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720; PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-        var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scenePath }, locationPathName = buildPath, target = BuildTarget.StandaloneOSX, options = BuildOptions.Development });
+        var target = Environment.GetEnvironmentVariable("ESP_RELEASE_BUILD") == "1"
+            ? EditorUserBuildSettings.activeBuildTarget : BuildTarget.StandaloneOSX;
+        if (target != BuildTarget.StandaloneOSX && target != BuildTarget.StandaloneWindows64)
+            throw new Exception("Downloadable builds support macOS and Windows x64.");
+        var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scenePath }, locationPathName = buildPath, target = target, options = Environment.GetEnvironmentVariable("ESP_RELEASE_BUILD") == "1" ? BuildOptions.None : BuildOptions.Development });
         if (report.summary.result != BuildResult.Succeeded) throw new Exception("Mission build failed");
         Debug.Log("ESP_MISSION_BUILD_OK");
     }

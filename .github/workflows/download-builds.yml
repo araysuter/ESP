@@ -1,0 +1,93 @@
+name: Downloadable app builds
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: esp-download-builds
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS, Windows]
+    runs-on: [self-hosted, '${{ matrix.os }}', esp-unity]
+    timeout-minutes: 90
+    env:
+      ESP_RELEASE_BUILD: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Build macOS DMG
+        if: matrix.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${UNITY_EDITOR:?Set UNITY_EDITOR on the runner}"
+          mkdir -p Builds/macOS dist
+          export ESP_BUILD_PATH="$PWD/Builds/macOS/ESP.app"
+          "$UNITY_EDITOR" -batchmode -quit -projectPath "$PWD/UnityProject" -buildTarget StandaloneOSX -executeMethod BuildMission.Build -logFile "$PWD/Builds/unity.log"
+          test -d "$ESP_BUILD_PATH/Contents"
+          ln -s /Applications Builds/macOS/Applications
+          hdiutil create -volname ESP -srcfolder Builds/macOS -ov -format UDZO dist/ESP-macOS.dmg
+          hdiutil verify dist/ESP-macOS.dmg
+      - name: Build Windows installer
+        if: matrix.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:UNITY_EDITOR) { throw 'Set UNITY_EDITOR on the runner' }
+          New-Item -ItemType Directory -Force Builds/Windows, dist | Out-Null
+          $env:ESP_BUILD_PATH = Join-Path $PWD 'Builds/Windows/ESP.exe'
+          & $env:UNITY_EDITOR -batchmode -quit -projectPath "$PWD/UnityProject" -buildTarget StandaloneWindows64 -executeMethod BuildMission.Build -logFile "$PWD/Builds/unity.log" | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw 'Unity build failed' }
+          if (-not (Test-Path $env:ESP_BUILD_PATH)) { throw 'Missing player executable' }
+          & ISCC.exe packaging/windows.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ESP-${{ matrix.os }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unity-log-${{ matrix.os }}
+          path: Builds/unity.log
+          if-no-files-found: ignore
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ESP-*
+          merge-multiple: true
+          path: dist
+      - name: Publish packages
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = 'build-' + context.runId + '-' + process.env.GITHUB_RUN_ATTEMPT;
+            const release = await github.rest.repos.createRelease({
+              ...context.repo, tag_name: tag, target_commitish: context.sha,
+              name: 'ESP build ' + context.sha.slice(0, 7), draft: true, prerelease: true,
+              body: 'Automated build of ' + context.sha + '. Unsigned packages. Windows gameplay and macOS notarization remain unverified.'
+            });
+            for (const name of ['ESP-macOS.dmg', 'ESP-Windows-Setup.exe']) {
+              await github.rest.repos.uploadReleaseAsset({
+                ...context.repo, release_id: release.data.id, name,
+                data: fs.readFileSync('dist/' + name)
+              });
+            }
+            await github.rest.repos.updateRelease({
+              ...context.repo, release_id: release.data.id, draft: false
+            });
