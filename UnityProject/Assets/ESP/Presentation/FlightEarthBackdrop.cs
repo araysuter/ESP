@@ -154,6 +154,7 @@ namespace ESP.Presentation
             backgroundSun.shadows = LightShadows.None;
             backgroundSun.enabled = false;
             cloudShell = globe.AddComponent<CloudShell>();
+            PolarAurora.Create(globe.transform);
             if (atmosphereShader != null && atmosphereShader.isSupported)
                 atmosphere = ContinuousAtmosphere.Create(background, atmosphereShader, backdropLayer);
             else Debug.LogWarning("ESP continuous Earth: atmosphere shader unavailable; globe retained.");

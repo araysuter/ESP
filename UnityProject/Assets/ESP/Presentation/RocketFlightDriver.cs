@@ -102,6 +102,7 @@ namespace ESP.Presentation
         {
             if (director != null) director.FlightDriver = this;
             missionDocument = FindFirstObjectByType<UIDocument>();
+            gameObject.AddComponent<MissionAudio>();
         }
         public void Launch(LaunchSite site, WeatherSnapshot weather)
         {
