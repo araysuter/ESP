@@ -58,4 +58,3 @@ Shader "ESP/Star Field"
         }
     }
 }
-

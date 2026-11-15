@@ -1,0 +1,9 @@
+Starbase launch tower and orbital launch mount
+Derived from "High detail, mechanized Spacex Starship Mechazilla tower and OLM"
+by herbys (Enrique Saggese), https://www.thingiverse.com/thing:5403074
+License declared in the source handoff: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+
+Adaptations include mesh selection, recentering, scaling, repetition and positioning,
+simplified foundation and mount legs, omission of mechanical fittings, and URP materials.
+This is an approximate static visual of the launch complex.

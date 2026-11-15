@@ -271,7 +271,7 @@ namespace ESP.Presentation
             var rates = Row(); rates.name = "time-rate-controls";
             rateButtons[0] = Button("−", () => ChangeWarp(-1), false, "time-rate-down");
             rateButtons[1] = Button("+", () => ChangeWarp(1), false, "time-rate-up");
-            rateButtons[1].tooltip = "Above 20× requires a verified, unpowered orbit. Actual speed may be lower while the simulation catches up.";
+            rateButtons[1].tooltip = "Above 20× requires a verified, unpowered orbit. Achieved speed may be lower when the simulation is rate limited.";
             warpValue = Label("1×", 10, Text, FontStyle.Bold);
             warpValue.style.flexGrow = 1; warpValue.style.unityTextAlign = TextAnchor.MiddleCenter;
             rates.Add(rateButtons[0]); rates.Add(warpValue); rates.Add(rateButtons[1]);
@@ -548,9 +548,13 @@ namespace ESP.Presentation
             // The shared dock carries mission time/rate in both views; avoid duplicate clocks.
             mapMission.style.display = DisplayStyle.None;
             double seconds = Math.Max(0, director.MissionTimeSeconds);
-            string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  /  {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
+            string clock = string.Format("T+ {0:00}:{1:00}:{2:00}  / requested {3}×", (int)(seconds / 3600), (int)(seconds / 60) % 60, (int)seconds % 60, flight != null ? flight.TimeRate : 1);
             missionTime.text = clock; mapMission.text = clock;
-            if (flight != null && flight.SimulationCatchingUp) missionTime.text += " · CATCHING UP";
+            if (flight != null)
+            {
+                string actual = string.Format(" · actual avg {0:F1}×{1}", flight.ActualTimeRate, flight.SimulationCatchingUp ? " (limited)" : "");
+                missionTime.text += actual; mapMission.text += actual;
+            }
             weather.text = director.WeatherSummary ?? "Weather unavailable";
             string imageryDate = director.mapLayers != null ? director.mapLayers.DisplayedDate : "";
             mapCredit.text = string.IsNullOrEmpty(imageryDate) ? "NASA · historical Blue Marble fallback" : "NASA · through " + imageryDate + " UTC\n" + director.mapLayers.Freshness;
@@ -562,6 +566,7 @@ namespace ESP.Presentation
             var mapCameraControls = director.mapCamera != null ? director.mapCamera.GetComponent<GlobeCameraControls>() : null;
             if (isMap && mapCameraControls != null && mapCameraControls.Distance >= 1000)
                 mapCredit.text += " · EARTH ORBIT APPROXIMATE";
+
             nasaStatus.text = director.NasaStatus;
             regionalImage.style.display = director.RegionalImage != null ? DisplayStyle.Flex : DisplayStyle.None;
             regionalImage.style.backgroundImage = director.RegionalImage != null ? new StyleBackground((Texture2D)director.RegionalImage) : new StyleBackground(StyleKeyword.None);
@@ -583,6 +588,9 @@ namespace ESP.Presentation
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
             var localSurface = director.GetComponent<LocalSurfaceTiles>();
             string surfaceInfo = localSurface != null ? "\n\n" + LocalSurfaceTiles.Attribution + "\n" + localSurface.Status : "";
+            if (director.SelectedSiteIndex == 0 && director.siteStructurePrefabs != null &&
+                director.siteStructurePrefabs.Length > 0 && director.siteStructurePrefabs[0])
+                surfaceInfo += "\nStarbase tower and mount: herbys (Enrique Saggese), CC BY 4.0 as declared in the source handoff. Approximate ESP adaptation.";
             if (director.SelectedSiteIndex == 1 && director.siteStructurePrefabs != null && director.siteStructurePrefabs.Length > 1)
             {
                 var structure = director.siteStructurePrefabs[1];
@@ -694,4 +702,3 @@ namespace ESP.Presentation
         }
     }
 }
-
