@@ -1,0 +1,16 @@
+ESP mission audio
+
+Starship Test Flight! by adimifus
+Recorded at Isla Blanca Park, April 20, 2023.
+https://www.youtube.com/watch?v=Zxne9b3YOmc
+https://commons.wikimedia.org/wiki/File:Starship_Test_Flight!.webm
+Licensed under Creative Commons Attribution 3.0 Unported.
+https://creativecommons.org/licenses/by/3.0/
+ESP uses the launch rumble (85–98 seconds of the original recording),
+mixed to mono, filtered, level-adjusted, faded, and encoded as Ogg Vorbis.
+
+Magic Space by CodeManu
+https://opengameart.org/content/magic-space
+Dedicated to the public domain under CC0 1.0 Universal.
+https://creativecommons.org/publicdomain/zero/1.0/
+ESP uses a trimmed and crossfaded loop encoded as Ogg Vorbis.
