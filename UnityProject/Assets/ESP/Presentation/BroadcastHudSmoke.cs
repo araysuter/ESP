@@ -99,10 +99,37 @@ namespace ESP.Presentation
             if (failed || !HudLayout("powered flight") || !Lifecycle("powered flight")) yield break;
             Capture("broadcast-ascent-1440x900.png");
 
+            var cameraToggle = ui.Q<Button>("flight-camera-toggle");
+            var cameraControls = director.launchCamera.GetComponent<FlightCameraControls>();
+            if (!Check(cameraToggle != null && cameraToggle.enabledInHierarchy && cameraControls != null &&
+                !cameraControls.IsOnboardView, "powered flight starts in chase view")) yield break;
+            float chaseFov = director.launchCamera.fieldOfView;
+            cameraToggle.Focus();
+            yield return null;
+            using (var submit = NavigationSubmitEvent.GetPooled()) { submit.target = cameraToggle; cameraToggle.SendEvent(submit); }
+            yield return Preview(true, "onboard camera / Earth inset");
+            if (failed || !Check(cameraControls.IsOnboardView && cameraToggle.text == "CHASE CAM", "onboard camera control") ||
+                !Lifecycle("onboard camera")) yield break;
+            Capture("broadcast-onboard-1440x900.png");
+
             director.ShowMap();
             yield return Preview(false, "map / live flight inset");
             if (failed || !HudLayout("map during flight") || !Lifecycle("map during flight") || !PopulatedTexture("broadcast-flight-inset.png")) yield break;
+            var insetControls = inset.FlightPreviewCamera.GetComponent<FlightCameraControls>();
+            if (!Check(cameraToggle.resolvedStyle.display == DisplayStyle.None && insetControls != null &&
+                !insetControls.IsOnboardView, "map hides onboard control and keeps chase inset")) yield break;
             Capture("broadcast-map-1440x900.png");
+            director.GoToLaunch(director.SelectedSiteIndex);
+            yield return Preview(true, "return to onboard camera");
+            if (failed || !Check(cameraControls.IsOnboardView, "map round trip retained onboard camera")) yield break;
+            cameraToggle.Focus();
+            yield return null;
+            using (var submit = NavigationSubmitEvent.GetPooled()) { submit.target = cameraToggle; cameraToggle.SendEvent(submit); }
+            if (!Check(!cameraControls.IsOnboardView && cameraToggle.text == "ONBOARD CAM" &&
+                Mathf.Approximately(director.launchCamera.fieldOfView, chaseFov), "restored chase framing")) yield break;
+            director.ShowMap();
+            yield return Preview(false, "map after returning to chase view");
+            if (failed) yield break;
             for (int i = 0; i < 3; ++i)
             {
                 director.GoToLaunch(director.SelectedSiteIndex);
