@@ -21,13 +21,14 @@ namespace ESP.Presentation
         public Shader offlineLightsShader;
         public Light surfaceSun;
         public bool networkEnabled = true;
-        public const string Attribution = "Ground: USDA / USGS The National Map orthoimagery; NASA / USGS Landsat WELD (2000 annual composite)";
+        public const string Attribution = "Ground: USDA / USGS The National Map orthoimagery; NASA / USGS Landsat WELD (2000 annual composite); NASA GIBS Blue Marble (MODIS)";
         public string Status { get; private set; } = "Bundled imagery fallback";
         public int ResidentTileCount => tiles.Count;
         public int ActiveRequestCount => requests.Count;
         private const int CacheLimit = 48, ConcurrentRequests = 2, Subdivisions = 16;
-        private const double MaximumAltitude = 60000, MercatorLimit = 85.05112878;
+        private const double MaximumAltitude = 400000, MercatorLimit = 85.05112878;
         private const string Landsat = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/2000-12-01/GoogleMapsCompatible_Level12/";
+        private const string BlueMarble = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/";
         private const string Usgs = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/";
         private readonly Dictionary<TileKey, Tile> tiles = new Dictionary<TileKey, Tile>();
         private readonly Dictionary<TileKey, UnityWebRequest> requests = new Dictionary<TileKey, UnityWebRequest>();
@@ -124,10 +125,10 @@ namespace ESP.Presentation
             }
             if (Time.unscaledTime >= nextSelection)
             {
-                SelectTiles(latitude, longitude, Math.Max(0, geo.AltitudeMeters));
+                SelectTiles(latitude, longitude, Math.Max(0, geo.AltitudeMeters), camera);
                 nextSelection = Time.unscaledTime + .35f;
             }
-            float altitudeFade = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(45000, (float)MaximumAltitude, (float)geo.AltitudeMeters));
+            float altitudeFade = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(300000, (float)MaximumAltitude, (float)geo.AltitudeMeters));
             foreach (var entry in tiles)
             {
                 Tile tile = entry.Value;
@@ -137,7 +138,7 @@ namespace ESP.Presentation
                 tile.LastUsed = Time.unscaledTime;
                 tile.Object.transform.position = CameraRelativeCoordinates.FromEcef(tile.Anchor.X, tile.Anchor.Y, tile.Anchor.Z,
                     origin.X, origin.Y, origin.Z, frameLat, frameLon);
-                Grid grid = entry.Key.Source == 0 ? coarseGrid : detailGrid;
+                Grid grid = entry.Key.Source == 1 ? detailGrid : coarseGrid;
                 int dx = SurfaceTileMath.WrappedDelta(entry.Key.X, grid.X, 1 << grid.Zoom);
                 tile.Material.SetVector("_PatchUv", new Vector4(dx + grid.Radius, grid.Y + grid.Radius - entry.Key.Y, 1f / (2 * grid.Radius + 1), 0));
                 float detailFade = entry.Key.Source == 1 ? 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(14000, 18000, (float)geo.AltitudeMeters)) : 1;
@@ -154,7 +155,7 @@ namespace ESP.Presentation
             // Failed/disabled network requests leave the original offline visual intact.
             if (oldGround != null)
             {
-                TileKey padTile = KeyAt(0, coarseGrid.Zoom, site.Latitude, site.Longitude);
+                TileKey padTile = KeyAt(geo.AltitudeMeters >= 60000 ? 2 : 0, coarseGrid.Zoom, site.Latitude, site.Longitude);
                 oldGround.enabled = !(wanted.Contains(padTile) && tiles.ContainsKey(padTile));
                 if (offlineLights != null) offlineLights.enabled = oldGround.enabled;
             }
@@ -173,21 +174,27 @@ namespace ESP.Presentation
             }
         }
 
-        private void SelectTiles(double latitude, double longitude, double altitude)
+        private void SelectTiles(double latitude, double longitude, double altitude, Camera camera)
         {
             wanted.Clear(); ordered.Clear();
             double localScale = Math.Max(.09, Math.Cos(latitude * Math.PI / 180));
-            int coarseZoom = Math.Max(8, Math.Min(12, (int)Math.Floor(Math.Log(40075016.686 * localScale / Math.Max(9000, altitude * 1.6), 2))));
-            coarseGrid = MakeGrid(0, coarseZoom, latitude, longitude, 1);
+            int coarseSource = altitude >= 60000 ? 2 : 0;
+            // Approximate a nadir-facing footprint; oblique views retain the globe fallback.
+            double verticalHalfAngle = Math.Min(80, Math.Max(1, camera.fieldOfView * .5)) * Math.PI / 180;
+            double aspect = Math.Max(.5, Math.Min(3, camera.aspect));
+            double footprintFactor = Math.Max(.5, Math.Min(2, 2 * Math.Tan(verticalHalfAngle) * aspect / 3));
+            double targetTileWidth = Math.Max(9000, altitude * footprintFactor);
+            int coarseZoom = Math.Max(5, Math.Min(coarseSource == 2 ? 8 : 12, (int)Math.Floor(Math.Log(40075016.686 * localScale / targetTileWidth, 2))));
+            coarseGrid = MakeGrid(coarseSource, coarseZoom, latitude, longitude, 1);
             // Deliberately exclude Alaska/Hawaii and other countries: their imagery
             // provenance/rights differ. Global public NASA imagery remains available.
             bool conus = latitude >= 24 && latitude <= 49.5 && longitude >= -125 && longitude <= -66;
             int detailZoom = Math.Max(12, Math.Min(maximumDetailZoom, (int)Math.Floor(Math.Log(40075016.686 * localScale / Math.Max(240, altitude * 1.3), 2))));
             detailGrid = conus && altitude < 18000 ? MakeGrid(1, detailZoom, latitude, longitude, 2) : default;
-            AddCenter(0, coarseGrid);
+            AddCenter(coarseSource, coarseGrid);
             AddCenter(1, detailGrid);
             AddRing(1, detailGrid, 1);
-            AddRing(0, coarseGrid, 1);
+            AddRing(coarseSource, coarseGrid, 1);
             AddRing(1, detailGrid, 2);
             AbortUnwanted();
             scratch.Clear();
@@ -223,7 +230,7 @@ namespace ESP.Presentation
 
         private IEnumerator Fetch(TileKey key, int requestGeneration)
         {
-            string url = (key.Source == 0 ? Landsat : Usgs) + key.Zoom + "/" + key.Y + "/" + key.X + (key.Source == 0 ? ".jpeg" : "");
+            string url = (key.Source == 1 ? Usgs : key.Source == 2 ? BlueMarble : Landsat) + key.Zoom + "/" + key.Y + "/" + key.X + (key.Source == 1 ? "" : ".jpeg");
             using (var request = UnityWebRequestTexture.GetTexture(url, true))
             {
                 request.timeout = 15;
@@ -262,7 +269,7 @@ namespace ESP.Presentation
                 image.filterMode = FilterMode.Trilinear;
                 image.anisoLevel = 4;
                 tiles.Add(key, BuildTile(key, image));
-                Status = key.Source == 1 ? "USDA / USGS aerial imagery near craft (source resolution varies)" : "NASA / USGS Landsat WELD 2000 (30 m source)";
+                Status = key.Source == 1 ? "USDA / USGS aerial imagery near craft (source resolution varies)" : key.Source == 2 ? "NASA GIBS Blue Marble (MODIS)" : "NASA / USGS Landsat WELD 2000 (30 m source)";
             }
         }
 
@@ -299,9 +306,9 @@ namespace ESP.Presentation
             var mesh = new Mesh { name = "WGS84 imagery tile" };
             mesh.vertices = vertices; mesh.normals = normals; mesh.uv = uv; mesh.uv2 = geographicUv; mesh.triangles = triangles;
             mesh.RecalculateBounds();
-            var material = new Material(surfaceShader) { name = "Geographic surface imagery", renderQueue = key.Source == 0 ? 2990 : 2991 };
+            var material = new Material(surfaceShader) { name = "Geographic surface imagery", renderQueue = key.Source == 1 ? 2991 : 2990 };
             material.SetTexture("_BaseMap", image);
-            var obj = new GameObject((key.Source == 0 ? "NASA Landsat " : "USGS ortho ") + key.Zoom + "/" + key.Y + "/" + key.X);
+            var obj = new GameObject((key.Source == 1 ? "USGS ortho " : key.Source == 2 ? "NASA Blue Marble " : "NASA Landsat ") + key.Zoom + "/" + key.Y + "/" + key.X);
             obj.transform.SetParent(transform, false);
             obj.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = obj.AddComponent<MeshRenderer>();
