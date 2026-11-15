@@ -22,10 +22,16 @@ namespace FlightCore
             if (HasCutOff) { simulation.Throttle = 0; return; }
             var state = simulation.State;
             if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters();
-            var orbit = OrbitDiagnostics.Compute(state.Position, state.Velocity);
-            if (!simulation.BoosterBurning && state.AltitudeMeters > 120000 && orbit.IsBound && orbit.MinimumWgs84AltitudeBoundMeters >= targetPerigee)
+            if (!simulation.BoosterBurning && state.AltitudeMeters > 120000)
             {
-                HasCutOff = true; CutoffMissionTimeSeconds = state.MissionTime; simulation.Throttle = 0; return;
+                var orbit = OrbitDiagnostics.Compute(state.Position, state.Velocity);
+                if (orbit.IsBound && orbit.MinimumWgs84AltitudeBoundMeters >= targetPerigee)
+                {
+                    HasCutOff = true;
+                    CutoffMissionTimeSeconds = state.MissionTime;
+                    simulation.Throttle = 0;
+                    return;
+                }
             }
             double fraction = Math.Max(0, Math.Min(1, 1 - (state.AltitudeMeters - 1000) / (flattenAltitudeMeters - 1000)));
             simulation.PitchDegrees = 90 * Math.Pow(fraction, pitchExponent);
