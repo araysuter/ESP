@@ -21,11 +21,27 @@ namespace ESP.Presentation
         private Vector3 chasePosition;
         private Quaternion chaseRotation;
         private float chaseFieldOfView;
+        private float cinematicStart;
+        private static readonly float[] CinematicAngles = { 35f, 135f, 225f, 315f };
+        private static readonly float[] CinematicElevations = { 18f, 5f, 28f, -8f };
+        private static readonly float[] CinematicRanges = { 2.8f, 4.2f, 2.2f, 3.3f };
+        public bool IsCinematicView { get; private set; }
+
+        public void ToggleCinematicView()
+        {
+            if (passiveView || director == null || director.IsMapView || director.RocketVisual == null) return;
+            if (IsOnboardView) RestoreChaseView();
+            IsCinematicView = !IsCinematicView;
+            cinematicStart = Time.unscaledTime;
+            dragging = false;
+            if (!IsCinematicView) trackedVehicle = null;
+        }
 
         public bool IsOnboardView => onboardHull != null;
 
         public void ToggleOnboardView()
         {
+            if (IsCinematicView) { IsCinematicView = false; trackedVehicle = null; }
             if (IsOnboardView)
             {
                 RestoreChaseView();
@@ -53,6 +69,7 @@ namespace ESP.Presentation
 
         public void ResetFraming()
         {
+            IsCinematicView = false;
             if (IsOnboardView) RestoreChaseView();
             trackedVehicle = null;
             center = Vector3.zero;
@@ -71,6 +88,20 @@ namespace ESP.Presentation
             Transform vehicle = director.RocketVisual;
             if (!TryVisibleBounds(vehicle, out Bounds bounds)) { dragging = false; return; }
             float radius = Mathf.Max(1f, bounds.extents.magnitude);
+            if (IsCinematicView)
+            {
+                float elapsed = Time.unscaledTime - cinematicStart;
+                int shot = Mathf.FloorToInt(elapsed / 8f) % 4;
+                float angle = (CinematicAngles[shot] + (elapsed % 8f) * 1.5f) * Mathf.Deg2Rad;
+                float elevation = CinematicElevations[shot] * Mathf.Deg2Rad;
+                Vector3 shotDirection = new Vector3(Mathf.Cos(elevation) * Mathf.Sin(angle), Mathf.Sin(elevation), Mathf.Cos(elevation) * Mathf.Cos(angle));
+                Vector3 targetPosition = KeepAboveSurface(bounds.center + shotDirection * radius * CinematicRanges[shot]);
+                float blend = 1f - Mathf.Exp(-2f * Time.unscaledDeltaTime);
+                transform.position = KeepAboveSurface(Vector3.Lerp(transform.position, targetPosition, blend));
+                Vector3 look = bounds.center - transform.position;
+                if (look.sqrMagnitude > .001f) transform.rotation = Quaternion.LookRotation(look, Vector3.up);
+                return;
+            }
             float minDistance = radius * 1.5f;
             float maxDistance = Mathf.Max(minDistance * 2f, radius * 15f);
             if (trackedVehicle != vehicle)
@@ -193,7 +224,7 @@ namespace ESP.Presentation
         }
 
         private static bool IsHullRenderer(Renderer renderer, RocketPresentation view) =>
-            renderer.enabled && renderer.gameObject.activeInHierarchy && !RocketPlume.IsExhaustRenderer(renderer) &&
+            renderer.enabled && renderer.gameObject.activeInHierarchy && renderer.GetComponentInParent<ReentryPlasma>() == null && !RocketPlume.IsExhaustRenderer(renderer) &&
             (view == null || view.exhaust == null || !renderer.transform.IsChildOf(view.exhaust));
 
         private void OnApplicationFocus(bool hasFocus) { if (!hasFocus) dragging = false; }

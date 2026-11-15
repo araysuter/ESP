@@ -38,7 +38,7 @@ namespace ESP.Presentation
             ui = hud.GetComponent<UIDocument>().rootVisualElement;
             yield return Resolution(1280, 720);
             if (failed) yield break;
-            session.NewMission();
+            session.NewMission(false);
             director.GoToLaunch(0);
             yield return Settle();
             if (!Visibility(true, false, "flight")) yield break;

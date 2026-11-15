@@ -24,6 +24,7 @@ namespace FlightCore
             moonTable=moon; sunTable=sun;
         }
         readonly DateTime launch;
+        internal DateTime LaunchUtc => launch;
         readonly double launchSidereal;
         public LunarEphemeris(DateTime launchUtc)
         {

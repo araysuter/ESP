@@ -22,7 +22,7 @@ namespace ESP.Presentation
             var driver = GetComponent<RocketFlightDriver>();
             var lighting = GetComponent<MissionSunlight>();
             var layers = director.mapLayers;
-            MissionSession.Instance.NewMission(); director.SelectVehicle(0); director.ShowMap();
+            MissionSession.Instance.NewMission(false); director.SelectVehicle(0); director.ShowMap();
             layers.Select(1);
             float deadline = Time.realtimeSinceStartup + 125;
             while (!layers.CloudsVisible && Time.realtimeSinceStartup < deadline) yield return null;

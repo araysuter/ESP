@@ -7,8 +7,11 @@ namespace FlightCore
         public static StageDefinition[] BuildStarshipStages() => new[]
         {
             new StageDefinition(250000, 3650000, 80.8e6, 88e6, 320, 350, .5, 63.62),
-            new StageDefinition(150000, 1600000, 11e6, 15.83e6, 320, 360, .5, 63.62)
+            new StageDefinition(150000, 1600000, 11e6, 15.83e6, 320, 360, .5, 63.62, supportsStarshipReturn: true)
         };
+
+        /// <summary>SLS-specific assisted pitch schedule; still uses ordinary simulation controls.</summary>
+        public static AssistedAscent BuildSlsGuidance() => new AssistedAscent(160000, 2.5, 200000, true);
 
         // The SRBs are not included here: they must burn in parallel with the core.
         public static StageDefinition[] BuildSlsStages() => new[]

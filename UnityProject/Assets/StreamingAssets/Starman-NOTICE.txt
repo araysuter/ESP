@@ -1,0 +1,13 @@
+Starman photograph
+SpaceX, Falcon Heavy Demo Mission, February 6, 2018.
+https://www.flickr.com/photos/spacex/40110297852/
+https://commons.wikimedia.org/wiki/File:Elon_Musk%27s_Tesla_Roadster_(40110297852).jpg
+CC0 1.0 Universal https://creativecommons.org/publicdomain/zero/1.0/
+The photo was resized and recompressed for ESP.
+
+Visual orbit
+NASA/JPL Horizons, target -143205, Sun center 500@10, J2000 ecliptic,
+osculating elements at JD 2461359.5 TDB (2026-11-15).
+https://ssd.jpl.nasa.gov/horizons/
+ESP uses fixed two-body propagation and approximates TDB by UTC. This
+illustrates the heliocentric orbit without network access or live tracking.

@@ -6,6 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Rendering;
 using ESP.Presentation;
 
 public static class BuildMission
@@ -84,8 +85,9 @@ public static class BuildMission
         var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader; stars.sky = sky;
         var launch = new GameObject("Launch camera").AddComponent<Camera>();
         launch.transform.position = new Vector3(75, 38, -90); launch.transform.LookAt(new Vector3(0, 18, 0));
-        launch.nearClipPlane = .1f; launch.farClipPlane = 1200000; launch.fieldOfView = 45;
+        launch.nearClipPlane = .1f; launch.farClipPlane = 300000; launch.fieldOfView = 45;
         if (!launch.GetUniversalAdditionalCameraData().clearDepth) throw new Exception("Flight overlay must clear its depth buffer");
+        ConfigureFinishing(map, launch);
         launch.clearFlags = CameraClearFlags.SolidColor; launch.backgroundColor = new Color(.11f, .20f, .29f);
         var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.5f;
         sun.cullingMask = ~(1 << 31);
@@ -112,6 +114,8 @@ public static class BuildMission
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
         manager.AddComponent<MissionFlightSmoke>();
         var flight = manager.AddComponent<RocketFlightDriver>(); flight.director = director; flight.nasaWeather = nasaWeather;
+        flight.reentryShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/ReentryPlasma.shader");
+        if (!flight.reentryShader) throw new Exception("Missing reentry plasma shader");
         var explosion = manager.AddComponent<RocketExplosion>();
         explosion.driver = flight; explosion.director = director;
         explosion.effectShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketExplosion.shader");
@@ -183,6 +187,31 @@ public static class BuildMission
         Debug.Log("Build succeeded!");
         Debug.Log("ESP_MISSION_BUILD_OK version=" + PlayerSettings.bundleVersion + " target=" + target + " release=" + release);
     }
+    private static void ConfigureFinishing(Camera map, Camera launch)
+    {
+        // A serialized scene/profile reference lets URP retain these post-process
+        // variants in players. Only the final overlay (or standalone map) applies it.
+        var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/ESP/Art/MissionFinishing.asset");
+        if (!profile || !profile.TryGet<Bloom>(out var bloom) || !profile.TryGet<Tonemapping>(out var tonemapping))
+            throw new Exception("Missing serialized mission Bloom/ACES finishing profile");
+        if (tonemapping.mode.value != TonemappingMode.ACES || !bloom.IsActive())
+            throw new Exception("Mission finishing profile requires active Bloom and ACES");
+        var volume = new GameObject("Mission ACES and restrained highlight bloom").AddComponent<Volume>();
+        volume.gameObject.layer = 0;
+        volume.isGlobal = true;
+        volume.priority = 100;
+        volume.weight = 1;
+        volume.sharedProfile = profile;
+        foreach (var camera in new[] { map, launch })
+        {
+            camera.allowHDR = true;
+            var data = camera.GetUniversalAdditionalCameraData();
+            data.renderPostProcessing = true;
+            data.volumeLayerMask = 1;
+            data.volumeTrigger = camera.transform;
+        }
+    }
+
     private static BuildTarget DevelopmentTarget()
     {
 #if UNITY_EDITOR_WIN

@@ -20,8 +20,20 @@ internal static class ImportStarbaseTower
         foreach (string module in Modules)
         {
             foreach (string extension in new[] { ".obj", ".mtl" })
-                File.Copy(Path.Combine(sourceDirectory, module + extension),
-                    GeneratedDirectory + "/" + module + extension, true);
+            {
+                string source = Path.Combine(sourceDirectory, module + extension);
+                string destination = GeneratedDirectory + "/" + module + extension;
+                if (module == "CatchArms" && extension == ".obj")
+                {
+                    // Unity's OBJ importer splits named groups, while Blender's
+                    // object-only export otherwise becomes a single "default" mesh.
+                    var lines = File.ReadAllLines(source);
+                    for (int i = 0; i < lines.Length; i++)
+                        if (lines[i].StartsWith("o ", StringComparison.Ordinal)) lines[i] = "g " + lines[i].Substring(2);
+                    File.WriteAllLines(destination, lines);
+                }
+                else File.Copy(source, destination, true);
+            }
         }
         AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
@@ -78,6 +90,13 @@ internal static class ImportStarbaseTower
             foreach (var renderer in renderersInAssembly) bounds.Encapsulate(renderer.bounds);
             if (Mathf.Abs(bounds.min.y + 2f) > .1f || Mathf.Abs(bounds.max.y - 136.75f) > .1f)
                 throw new InvalidDataException("Starbase tower import changed the expected vertical bounds: " + bounds);
+            bool leftArm = false, rightArm = false;
+            foreach (Transform part in assembly.GetComponentsInChildren<Transform>(true))
+            {
+                leftArm |= part.name == "Left_catch_arm";
+                rightArm |= part.name == "Right_catch_arm";
+            }
+            if (!leftArm || !rightArm) throw new InvalidDataException("Starbase catch arms must remain separate named meshes");
             var prefab = PrefabUtility.SaveAsPrefabAsset(assembly, GeneratedDirectory + "/StarbaseTower.prefab");
             if (!prefab) throw new IOException("Could not save the Starbase tower prefab.");
             return prefab;

@@ -17,6 +17,9 @@ namespace ESP.Presentation
         private VisualElement telemetry, inputStrip, previewHousing;
         private ScrollView informationBody;
         private Image previewImage;
+        private bool previewMinimized;
+        private string previewExpandedCaption = "LIVE  ·  ALTERNATE VIEW";
+        private Button previewMinimize;
         private Label previewCaption, previewMarker;
         private Label throttleValue, vehicleNote, mapVehicleNote;
         private Label stageFuel, boosterFuel;
@@ -29,8 +32,12 @@ namespace ESP.Presentation
         private readonly Label[] orbitMarkers = new Label[3];
         private readonly Label[] transitionMarkers = new Label[6];
         private MissionDirector subscribedDirector;
-        private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
-        private Button cameraToggle;
+        private Button roadsterMarker;
+        private VisualElement roadsterCard;
+        private bool roadsterOpen;
+        private float countdownRemaining;
+        private Button viewToggle, action, reentry, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
+        private Button cameraToggle, cinematicToggle;
         private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
             ? director.launchCamera.GetComponent<FlightCameraControls>() : null;
         private readonly Button[] rateButtons = new Button[2];
@@ -72,11 +79,15 @@ namespace ESP.Presentation
             headerMissionTime.style.marginTop = 2;
             header.Add(headerMissionTime);
             status = Label("", 10, Cyan, FontStyle.Normal); status.name = "flight-status";
-            status.style.maxWidth = 380;
-            Ellipsis(status);
+            status.style.whiteSpace = WhiteSpace.Normal;
+            status.style.unityTextAlign = TextAnchor.UpperCenter;
+            status.style.position = Position.Absolute;
+            status.style.left = Length.Percent(27);
+            status.style.width = Length.Percent(46);
+            status.style.top = 18;
             status.style.display = DisplayStyle.None;
-            header.Add(status);
             root.Add(header);
+            root.Add(status);
 
             viewToggle = Button("LAUNCH VIEW  [M]", ToggleView, false, "view-toggle");
             Absolute(viewToggle, null, 16, 18, null);
@@ -88,6 +99,13 @@ namespace ESP.Presentation
             }, false, "flight-camera-toggle");
             Absolute(cameraToggle, null, 51, 18, null);
             root.Add(cameraToggle);
+            cinematicToggle = Button("CINEMATIC", () => {
+                if (!MissionSession.BlocksInput) MainFlightCamera?.ToggleCinematicView();
+                Refresh();
+            }, false, "cinematic-camera-toggle");
+            Absolute(cinematicToggle, null, 86, 18, null);
+            cinematicToggle.tooltip = "Cycle through cinematic views of the vehicle";
+            root.Add(cinematicToggle);
             mapMission = Label("", 10, Text, FontStyle.Bold);
             mapMission.name = "map-mission-clock";
             mapMission.pickingMode = PickingMode.Ignore;
@@ -147,8 +165,58 @@ namespace ESP.Presentation
             }
             BuildMapControls();
             BuildFlightControls();
+            BuildRoadsterDiscovery();
             Resize();
             Refresh();
+        }
+
+        private void BuildRoadsterDiscovery()
+        {
+            var photo = Resources.Load<Texture2D>("Starman");
+            if (photo == null) return;
+
+            roadsterMarker = Button("◇", () =>
+            {
+                if (!MissionSession.BlocksInput) roadsterOpen = !roadsterOpen;
+            }, false, "roadster-marker");
+            Absolute(roadsterMarker, 0, 0, null, null);
+            roadsterMarker.style.width = 26;
+            roadsterMarker.style.height = 26;
+            roadsterMarker.style.fontSize = 14;
+            roadsterMarker.style.color = Amber;
+            roadsterMarker.style.backgroundColor = Color.clear;
+            roadsterMarker.style.paddingLeft = 0;
+            roadsterMarker.style.paddingRight = 0;
+            roadsterMarker.style.marginTop = 0;
+            Border(roadsterMarker, Color.clear);
+            roadsterMarker.tooltip = "Unidentified object";
+            roadsterMarker.style.display = DisplayStyle.None;
+            root.Add(roadsterMarker);
+
+            roadsterCard = Panel();
+            roadsterCard.name = "roadster-discovery";
+            Absolute(roadsterCard, null, 56, 18, null);
+            roadsterCard.style.width = 330;
+            roadsterCard.style.maxWidth = Length.Percent(88);
+            var header = Row();
+            header.style.justifyContent = Justify.SpaceBetween;
+            header.style.alignItems = Align.Center;
+            header.Add(Label("STARMAN", 13, Cyan, FontStyle.Bold));
+            header.Add(Button("CLOSE", () => { roadsterOpen = false; }, false, "close-roadster-discovery"));
+            roadsterCard.Add(header);
+            var image = new Image { image = photo, scaleMode = ScaleMode.ScaleToFit };
+            image.style.height = 174;
+            image.style.width = Length.Percent(100);
+            roadsterCard.Add(image);
+            var detail = Label("A Tesla Roadster sent around the Sun on Falcon Heavy’s first flight, February 6, 2018.", 11, Text, FontStyle.Normal);
+            detail.style.whiteSpace = WhiteSpace.Normal;
+            roadsterCard.Add(detail);
+            var credit = Label("SpaceX photo · CC0\nMap position uses an approximate solar orbit.", 9, Muted, FontStyle.Normal);
+            credit.style.whiteSpace = WhiteSpace.Normal;
+            credit.style.marginTop = 6;
+            roadsterCard.Add(credit);
+            roadsterCard.style.display = DisplayStyle.None;
+            root.Add(roadsterCard);
         }
 
         private void BuildMapControls()
@@ -327,9 +395,16 @@ namespace ESP.Presentation
             throttleBox.Add(throttle); right.Add(throttleBox);
 
             var staging = Column(); staging.style.width = 83; staging.style.flexShrink = 0;
+            reentry = Button("RE-ENTRY", () => {
+                if (director?.FlightDriver is RocketFlightDriver f) f.BeginReentry();
+                Refresh();
+            }, false, "starship-reentry-action");
+            reentry.style.height = 25;
+            reentry.style.fontSize = 10;
+            staging.Add(reentry);
             action = Button("LAUNCH", () => {
                 if (director == null) return;
-                if (director.CanLaunch) director.Launch(); else director.Stage();
+                if (director.CanLaunch) countdownRemaining = 3f; else director.Stage();
                 Refresh();
             }, true, "launch-stage-action");
             action.style.height = 38;
@@ -363,9 +438,18 @@ namespace ESP.Presentation
             previewHousing.Add(previewMarker);
             previewCaption = Label("LIVE  ·  ALTERNATE VIEW", 9, Text, FontStyle.Normal);
             previewCaption.name = "live-preview-caption";
-            previewCaption.style.paddingLeft = 8; previewCaption.style.height = 21;
+            previewCaption.style.paddingLeft = 8; previewCaption.style.paddingRight = 30;
+            previewCaption.style.height = 21; previewCaption.style.flexShrink = 0;
+            Ellipsis(previewCaption);
             previewCaption.style.unityTextAlign = TextAnchor.MiddleLeft;
             previewHousing.Add(previewCaption);
+            previewMinimize = Button("−", () => { previewMinimized = !previewMinimized; ApplyPreviewSize(); }, false, "live-preview-minimize");
+            previewMinimize.tooltip = "Minimize or restore the live preview";
+            previewMinimize.style.position = Position.Absolute;
+            previewMinimize.style.right = 0; previewMinimize.style.bottom = 0;
+            previewMinimize.style.width = 28; previewMinimize.style.height = 21;
+            previewMinimize.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+            previewHousing.Add(previewMinimize);
             dock.Add(previewHousing);
             flightControls.Add(dock); root.Add(flightControls);
         }
@@ -421,8 +505,9 @@ namespace ESP.Presentation
             float navSize = narrow ? 92 : 120;
             navball.style.width = navSize; navball.style.height = navSize;
             navballHousing.style.height = navSize + 25;
-            previewHousing.style.width = narrow ? 160 : compact ? 220 : 280;
-            previewHousing.style.height = (narrow ? 160 : compact ? 220 : 280) * 9f / 16f + 21;
+            float previewWidth = narrow ? 130 : compact ? 180 : 220;
+            previewHousing.style.width = previewMinimized ? 130 : previewWidth;
+            previewHousing.style.height = previewMinimized ? 21 : previewWidth * 9f / 16f + 21;
             inputStrip.style.top = 0;
             flightControls.style.height = narrow ? 252 : 268;
 
@@ -430,15 +515,25 @@ namespace ESP.Presentation
 
         private void Update()
         {
+            if (countdownRemaining > 0 && director != null && !MissionSession.BlocksInput)
+            {
+                if (!director.CanLaunch) countdownRemaining = 0;
+                else
+                {
+                    countdownRemaining -= Time.unscaledDeltaTime;
+                    if (countdownRemaining <= 0) director.Launch();
+                }
+                Refresh();
+            }
             var focused = root?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
             if (!MissionSession.BlocksInput && !editingText && Application.isFocused && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
                 ToggleView();
             if (subscribedDirector != director)
             {
-                if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
+                if (subscribedDirector != null) { subscribedDirector.PointSelected -= OpenWeather; subscribedDirector.MissionReset -= CancelCountdown; }
                 subscribedDirector = director;
-                if (subscribedDirector != null) subscribedDirector.PointSelected += OpenWeather;
+                if (subscribedDirector != null) { subscribedDirector.PointSelected += OpenWeather; subscribedDirector.MissionReset += CancelCountdown; }
             }
             if (Time.unscaledTime >= nextMarkerRefresh)
             {
@@ -456,9 +551,11 @@ namespace ESP.Presentation
 
         private void OnDestroy()
         {
-            if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
+            if (subscribedDirector != null) { subscribedDirector.PointSelected -= OpenWeather; subscribedDirector.MissionReset -= CancelCountdown; }
             if (activeRoot == root) activeRoot = null;
         }
+
+        private void CancelCountdown() { countdownRemaining = 0; }
 
         /// <summary>Tests a screen point in Unity's bottom-left pixel coordinates.</summary>
         public static bool IsPointerOverUI(Vector2 screenBottomLeft)
@@ -500,6 +597,7 @@ namespace ESP.Presentation
             PlaceSystemLabel(systemVehicle, camera, controls != null ? controls.FocusPosition : Vector3.zero, systemView, 4);
             var solarMap = director != null ? director.GetComponent<SolarSystemMap>() : null;
             PlaceSystemLabel(systemSun, camera, solarMap != null ? solarMap.SunPosition : Vector3.zero, systemView && solarMap != null);
+            RefreshRoadster(camera, solarMap?.RoadsterPosition, systemView);
             PlaceSystemLabel(systemMoon, camera, solarMap != null ? solarMap.MoonPosition : Vector3.zero,
                 director != null && director.IsMapView && solarMap != null);
             for (int i = 0; i < orbitMarkers.Length; i++)
@@ -549,6 +647,22 @@ namespace ESP.Presentation
             }
         }
 
+        private void RefreshRoadster(Camera camera, Vector3? position, bool systemView)
+        {
+            if (roadsterMarker == null) return;
+            if (!systemView) roadsterOpen = false;
+            bool canInteract = systemView && !MissionSession.BlocksInput;
+            roadsterCard.style.display = canInteract && roadsterOpen ? DisplayStyle.Flex : DisplayStyle.None;
+            bool visible = canInteract && !roadsterOpen && camera != null && position.HasValue;
+            Vector3 screen = visible ? camera.WorldToScreenPoint(position.Value) : Vector3.zero;
+            visible = visible && screen.z > 0 && camera.pixelRect.Contains(new Vector2(screen.x, screen.y));
+            roadsterMarker.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible) return;
+            Vector2 point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
+            roadsterMarker.style.left = point.x - 13;
+            roadsterMarker.style.top = point.y - 13;
+        }
+
         private void PlaceSystemLabel(Label label, Camera camera, Vector3 position, bool visible, float yOffset = -18)
         {
             Vector3 screen = visible && camera != null ? camera.WorldToScreenPoint(position) : Vector3.zero;
@@ -586,9 +700,13 @@ namespace ESP.Presentation
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
             cameraToggle.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
+            cinematicToggle.style.display = isMap ? DisplayStyle.None : DisplayStyle.Flex;
             var camera = isMap ? null : MainFlightCamera;
             bool onboard = camera != null && camera.IsOnboardView;
             cameraToggle.SetEnabled(camera != null && director.RocketVisual != null);
+            cinematicToggle.SetEnabled(camera != null && director.RocketVisual != null);
+            cinematicToggle.text = camera != null && camera.IsCinematicView ? "EXIT CINEMATIC" : "CINEMATIC";
+            Selected(cinematicToggle, camera != null && camera.IsCinematicView);
             cameraToggle.text = onboard ? "CHASE CAM" : "ONBOARD CAM";
             cameraToggle.tooltip = onboard ? "Return to the external chase camera" : "Look along the rocket from its hull";
             Selected(cameraToggle, onboard);
@@ -600,7 +718,7 @@ namespace ESP.Presentation
             if (!available) return;
             var inset = director.GetComponent<MissionInsetView>();
             SetPreview(inset != null && inset.HasPreview ? inset.PreviewTexture : null, inset != null && inset.PreviewIsMap);
-            bool showPreviewMarker = inset != null && inset.HasPreview && inset.PreviewIsMap && inset.HasMarker;
+            bool showPreviewMarker = !previewMinimized && inset != null && inset.HasPreview && inset.PreviewIsMap && inset.HasMarker;
             previewMarker.style.display = showPreviewMarker ? DisplayStyle.Flex : DisplayStyle.None;
             if (showPreviewMarker)
             {
@@ -617,7 +735,8 @@ namespace ESP.Presentation
             missionTime.text = clock; mapMission.text = clock;
             if (flight != null)
             {
-                string actual = string.Format(" · actual avg {0:F1}×{1}", flight.ActualTimeRate, flight.SimulationCatchingUp ? " (limited)" : "");
+                string actual = flight.IsPlanningReturn ? " · planning return — simulation time paused" :
+                    string.Format(" · actual avg {0:F1}×{1}", flight.ActualTimeRate, flight.SimulationCatchingUp ? " (limited)" : "");
                 missionTime.text += actual; mapMission.text += actual;
             }
             weather.text = director.WeatherSummary ?? "Weather unavailable";
@@ -643,7 +762,9 @@ namespace ESP.Presentation
             modelCredit.text = mapModelCredit.text = director.VehicleIndex == 1 ? "Clarence365 · CC BY 4.0 ↗" : "NASA · adapted ↗";
             modelCredit.tooltip = mapModelCredit.tooltip = director.VehicleIndex == 1 ? "Starship model by Clarence365, CC BY 4.0; adapted for ESP. Open source model." : "NASA SLS model adapted for ESP. Open source model.";
             site.text = (director.SiteName ?? "Launch site").Replace(" (approximate)", "").Replace(" (Approximate)", "").ToUpperInvariant();
-            status.text = isMap ? "EARTH / SELECT A LAUNCH SITE" : (director.FlightStatus ?? "READY").ToUpperInvariant();
+            status.text = (director.FlightStatus ?? "READY").ToUpperInvariant();
+            status.style.display = flight != null && flight.ReentryActive ? DisplayStyle.Flex : DisplayStyle.None;
+            status.tooltip = director.FlightStatus ?? "";
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
             string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
             string mapInfo = (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n" + director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
@@ -669,12 +790,13 @@ namespace ESP.Presentation
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
                 "\n" + (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n\n" + steeringInfo;
             flightDetailText.text = isMap ? mapInfo + (mapFlying ? "\n\n" + flightInfo : "") + surfaceInfo : flightInfo + "\n\n" + vehicleInfo + surfaceInfo;
-            assist.SetEnabled(flight != null);
-            assist.text = flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
+            assist.SetEnabled(flight != null && !flight.ReentryActive);
+            assist.text = flight != null && flight.IsPlanningReturn ? "PLANNING" : flight != null && flight.ReentryActive ? "RETURN AUTO" : flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
             Selected(assist, flight != null && flight.AssistanceEnabled);
             for (int i = 0; i < rateButtons.Length; i++)
             {
-                rateButtons[i].SetEnabled(flight != null);
+                rateButtons[i].SetEnabled(flight != null && !flight.IsPlanningReturn && !flight.ReturnNeedsRealTime);
+                rateButtons[i].tooltip = flight != null && flight.ReturnNeedsRealTime ? "Final approach runs at 1× so you can watch the powered flip and catch" : "Change simulation speed";
             }
             if (warpValue != null) warpValue.text = (flight != null ? flight.TimeRate : 1) + "×";
             altitudeGauge.SetValue((director.AltitudeMeters / 1000).ToString(Math.Abs(director.AltitudeMeters) < 10000 ? "N2" : "N1"));
@@ -693,9 +815,14 @@ namespace ESP.Presentation
                 stageFuel.text = "Unavailable";
                 boosterFuel.style.display = DisplayStyle.None;
             }
-            action.text = director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
-            action.SetEnabled(director.FlightDriver != null);
-            throttle.SetEnabled(director.FlightDriver != null);
+            action.text = countdownRemaining > 0 ? "T−" + Mathf.CeilToInt(countdownRemaining) :
+                director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
+            action.SetEnabled(countdownRemaining <= 0 && director.FlightDriver != null && !(flight?.ReentryActive ?? false));
+            reentry.style.display = director.VehicleIndex == 1 ? DisplayStyle.Flex : DisplayStyle.None;
+            reentry.SetEnabled(flight != null && flight.CanBeginReentry);
+            reentry.text = flight != null && flight.IsPlanningReturn ? "SEARCHING" : flight?.Simulation?.IsCaught == true ? "CAUGHT" : flight != null && flight.ReentryActive ? "RETURNING" : "RE-ENTRY";
+            reentry.tooltip = flight != null ? flight.ReentryStatus : "Starship return to Starbase";
+            throttle.SetEnabled(director.FlightDriver != null && !(flight?.ReentryActive ?? false));
             throttle.SetValueWithoutNotify(director.Throttle);
             throttleValue.text = (director.Throttle * 100).ToString("F0") + "%";
             throttleValue.style.color = director.Throttle > 0 ? Text : Muted;
@@ -707,7 +834,16 @@ namespace ESP.Presentation
         {
             if (previewImage == null) return;
             if (previewImage.image != texture) previewImage.image = texture;
-            previewCaption.text = texture == null ? "PREVIEW UNAVAILABLE" : isMap ? "LIVE  ·  EARTH MAP  ↗" : "LIVE  ·  FLIGHT  ↗";
+            previewExpandedCaption = texture == null ? "PREVIEW UNAVAILABLE" : isMap ? "LIVE  ·  EARTH MAP  ↗" : "LIVE  ·  FLIGHT  ↗";
+            previewCaption.text = previewMinimized ? "LIVE PREVIEW" : previewExpandedCaption;
+        }
+        private void ApplyPreviewSize()
+        {
+            previewImage.style.display = previewMinimized ? DisplayStyle.None : DisplayStyle.Flex;
+            previewMarker.style.display = DisplayStyle.None;
+            previewMinimize.text = previewMinimized ? "+" : "−";
+            previewCaption.text = previewMinimized ? "LIVE PREVIEW" : previewExpandedCaption;
+            Resize();
         }
         private static void Selected(Button button, bool selected)
         {

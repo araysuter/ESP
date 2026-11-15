@@ -20,7 +20,7 @@ namespace ESP.Presentation
             yield return null;
             var director = FindFirstObjectByType<MissionDirector>();
             if (director == null) { Fail("Missing director"); yield break; }
-            MissionSession.Instance.NewMission();
+            MissionSession.Instance.NewMission(false);
             director.GetComponent<MissionSunlight>().ReviewUtc = DateTime.UtcNow.Date.AddHours(18);
             review = true;
             director.GoToLaunch(1); director.SelectVehicle(2);

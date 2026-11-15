@@ -20,7 +20,7 @@ namespace ESP.Presentation
             yield return null;
             var director = GetComponent<MissionDirector>();
             var layers = director.mapLayers;
-            MissionSession.Instance.NewMission(); director.ShowMap();
+            MissionSession.Instance.NewMission(false); director.ShowMap();
             // Do not select clouds: this check must exercise normal startup.
             float deadline = Time.realtimeSinceStartup + 140;
             while (!layers.CloudsVisible && Time.realtimeSinceStartup < deadline) yield return null;

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.InputSystem;
 
 namespace ESP.Presentation
 {
@@ -21,6 +22,16 @@ namespace ESP.Presentation
         private MissionMenuPage? renderedPage;
         private float nextReadout;
         private bool physicsCollapsed;
+        private VisualElement nerdHeader;
+        private Vector2 nerdPointerStart, nerdPanelStart;
+        private bool draggingNerdPanel;
+        private VisualElement nerdPanel;
+        private Label nerdText;
+        private Toggle nerdToggle;
+        private bool nerdVisible;
+        private readonly Queue<string> nerdEvents = new Queue<string>();
+        private string lastNerdState;
+        private float nextNerdUpdate;
         private static readonly Color Backdrop = new Color(.012f, .025f, .045f, .84f);
         private static readonly Color Surface = new Color(.035f, .052f, .075f, .98f);
         private static readonly Color Raised = new Color(.065f, .092f, .12f, 1);
@@ -47,15 +58,19 @@ namespace ESP.Presentation
             Fill(overlayRoot);
             root.Add(overlayRoot);
             BuildFlightOverlay();
+            nerdVisible = PlayerPrefs.GetInt("ESP.NerdStats", 0) == 1;
+            BuildNerdPanel();
             BuildModal();
             root.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
             RefreshSession();
+            RefreshNerdStats();
         }
 
         private void Update()
         {
             if (root == null || overlayRoot == null) return;
             RefreshSession();
+            RefreshNerdStats();
         }
 
         private void RefreshSession()
@@ -68,6 +83,8 @@ namespace ESP.Presentation
             menuButton.style.display = !open && session.HasSession ? DisplayStyle.Flex : DisplayStyle.None;
             modifiedBadge.style.display = !open && session.HasSession && (session.ModifiedFlight || session.FlightDestroyed) ? DisplayStyle.Flex : DisplayStyle.None;
             physicsPanel.style.display = !open && session.HasSession && session.PhysicsVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            nerdPanel.style.display = !open && session.HasSession && nerdVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!open && nerdVisible) ClampNerdPanel(new Vector2(nerdPanel.resolvedStyle.left, nerdPanel.resolvedStyle.top));
             if (renderedPage != session.Page)
             {
                 renderedPage = session.Page;
@@ -114,7 +131,7 @@ namespace ESP.Presentation
 
             physicsPanel = new VisualElement { name = "live-physics-panel" };
             physicsPanel.style.position = Position.Absolute;
-            physicsPanel.style.top = 62; physicsPanel.style.right = 14;
+            physicsPanel.style.top = 128; physicsPanel.style.right = 14;
             physicsPanel.style.width = 278;
             physicsPanel.style.backgroundColor = Surface;
             physicsPanel.style.paddingLeft = 11; physicsPanel.style.paddingRight = 11;
@@ -184,7 +201,7 @@ namespace ESP.Presentation
             card.Add(Label(eyebrow, 10, Cyan, true));
             string title = session.Page == MissionMenuPage.Start ? "ESP" :
                 session.Page == MissionMenuPage.Pause ? "Pause" :
-                session.Page == MissionMenuPage.Settings ? "Settings" : "Cheats";
+                session.Page == MissionMenuPage.Settings ? "Settings" : session.Page == MissionMenuPage.Tutorial ? "Quick tutorial" : "Cheats";
             var titleLabel = Label(title, session.Page == MissionMenuPage.Start ? 48 : 31, Text, true);
             titleLabel.style.marginTop = 4; titleLabel.style.marginBottom = 17;
             card.Add(titleLabel);
@@ -199,6 +216,7 @@ namespace ESP.Presentation
                 case MissionMenuPage.Pause: BuildPause(session); break;
                 case MissionMenuPage.Settings: BuildSettings(session); break;
                 case MissionMenuPage.Cheats: BuildCheats(session); break;
+                case MissionMenuPage.Tutorial: BuildTutorial(session); break;
             }
             Resize();
         }
@@ -225,6 +243,29 @@ namespace ESP.Presentation
 
         private void BuildSettings(MissionSession session)
         {
+            AddAction("Open tutorial", "open-tutorial", session.OpenTutorial);
+            nerdToggle = Switch("Stats for nerds", "nerd-stats-toggle", value => {
+                nerdVisible = value;
+                PlayerPrefs.SetInt("ESP.NerdStats", value ? 1 : 0);
+                PlayerPrefs.Save();
+            });
+            nerdToggle.SetValueWithoutNotify(nerdVisible);
+            menuScroll.Add(nerdToggle);
+            var panel = GetComponent<UIDocument>().panelSettings;
+            if (panel != null)
+            {
+                menuScroll.Add(Label("INTERFACE", 10, Muted, true));
+                var scaleLabel = Label("GUI scale: " + Mathf.RoundToInt(panel.scale * 100) + "%", 11, Text);
+                menuScroll.Add(scaleLabel);
+                var scale = new Slider(.75f, 1.25f) { name = "gui-scale" };
+                scale.SetValueWithoutNotify(panel.scale);
+                scale.RegisterValueChangedCallback(evt => {
+                    panel.scale = Mathf.Round(evt.newValue * 20) / 20;
+                    scale.SetValueWithoutNotify(panel.scale);
+                    scaleLabel.text = "GUI scale: " + Mathf.RoundToInt(panel.scale * 100) + "%";
+                });
+                menuScroll.Add(scale);
+            }
             menuScroll.Add(Label("KEYBOARD INPUT", 10, Muted, true));
             var keyboardHelp = Note("W / S — pitch down / up\nA / D — turn left / right\nShift / Ctrl — increase / decrease throttle\nSpace — stage\nM — map / flight view\nEsc — pause / back\n\nSteering uses a simplified attitude controller; engine thrust follows the commanded orientation. It is not a physical gimbal simulation.");
             keyboardHelp.name = "keyboard-input-reference";
@@ -243,6 +284,12 @@ namespace ESP.Presentation
             saturation.SetValueWithoutNotify(session.MilkyWaySaturation);
             saturation.RegisterValueChangedCallback(evt => { session.SetMilkyWaySaturation(Mathf.Round(evt.newValue)); saturationLabel.text = "Milky Way saturation: " + Mathf.RoundToInt(session.MilkyWaySaturation) + "%"; });
             menuScroll.Add(saturation);
+            menuScroll.Add(Label("GRAPHICS · AURORA", 10, Muted, true));
+            AddAuroraSlider("Simulated Kp index", "aurora-kp", session.AuroraKp, 0, 9, false, session.SetAuroraKp);
+            AddAuroraSlider("Color boost", "aurora-color-boost", session.AuroraColorBoost, 50, 500, true, session.SetAuroraColorBoost);
+            AddAuroraSlider("Intensity", "aurora-intensity", session.AuroraIntensity, 50, 500, true, session.SetAuroraIntensity);
+            var auroraHelp = Note("Simulated magnetic activity, not live space weather. Higher Kp widens the polar oval toward lower latitudes. Color boost expands saturation and violet/red tones; intensity increases brightness. Enhanced reference look: 150% color / 300% intensity. Best viewed on Earth's night side.");
+            auroraHelp.style.marginBottom = 16; menuScroll.Add(auroraHelp);
             menuScroll.Add(Label("FRAME RATE LIMIT", 10, Muted, true));
             var caps = Row(); caps.style.flexWrap = Wrap.Wrap;
             caps.style.marginTop = 7; caps.style.marginBottom = 12;
@@ -262,6 +309,33 @@ namespace ESP.Presentation
             settingsNote.style.marginTop = 5; settingsNote.style.marginBottom = 17;
             menuScroll.Add(settingsNote);
             AddAction("Back", "settings-back", session.Back);
+        }
+
+        private void AddAuroraSlider(string title, string name, float value, float low, float high, bool percent, Action<float> change)
+        {
+            var label = Label("", 11, Text); label.style.marginTop = 8;
+            Action<float> display = v => label.text = title + ": " + (percent ? Mathf.RoundToInt(v) + "%" : v.ToString("F1"));
+            display(value); menuScroll.Add(label);
+            var slider = new Slider(low, high) { name = name };
+            slider.style.height = 26;
+            slider.SetValueWithoutNotify(value);
+            slider.RegisterValueChangedCallback(evt => { float v = percent ? Mathf.Round(evt.newValue) : Mathf.Round(evt.newValue * 10) / 10; change(v); display(v); });
+            slider.RegisterCallback<PointerUpEvent>(_ => PlayerPrefs.Save());
+            slider.RegisterCallback<FocusOutEvent>(_ => PlayerPrefs.Save());
+            menuScroll.Add(slider);
+        }
+
+        private void BuildTutorial(MissionSession session)
+        {
+            var introduction = Note("Welcome to ESP. Choose a launch site on the Earth map, then use the flight view to launch and steer your vehicle.");
+            introduction.style.marginBottom = 14;
+            menuScroll.Add(introduction);
+            var controls = Note("M — switch between map and flight\nLAUNCH — start the mission\nW / S — pitch down / up\nA / D — turn left / right\nShift / Ctrl — increase / decrease throttle\nSpace — stage\nEsc — pause or go back\n\nYou can reopen this tutorial from Settings.");
+            controls.name = "tutorial-controls";
+            controls.style.marginBottom = 16;
+            menuScroll.Add(controls);
+            AddAction("Got it", "tutorial-done", session.CloseTutorial, true);
+            AddAction("Skip tutorial", "tutorial-skip", session.CloseTutorial);
         }
 
         private void BuildCheats(MissionSession session)
@@ -337,6 +411,90 @@ namespace ESP.Presentation
         }
 
         private void OnGeometryChanged(GeometryChangedEvent evt) { Resize(); }
+        private void BuildNerdPanel()
+        {
+            nerdPanel = new VisualElement { name = "nerd-stats-panel" };
+            nerdPanel.style.position = Position.Absolute;
+            nerdPanel.style.left = 12; nerdPanel.style.top = 120;
+            nerdPanel.style.maxWidth = Length.Percent(90);
+            nerdPanel.style.width = 270; nerdPanel.style.maxHeight = Length.Percent(42);
+            nerdPanel.style.paddingLeft = 7; nerdPanel.style.paddingRight = 7;
+            nerdPanel.style.paddingTop = 5; nerdPanel.style.paddingBottom = 5;
+            nerdPanel.style.backgroundColor = Surface;
+            Border(nerdPanel, Edge); Radius(nerdPanel, 5);
+            nerdHeader = Row(); nerdHeader.name = "nerd-stats-drag-handle"; nerdHeader.Add(Label("STATS FOR NERDS  ·  DRAG", 9, Cyan, true));
+            nerdHeader.RegisterCallback<PointerDownEvent>(BeginNerdDrag);
+            nerdHeader.RegisterCallback<PointerMoveEvent>(MoveNerdDrag);
+            nerdHeader.RegisterCallback<PointerUpEvent>(EndNerdDrag);
+            nerdHeader.RegisterCallback<PointerCaptureOutEvent>(_ => draggingNerdPanel = false);
+            nerdPanel.Add(nerdHeader);
+            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            scroll.style.maxHeight = Length.Percent(100);
+            scroll.style.flexShrink = 1;
+            nerdText = Label("", 10, Text);
+            nerdText.name = "nerd-stats-values";
+            nerdText.style.whiteSpace = WhiteSpace.Normal;
+            scroll.Add(nerdText); nerdPanel.Add(scroll); overlayRoot.Add(nerdPanel);
+        }
+
+        private void BeginNerdDrag(PointerDownEvent evt)
+        {
+            if (evt.button != 0) return;
+            draggingNerdPanel = true;
+            nerdPointerStart = evt.position;
+            nerdPanelStart = new Vector2(nerdPanel.resolvedStyle.left, nerdPanel.resolvedStyle.top);
+            nerdHeader.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+        private void MoveNerdDrag(PointerMoveEvent evt)
+        {
+            if (!draggingNerdPanel || !nerdHeader.HasPointerCapture(evt.pointerId)) return;
+            Vector2 delta = (Vector2)evt.position - nerdPointerStart;
+            ClampNerdPanel(nerdPanelStart + delta);
+            evt.StopPropagation();
+        }
+        private void ClampNerdPanel(Vector2 position)
+        {
+            if (nerdPanel == null || root == null || float.IsNaN(nerdPanel.resolvedStyle.width)) return;
+            nerdPanel.style.left = Mathf.Clamp(position.x, 0, Mathf.Max(0, root.resolvedStyle.width - nerdPanel.resolvedStyle.width - 1));
+            nerdPanel.style.top = Mathf.Clamp(position.y, 0, Mathf.Max(0, root.resolvedStyle.height - nerdPanel.resolvedStyle.height - 1));
+        }
+        private void EndNerdDrag(PointerUpEvent evt)
+        {
+            draggingNerdPanel = false;
+            if (nerdHeader.HasPointerCapture(evt.pointerId)) nerdHeader.ReleasePointer(evt.pointerId);
+        }
+
+        private void RefreshNerdStats()
+        {
+            if (!nerdVisible || Time.unscaledTime < nextNerdUpdate) return;
+            nextNerdUpdate = Time.unscaledTime + .5f;
+            var session = MissionSession.Instance;
+            var driver = FindFirstObjectByType<RocketFlightDriver>();
+            var simulation = driver != null ? driver.Simulation : null;
+            string state = session == null ? "No session" : session.Page.ToString();
+            if (simulation != null) state += " / stage " + (simulation.State.StageIndex + 1) + (simulation.IsDestroyed ? " / destroyed" : "");
+            if (state != lastNerdState)
+            {
+                lastNerdState = state;
+                nerdEvents.Enqueue(Time.realtimeSinceStartup.ToString("F1") + "s: " + state);
+                while (nerdEvents.Count > 5) nerdEvents.Dequeue();
+            }
+            var k = Keyboard.current;
+            string input = k == null || MissionSession.BlocksInput ? "none" :
+                (k.wKey.isPressed ? "W " : "") + (k.sKey.isPressed ? "S " : "") +
+                (k.aKey.isPressed ? "A " : "") + (k.dKey.isPressed ? "D " : "") +
+                (k.leftShiftKey.isPressed || k.rightShiftKey.isPressed ? "Shift " : "") +
+                (k.leftCtrlKey.isPressed || k.rightCtrlKey.isPressed ? "Ctrl " : "") +
+                (k.spaceKey.isPressed ? "Space " : "");
+            if (string.IsNullOrWhiteSpace(input)) input = "none";
+            string flight = simulation == null ? "Flight: unavailable" :
+                string.Format("Pitch {0:F1}°  Heading {1:F1}°\nThrottle {2:F0}%  Stage {3}", simulation.ActualPitchDegrees, simulation.ActualHeadingDegrees, driver.Throttle * 100, simulation.State.StageIndex + 1);
+            float ms = Time.unscaledDeltaTime * 1000f;
+            nerdText.text = string.Format("Sampled frame {0:F1} ms  ({1:F0} FPS)\nCPU hardware: {2}\nGPU hardware: {3}\nUnity allocated: {4} MB\n{5}\nKeys held: {6}\n\nRecent state changes:\n{7}",
+                ms, ms > 0 ? 1000f / ms : 0, SystemInfo.processorType, SystemInfo.graphicsDeviceName,
+                UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / (1024 * 1024), flight, input, string.Join("\n", nerdEvents));
+        }
         private void Resize()
         {
             if (root == null) return;
@@ -355,6 +513,7 @@ namespace ESP.Presentation
                 Border(card, start ? Color.clear : Edge);
             }
             if (menuScroll != null) menuScroll.style.maxHeight = Mathf.Max(150, height - 220);
+            if (nerdPanel != null) ClampNerdPanel(new Vector2(nerdPanel.resolvedStyle.left, nerdPanel.resolvedStyle.top));
             if (physicsScroll != null) physicsScroll.style.maxHeight = Mathf.Clamp(height - 280, 120, 330);
         }
 

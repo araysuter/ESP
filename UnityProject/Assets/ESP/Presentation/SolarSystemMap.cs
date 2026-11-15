@@ -19,6 +19,7 @@ namespace ESP.Presentation
         private Transform sunObject, moonObject;
         public Vector3 SunPosition => sunObject != null ? sunObject.position : Vector3.zero;
         public Vector3 MoonPosition => moonObject != null ? moonObject.position : Vector3.zero;
+        public Vector3? RoadsterPosition { get; private set; }
         private LineRenderer moonOrbit;
         private Material moonMaterial;
         private Material material, sunMaterial;
@@ -55,8 +56,8 @@ namespace ESP.Presentation
             renderer.receiveShadows = false;
             sunMaterial = new Material(owner.orbitMaterial);
             sunMaterial.mainTexture = null;
-            if (sunMaterial.HasProperty("_BaseColor")) sunMaterial.SetColor("_BaseColor", new Color(1, .93f, .76f));
-            if (sunMaterial.HasProperty("_Color")) sunMaterial.SetColor("_Color", new Color(1, .93f, .76f));
+            if (sunMaterial.HasProperty("_BaseColor")) sunMaterial.SetColor("_BaseColor", new Color(6, 5.85f, 5.52f));
+            if (sunMaterial.HasProperty("_Color")) sunMaterial.SetColor("_Color", new Color(6, 5.85f, 5.52f));
             renderer.sharedMaterial = sunMaterial;
             sunObject = sphere.transform;
             var moon = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -131,6 +132,9 @@ namespace ESP.Presentation
             }
             if (sunObject != null) sunObject.position = sunPosition;
             orbit.enabled = director.IsMapView && controls != null && controls.Distance >= 1000 && sunlight.CurrentUtc != default;
+            RoadsterPosition = orbit.enabled
+                ? sunPosition + ToMap(CelestialFrames.J2000ToEcef(RoadsterFromSun(sunlight.CurrentUtc), sunlight.CurrentUtc))
+                : (Vector3?)null;
             if (!orbit.enabled) return;
             Vector3 radial = -towardSun;
             Vector3 tangent = Vector3.Cross(EclipticPole(sunlight.CurrentUtc), radial).normalized;
@@ -149,6 +153,35 @@ namespace ESP.Presentation
         }
 
         private static Vector3 ToMap(Vector3d p) => new Vector3((float)(p.X/1000000),(float)(p.Z/1000000),(float)(p.Y/1000000));
+
+        // JPL Horizons -143205, Sun-centered J2000 ecliptic elements, JD 2461359.5.
+        // A fixed two-body display approximation with UTC used in place of TDB.
+        internal static Vector3d RoadsterFromSun(DateTime utc)
+        {
+            const double rad = Math.PI / 180;
+            const double eccentricity = .2559597937;
+            const double axisMeters = 1.3252644534 * 149597870700.0;
+            const double inclination = 1.0747801201 * rad;
+            const double node = 316.8723890132 * rad;
+            const double perihelion = 177.7888708036 * rad;
+            const double obliquity = 23.4392911111 * rad;
+            double days = (utc - new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc)).TotalDays;
+            double meanAnomaly = (271.3832440704 + .6460263762 * days) % 360 * rad;
+            double anomaly = meanAnomaly;
+            for (int iteration = 0; iteration < 6; iteration++)
+                anomaly -= (anomaly - eccentricity * Math.Sin(anomaly) - meanAnomaly) /
+                    (1 - eccentricity * Math.Cos(anomaly));
+
+            double x = axisMeters * (Math.Cos(anomaly) - eccentricity);
+            double y = axisMeters * Math.Sqrt(1 - eccentricity * eccentricity) * Math.Sin(anomaly);
+            double alongNode = x * Math.Cos(perihelion) - y * Math.Sin(perihelion);
+            double acrossNode = x * Math.Sin(perihelion) + y * Math.Cos(perihelion);
+            double eclipticX = alongNode * Math.Cos(node) - acrossNode * Math.Cos(inclination) * Math.Sin(node);
+            double eclipticY = alongNode * Math.Sin(node) + acrossNode * Math.Cos(inclination) * Math.Cos(node);
+            double eclipticZ = acrossNode * Math.Sin(inclination);
+            return new Vector3d(eclipticX, eclipticY * Math.Cos(obliquity) - eclipticZ * Math.Sin(obliquity),
+                eclipticY * Math.Sin(obliquity) + eclipticZ * Math.Cos(obliquity));
+        }
 
         private void OnDestroy()
         {

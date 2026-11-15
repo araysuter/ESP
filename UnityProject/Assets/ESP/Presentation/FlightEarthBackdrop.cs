@@ -174,6 +174,7 @@ namespace ESP.Presentation
             backgroundSun.cullingMask = 1 << backdropLayer;
             backgroundSun.shadows = LightShadows.None;
             backgroundSun.enabled = false;
+            AuroraCurtains.Create(globe.transform);
             cloudShell = globe.AddComponent<CloudShell>();
             if (atmosphereShader != null && atmosphereShader.isSupported)
                 atmosphere = ContinuousAtmosphere.Create(background, atmosphereShader, backdropLayer);
