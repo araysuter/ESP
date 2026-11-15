@@ -193,22 +193,21 @@ namespace ESP.Presentation
         }
         private void UpdateOrbitVerification()
         {
+            const double minimumClearanceMeters = 180_000;
+            const double requiredCoastSeconds = 60;
             if (simulation.HasUsedCheats || (MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight)) { InvalidateOrbitVerification(); return; }
             var state = simulation.State;
             bool unpowered = !simulation.BoosterBurning && (simulation.Throttle <= 0 || state.PropellantKg <= 0);
-            const double mu = 3.986004418e14;
-            const double minimumPerigeeRadius = 6378137.0 + 180000.0;
-            var p = state.Position; var v = state.Velocity;
-            double radius = p.Magnitude();
-            double v2 = v.X * v.X + v.Y * v.Y + v.Z * v.Z;
-            double energy = .5 * v2 - mu / radius;
-            double hx = p.Y * v.Z - p.Z * v.Y, hy = p.Z * v.X - p.X * v.Z, hz = p.X * v.Y - p.Y * v.X;
-            double h2 = hx * hx + hy * hy + hz * hz;
-            double e2 = 1 + 2 * energy * h2 / (mu * mu);
-            double perigee = h2 / (mu * (1 + Math.Sqrt(Math.Max(0, e2))));
-            bool valid = state.IsLaunched && !state.IsLanded && unpowered && energy < 0 && e2 >= -1e-10 && perigee >= minimumPerigeeRadius;
-            orbitSeconds = valid ? orbitSeconds + StepSeconds : 0;
-            OrbitVerified = orbitSeconds >= 60;
+            if (!state.IsLaunched || state.IsLanded || !unpowered)
+            {
+                InvalidateOrbitVerification();
+                return;
+            }
+
+            var orbit = OrbitDiagnostics.Compute(state.Position, state.Velocity);
+            bool clearsEarth = orbit.IsBound && orbit.MinimumWgs84AltitudeBoundMeters >= minimumClearanceMeters;
+            orbitSeconds = clearsEarth ? orbitSeconds + StepSeconds : 0;
+            OrbitVerified = orbitSeconds >= requiredCoastSeconds;
         }
         private void RenderState()
         {
