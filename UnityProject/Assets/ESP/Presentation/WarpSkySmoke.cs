@@ -67,7 +67,11 @@ namespace ESP.Presentation
             sunlight = FindFirstObjectByType<MissionSunlight>();
             if (!Check(session && director && driver && sunlight, "missing mission components")) yield break;
             hadBrightness = PlayerPrefs.HasKey(BrightnessKey); hadSaturation = PlayerPrefs.HasKey(SaturationKey);
-            brightness = PlayerPrefs.GetFloat(BrightnessKey, 100); saturation = PlayerPrefs.GetFloat(SaturationKey, 100);
+            brightness = PlayerPrefs.GetFloat(BrightnessKey, MissionSession.DefaultMilkyWayBrightness);
+            saturation = PlayerPrefs.GetFloat(SaturationKey, MissionSession.DefaultMilkyWaySaturation);
+            if (!Check(Close(session.MilkyWayBrightness, hadBrightness ? Mathf.Clamp(brightness, 10, 500) : 500) &&
+                Close(session.MilkyWaySaturation, hadSaturation ? Mathf.Clamp(saturation, 10, 300) : 200),
+                "initial sky defaults or saved preferences")) yield break;
             frameLimit = Application.targetFrameRate; vsync = QualitySettings.vSyncCount; saved = true;
             session.NewMission(); director.SelectVehicle(0); director.ShowMap();
             sunlight.ReviewUtc = new DateTime(2026, 3, 20, 18, 0, 0, DateTimeKind.Utc);
