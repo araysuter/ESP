@@ -43,7 +43,7 @@ namespace ESP.Presentation
                 lighting.ReviewUtc = DateTime.UtcNow.Date.AddHours(18);
                 Debug.Log("ESP_SRB_DAYLIGHT_REVIEW_OVERRIDE " + lighting.ReviewUtc.Value.ToString("O") + " lighting only; actual flight state");
             }
-            session.NewMission(); director.SelectVehicle(2); director.GoToLaunch(1);
+            session.NewMission(false); director.SelectVehicle(2); director.GoToLaunch(1);
             yield return null;
             if (!Check(director.VehicleIndex == 2 && smoke.ActiveParticleCount == 0, "SLS prelaunch has no smoke")) yield break;
             // A real manual SRB-powered climb keeps the retained trail within the atmosphere.

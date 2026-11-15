@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 namespace ESP.Presentation
 {
     /// <summary>Connects the fixed-step flight core to the presentation; simulation state stays in doubles.</summary>
-    public sealed class RocketFlightDriver : MonoBehaviour, IMissionFlightDriver
+    public sealed partial class RocketFlightDriver : MonoBehaviour, IMissionFlightDriver
     {
         public MissionDirector director;
         public NasaWeatherProfile nasaWeather;
@@ -31,14 +31,18 @@ namespace ESP.Presentation
         public double ActualTimeRate => IsPaused || MissionSession.BlocksInput || simulation == null || simulation.State.IsLanded ? 0 : actualTimeRate;
         // Higher rates are only offered after the normal mission has verified
         // a sustained, unpowered orbit. Integration remains at the fixed step.
-        public bool CanHighWarp => simulation != null && (simulation.Primary != CelestialPrimary.Earth || OrbitVerified) &&
-            simulation.State.AltitudeMeters > 120000 && !simulation.State.IsLanded &&
+        public bool CanHighWarp => simulation != null && !IsPlanningReturn && simulation.State.AltitudeMeters > 120000 &&
+            (ReentryActive ? (simulation.Primary == CelestialPrimary.Earth &&
+                (returnController.Phase == StarshipReturnPhase.CoastToBurn ||
+                (returnController.Phase == StarshipReturnPhase.EntryCoast && simulation.State.AltitudeMeters > 130000))) :
+                (simulation.Primary != CelestialPrimary.Earth || OrbitVerified)) && !simulation.State.IsLanded &&
             simulation.State.IsLaunched && !simulation.BoosterBurning && simulation.Throttle <= 0 &&
             !(MissionSession.Instance != null && MissionSession.Instance.ModifiedFlight);
-        public void ToggleAssistance() { if (IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
+        public void ToggleAssistance() { if (ReentryActive || IsPaused || (MissionSession.Instance != null && MissionSession.Instance.GravityMultiplier != 1)) return; AssistanceEnabled = !AssistanceEnabled; }
         public void SetTimeRate(int rate)
         {
             if (Array.IndexOf(new[] { 1, 2, 3, 4, 5, 10, 20, 50, 100, 300, 1000 }, rate) < 0) throw new ArgumentOutOfRangeException(nameof(rate));
+            if (rate > 1 && (IsPlanningReturn || ReturnNeedsRealTime)) return;
             if (rate > 20 && !CanHighWarp) return;
             if (TimeRate != rate) actualTimeRate = 0;
             TimeRate = rate;
@@ -75,7 +79,7 @@ namespace ESP.Presentation
         }
 
         public bool CanLaunch => !started;
-        public string Status => simulation != null ? (OrbitVerified ? "Orbit verified (60 s unpowered)" : simulation.State.Status) : "Ready — " + (AssistanceEnabled ? "assisted" : "manual") + " • " + TimeRate + "× selected";
+        public string Status => ReentryActive ? ReentryStatus : simulation != null ? (OrbitVerified ? "Orbit verified (60 s unpowered)" : !simulation.State.IsLanded && AssistanceEnabled && guidance != null && guidance.IsCoasting ? "Coasting to ICPS circularization burn" : simulation.State.Status) : "Ready — " + (AssistanceEnabled ? "assisted" : "manual") + " • " + TimeRate + "× selected";
         public double AltitudeMeters => simulation != null ? simulation.State.AltitudeMeters : 0;
         public double SpeedMetersPerSecond => simulation != null ? simulation.State.SpeedRelativeGround : 0;
         public double MissionTimeSeconds => simulation != null ? simulation.State.MissionTime : 0;
@@ -93,6 +97,7 @@ namespace ESP.Presentation
         public void SetPitchTarget(double pitchDegrees)
         {
             if (double.IsNaN(pitchDegrees) || double.IsInfinity(pitchDegrees)) throw new ArgumentOutOfRangeException(nameof(pitchDegrees));
+            if (ReentryActive) return;
             AssistanceEnabled = false;
             if (simulation != null) simulation.PitchDegrees = Math.Max(-90, Math.Min(90, pitchDegrees));
         }
@@ -151,7 +156,7 @@ namespace ESP.Presentation
             director.GetComponent<RocketSmokeTrail>()?.Arm(simulation);
             director.GetComponent<FlightTrailRecorder>()?.RecordSimulation(simulation);
             if (simulation.GravityMultiplier != 1) AssistanceEnabled = false;
-            guidance = new AssistedAscent(director.VehicleIndex == 1 ? 220000 : director.VehicleIndex == 2 ? 120000 : 160000, director.VehicleIndex == 2 ? 3 : 2);
+            guidance = director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsGuidance() : new AssistedAscent(director.VehicleIndex == 1 ? 220000 : 160000, 2);
             simulation.Throttle = pendingThrottle;
             simulation.Launch();
             accumulator = 0;
@@ -161,6 +166,7 @@ namespace ESP.Presentation
         public void ResetMission()
         {
             if (director != null) director.GetComponent<RocketSmokeTrail>()?.Clear();
+            ClearReentry();
             simulation = null; launchAtmosphere = null; guidance = null; launchSite = null; started = false; accumulator = 0; orbitSeconds = 0; OrbitVerified = false;
             pendingThrottle = 0; AssistanceEnabled = true; TimeRate = 1; actualTimeRate = 0; SimulationCatchingUp = false;
             LatitudeDegrees = LongitudeDegrees = 0;
@@ -179,19 +185,20 @@ namespace ESP.Presentation
             }
             if (director != null) { director.ResetLaunchFraming(); director.RefreshFlightBackdrop(); }
         }
-        public void Stage() { if (IsPaused || simulation == null) return; if (TimeRate > 20) TimeRate = 20; InvalidateOrbitVerification(); if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
-        public void SetThrottle(float value) { if (IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; if (pendingThrottle > 0) InvalidateOrbitVerification(); if (TimeRate > 20 && !CanHighWarp) TimeRate = 20; }
+        public void Stage() { if (ReentryActive || IsPaused || simulation == null) return; if (TimeRate > 20) TimeRate = 20; InvalidateOrbitVerification(); if (simulation.BoosterAttached && simulation.BoosterPropellantKg <= 0) simulation.JettisonBoosters(); else simulation.Stage(); }
+        public void SetThrottle(float value) { if (ReentryActive || IsPaused) return; AssistanceEnabled = false; pendingThrottle = Mathf.Clamp01(value); if (simulation != null) simulation.Throttle = pendingThrottle; if (pendingThrottle > 0) InvalidateOrbitVerification(); if (TimeRate > 20 && !CanHighWarp) TimeRate = 20; }
 
         private void Update()
         {
             if (simulation == null || IsPaused || MissionSession.BlocksInput) return;
-            if (simulation.State.IsLanded) { accumulator = 0; return; }
+            if (simulation.State.IsLanded) { returnController?.Update(simulation); accumulator = 0; RenderState(); return; }
+            if (AdvanceReturnPlanning()) { accumulator = 0; actualTimeRate = 0; RenderState(); return; }
             Keyboard keyboard = Keyboard.current;
             var focused = missionDocument?.rootVisualElement?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
             bool controlFocused = focused is Button || focused is Slider ||
                 focused?.GetFirstAncestorOfType<Button>() != null || focused?.GetFirstAncestorOfType<Slider>() != null;
-            if (keyboard != null && Application.isFocused && !editingText && !simulation.State.IsLanded)
+            if (!ReentryActive && keyboard != null && Application.isFocused && !editingText && !simulation.State.IsLanded)
             {
                 float pitchInput = (keyboard.sKey.isPressed || (!controlFocused && keyboard.downArrowKey.isPressed) ? 1 : 0) - (keyboard.wKey.isPressed || (!controlFocused && keyboard.upArrowKey.isPressed) ? 1 : 0);
                 float headingInput = (keyboard.dKey.isPressed || (!controlFocused && keyboard.rightArrowKey.isPressed) ? 1 : 0) - (keyboard.aKey.isPressed || (!controlFocused && keyboard.leftArrowKey.isPressed) ? 1 : 0);
@@ -208,15 +215,19 @@ namespace ESP.Presentation
             }
             // Cap requested work to what can be simulated this frame. Do not queue
             // unbounded future flight after the player selects a lower rate.
-            if (TimeRate > 20 && !CanHighWarp) TimeRate = 20;
+            if (ReturnNeedsRealTime) TimeRate = 1;
+            else if (TimeRate > 20 && !CanHighWarp) TimeRate = 20;
             double requested = accumulator + Time.unscaledDeltaTime * TimeRate;
             SimulationCatchingUp = requested >= 500 * StepSeconds;
             accumulator = Math.Min(requested, 500 * StepSeconds);
             int steps = 0;
             while (accumulator >= StepSeconds && steps < 500)
             {
-                if (AssistanceEnabled && guidance != null) guidance.Update(simulation);
-                simulation.Step(); UpdateOrbitVerification(); accumulator -= StepSeconds; steps++;
+                if (ReentryActive) returnController.Update(simulation);
+                else if (AssistanceEnabled && guidance != null) guidance.Update(simulation);
+                simulation.Step();
+                if (simulation.State.IsComplete) returnController?.Update(simulation);
+                UpdateOrbitVerification(); accumulator -= StepSeconds; steps++;
                 if (simulation.State.IsLanded)
                 {
                     // Impact is terminal. Stop the controls and work backlog immediately;
@@ -225,6 +236,7 @@ namespace ESP.Presentation
                     AssistanceEnabled = false; TimeRate = 1; accumulator = 0;
                     break;
                 }
+                if (TimeRate > 1 && ReturnNeedsRealTime) { TimeRate = 1; accumulator = 0; break; }
                 if (TimeRate > 20 && !CanHighWarp) { TimeRate = 20; accumulator = 0; break; }
             }
             if (Time.unscaledDeltaTime > 0)
@@ -288,6 +300,7 @@ namespace ESP.Presentation
                 Vector3 direction = new Vector3((float)localEast, (float)localUp, (float)localNorth).normalized;
                 // Choose a deterministic perpendicular reference; the flight model supplies no roll.
                 director.RocketVisual.rotation = Quaternion.FromToRotation(Vector3.up, direction);
+                RenderReentry(ecef, lat, lon);
             }
 
         }

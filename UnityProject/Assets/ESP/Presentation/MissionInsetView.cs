@@ -64,11 +64,17 @@ namespace ESP.Presentation
             camera.targetTexture = PreviewTexture;
             camera.rect = new Rect(0, 0, 1, 1);
             camera.aspect = 384f / 216f;
-            camera.allowHDR = false;
+            // URP grades an HDR intermediate, then writes the display-ready inset
+            // to ARGB32. The UI texture must not be tone mapped a second time.
+            camera.allowHDR = true;
             camera.allowMSAA = false;
             var data = camera.GetUniversalAdditionalCameraData();
             data.renderType = CameraRenderType.Base;
-            data.renderPostProcessing = false;
+            // Flight preview is the last overlay above its unprocessed backdrop;
+            // map preview is a standalone Base. Each receives finishing once.
+            data.renderPostProcessing = true;
+            data.volumeLayerMask = source.GetUniversalAdditionalCameraData().volumeLayerMask;
+            data.volumeTrigger = camera.transform;
             data.renderShadows = false;
             data.requiresColorTexture = false;
             data.requiresDepthTexture = false;

@@ -15,6 +15,10 @@ namespace ESP.Presentation
         private MissionSunlight sunlight;
         private FlightEarthBackdrop backdrop;
         private DateTime lastUtc;
+        public float SolarAngularDiameterDegrees { get; private set; }
+        public float SolarFlareVisibility { get; private set; }
+        public float StellarZenithVisibility { get; private set; } = 1;
+        public const float SolarDiscPeakDisplayRadiance = 12f;
         private Vector3d axisX, axisY, axisZ;
 
         public static StarField Create(Camera camera, Material material, int layer, Texture sky = null)
@@ -81,6 +85,10 @@ namespace ESP.Presentation
             float brightness = settings != null ? settings.MilkyWayBrightness : MissionSession.DefaultMilkyWayBrightness;
             float saturation = settings != null ? settings.MilkyWaySaturation : MissionSession.DefaultMilkyWaySaturation;
             material.SetVector("_SkyAdjust", new Vector4(brightness / 100f, saturation / 100f, 0, 0));
+            // Stellar exposure is independent of solar transmission. The atmosphere
+            // must not erase the bright photosphere to hide much fainter stars.
+            StellarZenithVisibility = 1;
+            material.SetVector("_SkyDaylight", Vector4.zero);
             if (sunlight != null && sunlight.CurrentUtc != default)
             {
                 Vector3 towardSun = ToWorld(sunlight.SunEcef).normalized;
@@ -94,11 +102,49 @@ namespace ESP.Presentation
                     distance = Mathf.Max(SolarSystemMap.SunRadius, fromCamera.magnitude);
                     towardSun = fromCamera.normalized;
                 }
+                float sourceVisibility = 1;
+                if (backdrop && targetCamera == backdrop.BackgroundCamera)
+                {
+                    // Reconstruct the actual camera ECEF position in double precision.
+                    // Camera is scaled ENU; the authoritative origin remains unchanged.
+                    double lat = backdrop.FrameLatitudeRadians, lon = backdrop.FrameLongitudeRadians;
+                    Vector3 offset = targetCamera.transform.position * 1000000f;
+                    double sl = Math.Sin(lat), cl = Math.Cos(lat), so = Math.Sin(lon), co = Math.Cos(lon);
+                    var cameraEcef = backdrop.RenderOriginEcef + new Vector3d(
+                        -so * offset.x + cl * co * offset.y - sl * co * offset.z,
+                        co * offset.x + cl * so * offset.y - sl * so * offset.z,
+                        sl * offset.y + cl * offset.z);
+                    sourceVisibility = SolarLighting.IsOccluded(cameraEcef, sunlight.SunEcef) ? 0 : 1;
+                    var location = EarthFrames.EcefToGeodetic(cameraEcef);
+                    double cameraLat = location.LatitudeRadians, cameraLon = location.LongitudeRadians;
+                    var upEcef = new Vector3d(Math.Cos(cameraLat) * Math.Cos(cameraLon),
+                        Math.Cos(cameraLat) * Math.Sin(cameraLon), Math.Sin(cameraLat));
+                    Vector3 upSky = ToJ2000(ToWorld(upEcef)).normalized;
+                    float elevation = (float)SolarLighting.ElevationDegrees(sunlight.SunEcef, cameraLat, cameraLon);
+                    float daylight = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-12, 0, elevation));
+                    // Display exposure, not atmospheric extinction: keep the night
+                    // sky intact and recover space stars continuously with altitude.
+                    float air = Mathf.Exp(-Mathf.Max(0, (float)location.AltitudeMeters) / 20000f);
+                    float stellarExposure = 14 * daylight * air;
+                    StellarZenithVisibility = Mathf.Exp(-stellarExposure);
+                    material.SetVector("_SkyDaylight", new Vector4(upSky.x, upSky.y, upSky.z, stellarExposure));
+                }
+                else if (isMap)
+                    sourceVisibility = SolarSystemMap.EarthOccludes(towardSun * distance + targetCamera.transform.position,
+                        targetCamera.transform.position) ? 0 : 1;
+                SolarFlareVisibility = sourceVisibility;
+                SolarAngularDiameterDegrees = 2 * Mathf.Asin(Mathf.Clamp01(SolarSystemMap.SunRadius / distance)) * Mathf.Rad2Deg;
+                material.SetVector("_SolarOptics", new Vector4(sourceVisibility, 0, 0, 0));
                 Vector3 sunSky = ToJ2000(towardSun).normalized;
                 material.SetVector("_SunSky", new Vector4(sunSky.x, sunSky.y, sunSky.z,
                     Mathf.Clamp(SolarSystemMap.SunRadius / distance, .00001f, .95f)));
             }
-            else material.SetVector("_SunSky", Vector4.zero);
+            else
+            {
+                SolarAngularDiameterDegrees = SolarFlareVisibility = 0;
+                material.SetVector("_SunSky", Vector4.zero);
+                material.SetVector("_SolarOptics", Vector4.zero);
+            }
         }
 
         private void OnDestroy() { if (mesh) Destroy(mesh); }

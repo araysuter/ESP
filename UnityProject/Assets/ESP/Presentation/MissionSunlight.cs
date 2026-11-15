@@ -75,7 +75,7 @@ namespace ESP.Presentation
                 double earthAngle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime;
                 position = EarthFrames.InertialToEcef(state.Position, earthAngle);
                 var ephemeris=driver.Simulation.Celestial;
-                if(ephemeris != null)
+                if(ephemeris != null && !ReviewUtc.HasValue)
                 {
                     var relative=ephemeris.SunPosition(state.MissionTime)-state.Position;
                     if(relative.Magnitude()>1) vesselSun=EarthFrames.InertialToEcef(relative,earthAngle).Normalize();
