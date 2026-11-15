@@ -10,13 +10,17 @@ namespace ESP.Presentation
     {
         private IEnumerator Start()
         {
-            bool preview = Array.IndexOf(Environment.GetCommandLineArgs(), "-espVehiclePreview") >= 0;
-            if (!preview && Array.IndexOf(Environment.GetCommandLineArgs(), "-espFlightSmoke") < 0) yield break;
+            string[] arguments = Environment.GetCommandLineArgs();
+            bool preview = Array.IndexOf(arguments, "-espVehiclePreview") >= 0;
+            bool offline = Array.IndexOf(arguments, "-espOfflineFlightSmoke") >= 0;
+            // The offline smoke implies the flight smoke but forces a deterministic
+            // standard atmosphere and forbids any weather-driven atmosphere.
+            bool flightSmoke = Array.IndexOf(arguments, "-espFlightSmoke") >= 0 || offline;
+            if (!preview && !flightSmoke) yield break;
             var director = GetComponent<MissionDirector>();
             var driver = GetComponent<RocketFlightDriver>();
             yield return null;
             director.GoToLaunch(1);
-            string[] arguments = Environment.GetCommandLineArgs();
             int vehicleFlag = Array.IndexOf(arguments, "-espVehicle");
             if (vehicleFlag >= 0 && vehicleFlag + 1 < arguments.Length && int.TryParse(arguments[vehicleFlag + 1], out int selectedVehicle))
                 director.SelectVehicle(selectedVehicle);
@@ -40,11 +44,21 @@ namespace ESP.Presentation
                 Application.Quit(); yield break;
             }
             float end = Time.realtimeSinceStartup + 110;
-            bool skipWeatherWait = Array.IndexOf(arguments, "-espSkipWeatherWait") >= 0;
+            bool skipWeatherWait = Array.IndexOf(arguments, "-espSkipWeatherWait") >= 0 || offline;
             while (!skipWeatherWait && director.nasaWeather != null && director.nasaWeather.Snapshot == null && Time.realtimeSinceStartup < end)
                 yield return new WaitForSecondsRealtime(1);
             Debug.Log("ESP_FLIGHT_WEATHER " + (director.nasaWeather != null ? director.nasaWeather.Status : "missing"));
-            director.Launch();
+            director.Launch(offline);
+            // Offline smoke must run on the deterministic standard atmosphere; if a
+            // weather column still drove the launch, fail hard so the test is trustworthy.
+            if (offline && driver.LaunchUsesWeather)
+            {
+                Debug.LogError("ESP_FLIGHT_SMOKE_FAIL offline launch used a weather atmosphere source=" + driver.WeatherSourceLabel);
+                Application.Quit(1);
+                yield break;
+            }
+            if (offline)
+                Debug.Log("ESP_FLIGHT_OFFLINE_OK standard atmosphere source=" + driver.WeatherSourceLabel);
             driver.SetTimeRate(20);
             bool launchShot = false, stageShot = false;
             end = Time.realtimeSinceStartup + 240;

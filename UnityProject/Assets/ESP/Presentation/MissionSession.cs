@@ -55,7 +55,7 @@ namespace ESP.Presentation
             string[] args = Environment.GetCommandLineArgs();
             // Existing opt-in flight rehearsals retain their explicit entry path.
             if (Array.IndexOf(args, "-espMenuSmoke") < 0 &&
-                (Array.IndexOf(args, "-espFlightSmoke") >= 0 || Array.IndexOf(args, "-espVehiclePreview") >= 0 || Array.IndexOf(args, "-espMissionCapture") >= 0))
+                (Array.IndexOf(args, "-espFlightSmoke") >= 0 || Array.IndexOf(args, "-espOfflineFlightSmoke") >= 0 || Array.IndexOf(args, "-espVehiclePreview") >= 0 || Array.IndexOf(args, "-espMissionCapture") >= 0))
             { HasSession = true; Page = MissionMenuPage.None; }
             SyncPause();
         }
