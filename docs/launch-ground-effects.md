@@ -36,11 +36,19 @@ added; the reference image informed the direction only.
 
 The scene builder runs `LaunchGroundEffectsChecks` for pressure-front travel
 time, outward push, post-cutoff propagation, wake decay and displacement bounds.
-These checks have been added but have not run in Unity in this workspace.
+These checks passed in Unity 6000.6.9f1 on macOS ARM, followed by a successful
+packaged development build.
 
-Unity compilation, target-player rendering, overdraw/frame timing, and visual
-comparison with the reference remain pending. Rehearse each preset: prelaunch
-is clear; powered liftoff produces a longer flame and rolling gas/dust; nearby
-dust shakes as the pressure fronts arrive; cutoff stops new emissions; cloud
-stays at the pad while the rocket climbs; pause/resume and map inset retain
-the same clock; restart clears it. Check a daytime and nighttime launch.
+The packaged `-espLaunchCloudSmoke` rehearsal passed on November 15, 2026:
+actual offline Starship flight at 1×, bounded ground-cloud emission (47 puffs at
+2.04 s, 117 at 5.04 s, 170 at 10.02 s), menu pause and restart clearing the pool.
+Inspected daylight captures show white billowing gas and tan dust at the pad,
+with the longer blue-white exhaust visible above the cloud. The opt-in rehearsal
+logs a daylight UTC override and wider camera framing; neither changes flight
+state. Its snapshots are visual checks, not a measured acoustic simulation or
+proof of reference-image fidelity.
+
+This test used the shared integration project with an existing, unmerged
+re-entry source overlay preserved. It validates the launch effects in that
+combined macOS build, not the re-entry mission. Windows, night launch visuals,
+all-preset acceptance and frame-time/overdraw measurements remain unverified.

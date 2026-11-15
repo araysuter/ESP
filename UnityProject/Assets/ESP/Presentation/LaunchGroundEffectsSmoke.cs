@@ -31,6 +31,13 @@ namespace ESP.Presentation
             if (!Check(cloud.ActiveParticleCount == 0, "clear before launch")) yield break;
             driver.SetThrottle(1);
             driver.Launch(LaunchSites.All[0], null, true);
+            // Review framing only: keep the pad cloud and full exhaust in shot.
+            var controls = director.launchCamera.GetComponent<FlightCameraControls>();
+            if (controls != null) controls.enabled = false;
+            director.launchCamera.transform.position = new Vector3(190, 95, -230);
+            director.launchCamera.transform.LookAt(new Vector3(0, 35, 0));
+            director.launchCamera.fieldOfView = 50;
+            Debug.Log("ESP_LAUNCH_CLOUD_REVIEW wide camera override for plume/pad visibility");
             float deadline = Time.realtimeSinceStartup + 60;
             foreach (double captureTime in new[] { 2d, 5, 10 })
             {
@@ -49,6 +56,8 @@ namespace ESP.Presentation
             session.ResumeMission(); session.RestartMission();
             yield return new WaitForEndOfFrame();
             if (!Check(cloud.ActiveParticleCount == 0, "reset")) yield break;
+            if (controls != null) controls.enabled = true;
+            director.ResetLaunchFraming();
             if (sunlight != null) sunlight.ReviewUtc = oldUtc;
             Debug.Log("ESP_LAUNCH_CLOUD_SMOKE_OK Starship emission, capacity, pause, reset");
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-espKeepOpen") < 0) Application.Quit();
