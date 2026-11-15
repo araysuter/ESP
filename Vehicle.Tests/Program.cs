@@ -26,7 +26,7 @@ internal static class Program
         var stages = vehicle == "SLS" ? RealVehiclePresets.BuildSlsStages() : RealVehiclePresets.BuildStarshipStages();
         var booster = vehicle == "SLS" ? RealVehiclePresets.BuildSlsBoosterParameters() : null;
         var rocket = new RocketSimulation(step, stages, atmosphere, lat * Math.PI / 180, lon * Math.PI / 180, booster: booster);
-        var guidance = new AssistedAscent(vehicle == "SLS" ? 120000 : 220000, vehicle == "SLS" ? 3 : 2);
+        var guidance = vehicle == "SLS" ? RealVehiclePresets.BuildSlsGuidance() : new AssistedAscent(220000, 2);
         rocket.Launch(); double minimum = double.PositiveInfinity;
         for (int i = 0; i < 2500 / step; i++)
         {

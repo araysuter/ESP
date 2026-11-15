@@ -34,7 +34,7 @@ namespace ESP.Presentation
             yield return new WaitForSecondsRealtime(.3f);
             ScreenCapture.CaptureScreenshot(Path.Combine(Application.persistentDataPath, "menu-smoke-start.png"));
             yield return new WaitForSecondsRealtime(.2f);
-            session.NewMission();
+            session.NewMission(false);
             yield return null;
             if (!Check(session.Page == MissionMenuPage.None && !MissionSession.BlocksInput && !driver.IsPaused && director.IsMapView, "new mission")) yield break;
             director.GoToLaunch(0);
@@ -87,7 +87,7 @@ namespace ESP.Presentation
             if (!Check(driver.IsPaused && session.HasSession, "return to start lost session or pause")) yield break;
             session.ResumeMission();
             if (!Check(!driver.IsPaused && !director.IsMapView, "resume from start lost flight view")) yield break;
-            session.NewMission();
+            session.NewMission(false);
             if (!Check(!session.ModifiedFlight && driver.Simulation == null, "new mission retained overrides")) yield break;
             Debug.Log("ESP_MENU_SMOKE_OK");
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-espKeepOpen") < 0) Application.Quit();

@@ -73,7 +73,7 @@ namespace ESP.Presentation
                 Close(session.MilkyWaySaturation, hadSaturation ? Mathf.Clamp(saturation, 10, 300) : 200),
                 "initial sky defaults or saved preferences")) yield break;
             frameLimit = Application.targetFrameRate; vsync = QualitySettings.vSyncCount; saved = true;
-            session.NewMission(); director.SelectVehicle(0); director.ShowMap();
+            session.NewMission(false); director.SelectVehicle(0); director.ShowMap();
             sunlight.ReviewUtc = new DateTime(2026, 3, 20, 18, 0, 0, DateTimeKind.Utc);
             session.OpenPause(); session.OpenSettings();
             if (!Check(driver.IsPaused && MissionSession.BlocksInput, "settings must pause and block input")) yield break;

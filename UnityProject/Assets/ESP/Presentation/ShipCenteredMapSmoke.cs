@@ -25,7 +25,7 @@ namespace ESP.Presentation
             if (!controls || !GetComponent<SolarSystemMap>()) { Fail("Missing map controls/system"); yield break; }
             for (int vehicle = 0; vehicle < 3; vehicle++)
             {
-                MissionSession.Instance.NewMission(); director.SelectVehicle(vehicle);
+                MissionSession.Instance.NewMission(false); director.SelectVehicle(vehicle);
                 director.GoToLaunch(vehicle % 2); director.ShowMap(); controls.ShowShip();
                 yield return new WaitForEndOfFrame();
                 if (!Centered(director, controls)) { Fail("Pad not centered"); yield break; }

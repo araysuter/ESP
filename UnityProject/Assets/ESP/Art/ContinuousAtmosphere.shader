@@ -62,44 +62,91 @@ Shader "ESP/Continuous Atmosphere"
                 float lengthThroughAir = max(0, end - begin);
                 if (lengthThroughAir < .0000001) return 0;
                 float3 sun = normalize(_SunPlanet.xyz);
-                float opticalColumn = 0, illuminatedColumn = 0;
-                // Fixed work: eight quadrature points, no nested light march, textures,
-                // history buffer or per-frame allocation. Earth blocks solar rays.
+                // Coefficients are in inverse million metres, for representative
+                // RGB wavelengths (680, 550, 440 nm). These are an RGB clear-air
+                // approximation, not a spectral or multiple-scattering solution.
+                const float3 betaRayleigh = float3(5.8, 13.5, 33.1);
+                const float betaMieScattering = 3.0;
+                const float betaMieExtinction = 4.4;
+                const float invFourPi = .07957747155;
+                float mu = clamp(dot(ray, sun), -1.0, 1.0);
+                float rayleighPhase = 3.0 * invFourPi / 4.0 * (1.0 + mu * mu);
+                // Henyey-Greenstein: mu=1 looks toward the Sun.
+                const float g = .76;
+                float miePhase = invFourPi * (1.0 - g * g) /
+                    pow(max(1.0 + g * g - 2.0 * g * mu, .001), 1.5);
+                float2 viewColumn = 0;
+                float3 rayleighIntegral = 0, mieIntegral = 0;
+                // Concentrate the bounded eight-point view quadrature toward
+                // closest approach in ellipsoid-normalized space, where density
+                // is generally highest. This approximates geodetic altitude.
+                float3 normalizedOrigin = origin / EarthRadii;
+                float3 normalizedRay = ray / EarthRadii;
+                float closest = clamp(-dot(normalizedOrigin, normalizedRay) /
+                    dot(normalizedRay, normalizedRay), begin, end);
                 [unroll] for (int i = 0; i < 8; i++)
                 {
-                    float t = begin + lengthThroughAir * ((i + .5) / 8.0);
+                    float t0, t1;
+                    if (closest <= begin + .0000001)
+                    {
+                        float u0 = i / 8.0, u1 = (i + 1.0) / 8.0;
+                        t0 = begin + lengthThroughAir * u0 * u0;
+                        t1 = begin + lengthThroughAir * u1 * u1;
+                    }
+                    else if (closest >= end - .0000001)
+                    {
+                        float u0 = 1.0 - i / 8.0, u1 = 1.0 - (i + 1.0) / 8.0;
+                        t0 = end - lengthThroughAir * u0 * u0;
+                        t1 = end - lengthThroughAir * u1 * u1;
+                    }
+                    else if (i < 4)
+                    {
+                        float u0 = 1.0 - i / 4.0, u1 = 1.0 - (i + 1.0) / 4.0;
+                        t0 = closest - (closest - begin) * u0 * u0;
+                        t1 = closest - (closest - begin) * u1 * u1;
+                    }
+                    else
+                    {
+                        float u0 = (i - 4.0) / 4.0, u1 = (i - 3.0) / 4.0;
+                        t0 = closest + (end - closest) * u0 * u0;
+                        t1 = closest + (end - closest) * u1 * u1;
+                    }
+                    float stepLength = t1 - t0;
+                    float t = .5 * (t0 + t1);
                     float3 samplePosition = origin + t * ray;
                     float height = max(0, (length(samplePosition / EarthRadii) - 1) * 6.371);
-                    float density = exp(-height / .008);
+                    float2 density = exp(-height / float2(.008, .0012));
+                    // Midpoint view optical depth from camera to this sample.
+                    float2 sampleViewColumn = viewColumn + density * (stepLength * .5);
+                    viewColumn += density * stepLength;
                     float2 sunGround = IntersectEllipsoid(samplePosition, sun, EarthRadii);
-                    float lit = (sunGround.x > .000001 && sunGround.y > sunGround.x) ? 0 : 1;
-                    opticalColumn += density;
-                    illuminatedColumn += density * lit;
+                    if (sunGround.x > .000001 && sunGround.y > sunGround.x) continue;
+                    float sunDistance = max(0, IntersectEllipsoid(samplePosition, sun, EarthRadii + .1).y);
+                    float2 sunColumn = 0;
+                    // Quadratically spaced intervals resolve dense air near the
+                    // sample; this also bounds work at low solar elevations.
+                    [unroll] for (int j = 0; j < 6; j++)
+                    {
+                        float u0 = j / 6.0, u1 = (j + 1.0) / 6.0;
+                        float s0 = sunDistance * u0 * u0, s1 = sunDistance * u1 * u1;
+                        float3 lightPosition = samplePosition + sun * (.5 * (s0 + s1));
+                        float lightHeight = max(0, (length(lightPosition / EarthRadii) - 1) * 6.371);
+                        sunColumn += exp(-lightHeight / float2(.008, .0012)) * (s1 - s0);
+                    }
+                    float2 totalColumn = sampleViewColumn + sunColumn;
+                    float3 transmittance = exp(-betaRayleigh * totalColumn.x - betaMieExtinction * totalColumn.y);
+                    rayleighIntegral += density.x * transmittance * stepLength;
+                    mieIntegral += density.y * transmittance * stepLength;
                 }
-                opticalColumn *= lengthThroughAir / 8;
-                illuminatedColumn *= lengthThroughAir / 8;
-                // RGB wavelength dependence is an appearance approximation, not
-                // measured local aerosol/weather. Density scale height is 8 km.
-                float3 opticalDepth = opticalColumn * float3(5.8, 13.5, 33.1);
-                float litFraction = illuminatedColumn / max(opticalColumn, .0000001);
-                float mu = dot(ray, sun);
-                float phase = .65 + .35 * mu * mu;
-                float scatter = (1 - exp(-opticalDepth.b * 2.5)) * litFraction * phase;
-                float3 color = float3(.26, .48, .90) * scatter;
-                float alpha = 1 - exp(-dot(opticalDepth, float3(.21, .72, .07)));
-                // Keep geographic imagery readable beneath this artistic air layer.
-                // Sky rays retain full extinction; this is not calibrated radiometry.
-                if (hitsGround) { color *= .45; alpha *= .6; }
-                if (!hitsGround)
-                {
-                    float height = max(0, (length(origin / EarthRadii) - 1) * 6.371);
-                    float3 up = normalize(origin / (EarthRadii * EarthRadii));
-                    float day = smoothstep(-.10, .15, dot(up, sun));
-                    // Display exposure suppresses stars through a bright lower sky;
-                    // it fades continuously with air column and camera altitude.
-                    float skyExposure = day * exp(-height / .025) * (1 - exp(-opticalColumn * 700));
-                    alpha = max(alpha, .995 * skyExposure);
-                }
+                // Fixed display exposure; no claim of absolute radiometric units.
+                float3 color = 20.0 * (betaRayleigh * rayleighPhase * rayleighIntegral +
+                    betaMieScattering * miePhase * mieIntegral);
+                float3 viewTransmission = exp(-betaRayleigh * viewColumn.x - betaMieExtinction * viewColumn.y);
+                // Blend state has scalar alpha, so this is luminance extinction,
+                // not wavelength-dependent attenuation of the background.
+                float alpha = 1.0 - dot(viewTransmission, float3(.2126, .7152, .0722));
+                // Daylight star visibility belongs to the celestial background;
+                // boosting alpha here also incorrectly hides the Sun and glare.
                 return half4(color, saturate(alpha));
             }
             ENDHLSL

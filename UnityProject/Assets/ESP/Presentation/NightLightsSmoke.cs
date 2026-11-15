@@ -25,7 +25,7 @@ namespace ESP.Presentation
             if (lighting == null || lighting.nightLights == null || lighting.nightLights.width != 4096 ||
                 lighting.nightLights.format != TextureFormat.BC4 || lighting.nightLights.isReadable)
             { Fail("offline texture import/budget"); yield break; }
-            MissionSession.Instance.NewMission(); director.SelectVehicle(0); director.ShowMap();
+            MissionSession.Instance.NewMission(false); director.SelectVehicle(0); director.ShowMap();
             var controls = director.mapCamera.GetComponent<GlobeCameraControls>();
             var names = new[] { "americas", "europe", "asia", "australia" };
             var latitude = new[] { 30f, 35f, 30f, -30f };

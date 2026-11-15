@@ -22,7 +22,7 @@ namespace ESP.Presentation
             yield return null;
             var director = GetComponent<MissionDirector>();
             var lighting = GetComponent<MissionSunlight>();
-            MissionSession.Instance.NewMission(); director.SelectVehicle(0); director.ShowMap();
+            MissionSession.Instance.NewMission(false); director.SelectVehicle(0); director.ShowMap();
             lighting.ReviewUtc = new DateTime(2026,11,15,0,0,0,DateTimeKind.Utc);
             yield return Shot("map");
             var cam = director.mapCamera;

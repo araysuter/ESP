@@ -22,7 +22,7 @@ namespace ESP.Presentation
             var cloud = FindFirstObjectByType<LaunchGroundEffects>();
             var session = MissionSession.Instance;
             if (!Check(director != null && driver != null && cloud != null && cloud.smokeShader != null && session != null, "wiring")) yield break;
-            session.NewMission(); director.SelectVehicle(1); director.GoToLaunch(0);
+            session.NewMission(false); director.SelectVehicle(1); director.GoToLaunch(0);
             var sunlight = director.GetComponent<MissionSunlight>();
             DateTime? oldUtc = sunlight != null ? sunlight.ReviewUtc : null;
             if (sunlight != null) sunlight.ReviewUtc = DateTime.UtcNow.Date.AddHours(18);

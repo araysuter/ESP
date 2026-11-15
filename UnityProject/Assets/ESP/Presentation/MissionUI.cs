@@ -17,6 +17,9 @@ namespace ESP.Presentation
         private VisualElement telemetry, inputStrip, previewHousing;
         private ScrollView informationBody;
         private Image previewImage;
+        private bool previewMinimized;
+        private string previewExpandedCaption = "LIVE  ·  ALTERNATE VIEW";
+        private Button previewMinimize;
         private Label previewCaption, previewMarker;
         private Label throttleValue, vehicleNote, mapVehicleNote;
         private Label stageFuel, boosterFuel;
@@ -32,6 +35,7 @@ namespace ESP.Presentation
         private Button roadsterMarker;
         private VisualElement roadsterCard;
         private bool roadsterOpen;
+        private float countdownRemaining;
         private Button viewToggle, action, reentry, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
         private Button cameraToggle;
         private FlightCameraControls MainFlightCamera => director != null && director.launchCamera != null
@@ -393,7 +397,7 @@ namespace ESP.Presentation
             staging.Add(reentry);
             action = Button("LAUNCH", () => {
                 if (director == null) return;
-                if (director.CanLaunch) director.Launch(); else director.Stage();
+                if (director.CanLaunch) countdownRemaining = 3f; else director.Stage();
                 Refresh();
             }, true, "launch-stage-action");
             action.style.height = 38;
@@ -427,9 +431,18 @@ namespace ESP.Presentation
             previewHousing.Add(previewMarker);
             previewCaption = Label("LIVE  ·  ALTERNATE VIEW", 9, Text, FontStyle.Normal);
             previewCaption.name = "live-preview-caption";
-            previewCaption.style.paddingLeft = 8; previewCaption.style.height = 21;
+            previewCaption.style.paddingLeft = 8; previewCaption.style.paddingRight = 30;
+            previewCaption.style.height = 21; previewCaption.style.flexShrink = 0;
+            Ellipsis(previewCaption);
             previewCaption.style.unityTextAlign = TextAnchor.MiddleLeft;
             previewHousing.Add(previewCaption);
+            previewMinimize = Button("−", () => { previewMinimized = !previewMinimized; ApplyPreviewSize(); }, false, "live-preview-minimize");
+            previewMinimize.tooltip = "Minimize or restore the live preview";
+            previewMinimize.style.position = Position.Absolute;
+            previewMinimize.style.right = 0; previewMinimize.style.bottom = 0;
+            previewMinimize.style.width = 28; previewMinimize.style.height = 21;
+            previewMinimize.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+            previewHousing.Add(previewMinimize);
             dock.Add(previewHousing);
             flightControls.Add(dock); root.Add(flightControls);
         }
@@ -485,8 +498,9 @@ namespace ESP.Presentation
             float navSize = narrow ? 92 : 120;
             navball.style.width = navSize; navball.style.height = navSize;
             navballHousing.style.height = navSize + 25;
-            previewHousing.style.width = narrow ? 160 : compact ? 220 : 280;
-            previewHousing.style.height = (narrow ? 160 : compact ? 220 : 280) * 9f / 16f + 21;
+            float previewWidth = narrow ? 160 : compact ? 220 : 280;
+            previewHousing.style.width = previewMinimized ? 130 : previewWidth;
+            previewHousing.style.height = previewMinimized ? 21 : previewWidth * 9f / 16f + 21;
             inputStrip.style.top = 0;
             flightControls.style.height = narrow ? 252 : 268;
 
@@ -494,15 +508,25 @@ namespace ESP.Presentation
 
         private void Update()
         {
+            if (countdownRemaining > 0 && director != null && !MissionSession.BlocksInput)
+            {
+                if (!director.CanLaunch) countdownRemaining = 0;
+                else
+                {
+                    countdownRemaining -= Time.unscaledDeltaTime;
+                    if (countdownRemaining <= 0) director.Launch();
+                }
+                Refresh();
+            }
             var focused = root?.panel?.focusController?.focusedElement as VisualElement;
             bool editingText = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
             if (!MissionSession.BlocksInput && !editingText && Application.isFocused && GUIUtility.keyboardControl == 0 && Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
                 ToggleView();
             if (subscribedDirector != director)
             {
-                if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
+                if (subscribedDirector != null) { subscribedDirector.PointSelected -= OpenWeather; subscribedDirector.MissionReset -= CancelCountdown; }
                 subscribedDirector = director;
-                if (subscribedDirector != null) subscribedDirector.PointSelected += OpenWeather;
+                if (subscribedDirector != null) { subscribedDirector.PointSelected += OpenWeather; subscribedDirector.MissionReset += CancelCountdown; }
             }
             if (Time.unscaledTime >= nextMarkerRefresh)
             {
@@ -520,9 +544,11 @@ namespace ESP.Presentation
 
         private void OnDestroy()
         {
-            if (subscribedDirector != null) subscribedDirector.PointSelected -= OpenWeather;
+            if (subscribedDirector != null) { subscribedDirector.PointSelected -= OpenWeather; subscribedDirector.MissionReset -= CancelCountdown; }
             if (activeRoot == root) activeRoot = null;
         }
+
+        private void CancelCountdown() { countdownRemaining = 0; }
 
         /// <summary>Tests a screen point in Unity's bottom-left pixel coordinates.</summary>
         public static bool IsPointerOverUI(Vector2 screenBottomLeft)
@@ -681,7 +707,7 @@ namespace ESP.Presentation
             if (!available) return;
             var inset = director.GetComponent<MissionInsetView>();
             SetPreview(inset != null && inset.HasPreview ? inset.PreviewTexture : null, inset != null && inset.PreviewIsMap);
-            bool showPreviewMarker = inset != null && inset.HasPreview && inset.PreviewIsMap && inset.HasMarker;
+            bool showPreviewMarker = !previewMinimized && inset != null && inset.HasPreview && inset.PreviewIsMap && inset.HasMarker;
             previewMarker.style.display = showPreviewMarker ? DisplayStyle.Flex : DisplayStyle.None;
             if (showPreviewMarker)
             {
@@ -778,8 +804,9 @@ namespace ESP.Presentation
                 stageFuel.text = "Unavailable";
                 boosterFuel.style.display = DisplayStyle.None;
             }
-            action.text = director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
-            action.SetEnabled(director.FlightDriver != null && !(flight?.ReentryActive ?? false));
+            action.text = countdownRemaining > 0 ? "T−" + Mathf.CeilToInt(countdownRemaining) :
+                director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
+            action.SetEnabled(countdownRemaining <= 0 && director.FlightDriver != null && !(flight?.ReentryActive ?? false));
             reentry.style.display = director.VehicleIndex == 1 ? DisplayStyle.Flex : DisplayStyle.None;
             reentry.SetEnabled(flight != null && flight.CanBeginReentry);
             reentry.text = flight != null && flight.IsPlanningReturn ? "SEARCHING" : flight?.Simulation?.IsCaught == true ? "CAUGHT" : flight != null && flight.ReentryActive ? "RETURNING" : "RE-ENTRY";
@@ -796,7 +823,16 @@ namespace ESP.Presentation
         {
             if (previewImage == null) return;
             if (previewImage.image != texture) previewImage.image = texture;
-            previewCaption.text = texture == null ? "PREVIEW UNAVAILABLE" : isMap ? "LIVE  ·  EARTH MAP  ↗" : "LIVE  ·  FLIGHT  ↗";
+            previewExpandedCaption = texture == null ? "PREVIEW UNAVAILABLE" : isMap ? "LIVE  ·  EARTH MAP  ↗" : "LIVE  ·  FLIGHT  ↗";
+            previewCaption.text = previewMinimized ? "LIVE PREVIEW" : previewExpandedCaption;
+        }
+        private void ApplyPreviewSize()
+        {
+            previewImage.style.display = previewMinimized ? DisplayStyle.None : DisplayStyle.Flex;
+            previewMarker.style.display = DisplayStyle.None;
+            previewMinimize.text = previewMinimized ? "+" : "−";
+            previewCaption.text = previewMinimized ? "LIVE PREVIEW" : previewExpandedCaption;
+            Resize();
         }
         private static void Selected(Button button, bool selected)
         {
