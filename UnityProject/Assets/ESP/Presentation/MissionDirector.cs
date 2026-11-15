@@ -41,6 +41,7 @@ namespace ESP.Presentation
         public NasaEventFeed events;
         public NasaSpaceWeather spaceWeather;
         public event Action PointSelected;
+        public event Action MissionReset;
         public GameObject rocketPrefab;
         public GameObject[] vehiclePrefabs;
         public int VehicleIndex { get; private set; }
@@ -49,6 +50,7 @@ namespace ESP.Presentation
         {
             if (vehiclePrefabs == null || index < 0 || index >= vehiclePrefabs.Length || vehiclePrefabs[index] == null || !CanLaunch) return;
             VehicleIndex = index; rocketPrefab = vehiclePrefabs[index];
+            MissionReset?.Invoke();
             FlightDriver?.ResetMission();
             ReleaseEnvironment();
             if (Inset != null || !IsMapView)
@@ -148,7 +150,7 @@ namespace ESP.Presentation
             if (siteIndex < 0 || siteIndex >= LaunchSites.All.Length) throw new ArgumentOutOfRangeException(nameof(siteIndex));
             bool siteChanged = SelectedSiteIndex != siteIndex;
             SelectedSiteIndex = siteIndex;
-            if (siteChanged) { FlightDriver?.ResetMission(); RequestWeather(); if (picker == null || !picker.HasSelection) RefreshPointWeather(); }
+            if (siteChanged) { MissionReset?.Invoke(); FlightDriver?.ResetMission(); RequestWeather(); if (picker == null || !picker.HasSelection) RefreshPointWeather(); }
             if (environment && !siteChanged)
             {
                 environment.SetActive(true);
@@ -173,6 +175,26 @@ namespace ESP.Presentation
             }
             ResetLaunchFraming();
             SetLaunchView();
+        }
+        // Retarget only the scenery and render frame; preserve the live flight,
+        // propellant, weather column, mission clock and upper-stage object.
+        public void PrepareReturnEnvironment()
+        {
+            if (SelectedSiteIndex == 0 && environment) return;
+            var retainedRocket = RocketVisual;
+            if (retainedRocket) retainedRocket.SetParent(null, true);
+            ReleaseEnvironment();
+            SelectedSiteIndex = 0;
+            groundMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            groundMaterial.color = Color.white;
+            groundMaterial.SetFloat("_Smoothness", 0);
+            if (siteGroundTextures != null && siteGroundTextures.Length > 0)
+                groundMaterial.mainTexture = siteGroundTextures[0];
+            var structure = siteStructurePrefabs != null && siteStructurePrefabs.Length > 0 ? siteStructurePrefabs[0] : null;
+            environment = LaunchEnvironment.Build(LaunchSites.All[0], groundMaterial, structure);
+            RocketVisual = retainedRocket;
+            if (RocketVisual) RocketVisual.SetParent(environment.transform, true);
+            RefreshFlightBackdrop();
         }
         private void SetLaunchView()
         {
@@ -247,7 +269,7 @@ namespace ESP.Presentation
             if (snapshot != null && !snapshot.IsCurrent(DateTime.UtcNow)) snapshot = null;
             FlightDriver.Launch(LaunchSites.All[SelectedSiteIndex], snapshot, offline);
         }
-        public void ResetMission() { FlightDriver?.ResetMission(); if (!IsMapView) SetLaunchView(); }
+        public void ResetMission() { MissionReset?.Invoke(); FlightDriver?.ResetMission(); if (!IsMapView) SetLaunchView(); }
         public void Stage() { FlightDriver?.Stage(); }
         public void SetThrottle(float value) { FlightDriver?.SetThrottle(Mathf.Clamp01(value)); }
         public void SelectLayer(int index) { if (mapLayers != null && index >= 0 && index <= 2) mapLayers.Select(index - 1); }

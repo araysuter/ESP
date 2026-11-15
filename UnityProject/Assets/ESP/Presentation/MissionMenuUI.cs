@@ -235,6 +235,7 @@ namespace ESP.Presentation
                 scale.SetValueWithoutNotify(panel.scale);
                 scale.RegisterValueChangedCallback(evt => {
                     panel.scale = Mathf.Round(evt.newValue * 20) / 20;
+                    scale.SetValueWithoutNotify(panel.scale);
                     scaleLabel.text = "GUI scale: " + Mathf.RoundToInt(panel.scale * 100) + "%";
                 });
                 menuScroll.Add(scale);
