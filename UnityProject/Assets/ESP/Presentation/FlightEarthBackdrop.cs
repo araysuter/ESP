@@ -14,6 +14,7 @@ namespace ESP.Presentation
         public Mesh globeMesh;
         public Material globeMaterial;
         public Shader starShader;
+        public Texture2D celestialSky;
         public Shader atmosphereShader;
         public Light earthSun;
         public MissionSunlight sunlight;
@@ -128,7 +129,7 @@ namespace ESP.Presentation
             if (starShader)
             {
                 starMaterial = new Material(starShader);
-                StarField.Create(background, starMaterial, backdropLayer);
+                StarField.Create(background, starMaterial, backdropLayer, celestialSky);
             }
             globe = new GameObject("Continuous WGS84 Earth");
             globe.transform.SetParent(backdropRoot.transform, false);

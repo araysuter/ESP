@@ -17,8 +17,7 @@ namespace FlightCore
             double longitude = ((280.459 + .98564736 * days) % 360 + 1.915 * Math.Sin(anomaly) + .020 * Math.Sin(2 * anomaly)) * Rad;
             double obliquity = (23.439 - .00000036 * days) * Rad;
             var equatorial = new Vector3d(Math.Cos(longitude), Math.Cos(obliquity) * Math.Sin(longitude), Math.Sin(obliquity) * Math.Sin(longitude));
-            double centuries = days / 36525;
-            double sidereal = (280.46061837 + 360.98564736629 * days + .000387933 * centuries * centuries - centuries * centuries * centuries / 38710000) % 360 * Rad;
+            double sidereal = CelestialFrames.GreenwichSiderealAngle(utc);
             return EarthFrames.InertialToEcef(equatorial, sidereal).Normalize();
         }
 

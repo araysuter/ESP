@@ -1,33 +1,41 @@
 using System;
+using FlightCore;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace ESP.Presentation
 {
-    /// <summary>
-    /// Decorative, deterministic stars. Directions are fictional, not a star catalog.
-    /// The shell follows camera position but not orientation, so it has no parallax.
-    /// The supplied material must use ESP/Star Field and be serialized into the scene.
-    /// </summary>
+    /// <summary>NASA J2000 sky, sampled once per pixel with no camera-position parallax.</summary>
     [DefaultExecutionOrder(300)]
     public sealed class StarField : MonoBehaviour
     {
-        private const int StarCount = 2400;
         private Camera targetCamera;
         private Mesh mesh;
+        private Material material;
+        private MissionSunlight sunlight;
+        private FlightEarthBackdrop backdrop;
+        private DateTime lastUtc;
+        private Vector3d axisX, axisY, axisZ;
 
-        /// <summary>Create a separate field for each camera, on a layer visible to that camera.</summary>
-        public static StarField Create(Camera camera, Material material, int layer)
+        public static StarField Create(Camera camera, Material material, int layer, Texture sky = null)
         {
-            if (!camera || !material) return null;
+            if (!camera || !material || !sky) return null;
             var existing = camera.GetComponentInChildren<StarField>(true);
             if (existing) return existing;
-            var root = new GameObject("Procedural star field");
+            var root = new GameObject("NASA J2000 celestial sky");
             root.transform.SetParent(camera.transform, false);
+            root.transform.localPosition = Vector3.forward * .01f;
             root.layer = layer;
             var field = root.AddComponent<StarField>();
             field.targetCamera = camera;
-            field.mesh = MakeMesh(Mathf.Max(camera.nearClipPlane * 2f, camera.farClipPlane * .8f));
+            field.material = material;
+            material.SetTexture("_Sky", sky);
+            field.sunlight = FindFirstObjectByType<MissionSunlight>();
+            field.backdrop = FindFirstObjectByType<FlightEarthBackdrop>();
+            field.mesh = new Mesh { name = "Celestial sky screen quad" };
+            field.mesh.vertices = new[] { new Vector3(-1,-1,0), new Vector3(-1,1,0), new Vector3(1,1,0), new Vector3(1,-1,0) };
+            field.mesh.triangles = new[] { 0,1,2,0,2,3 };
+            field.mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 100);
             root.AddComponent<MeshFilter>().sharedMesh = field.mesh;
             var renderer = root.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = material;
@@ -35,66 +43,42 @@ namespace ESP.Presentation
             renderer.receiveShadows = false;
             renderer.lightProbeUsage = LightProbeUsage.Off;
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-            root.transform.SetPositionAndRotation(camera.transform.position, Quaternion.identity);
-            Debug.Log("ESP star field: " + StarCount + " stars, " + (StarCount * 2) + " triangles (one mesh per camera)");
+            renderer.allowOcclusionWhenDynamic = false;
+            Debug.Log("ESP_CELESTIAL_SKY " + sky.width + "x" + sky.height + " format=" + (sky as Texture2D)?.format +
+                " bytes=" + UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(sky) + " BC6H=" + SystemInfo.SupportsTextureFormat(TextureFormat.BC6H));
             return field;
+        }
+
+        private Vector3 ToWorld(Vector3d ecef)
+        {
+            if (backdrop && targetCamera == backdrop.BackgroundCamera)
+                return CameraRelativeCoordinates.FromEcef(ecef.X, ecef.Y, ecef.Z, 0, 0, 0,
+                    backdrop.FrameLatitudeRadians, backdrop.FrameLongitudeRadians);
+            return new Vector3((float)ecef.X, (float)ecef.Z, (float)ecef.Y);
+        }
+
+        private Vector3 ToJ2000(Vector3 world)
+        {
+            return new Vector3(Vector3.Dot(world, ToWorld(axisX)), Vector3.Dot(world, ToWorld(axisY)), Vector3.Dot(world, ToWorld(axisZ)));
         }
 
         private void LateUpdate()
         {
-            if (targetCamera) transform.SetPositionAndRotation(targetCamera.transform.position, Quaternion.identity);
-            else Destroy(gameObject);
-        }
-
-        private void OnDestroy()
-        {
-            if (mesh) Destroy(mesh);
-        }
-
-        private static Mesh MakeMesh(float radius)
-        {
-            var vertices = new Vector3[StarCount * 4];
-            var uv = new Vector2[vertices.Length];
-            var colors = new Color[vertices.Length];
-            var triangles = new int[StarCount * 6];
-            var random = new System.Random(836471);
-            for (int i = 0; i < StarCount; i++)
+            if (!targetCamera) { Destroy(gameObject); return; }
+            DateTime utc = sunlight && sunlight.CurrentUtc != default ? sunlight.CurrentUtc : DateTime.UtcNow;
+            if (utc != lastUtc)
             {
-                // Uniform distribution on the unit sphere, independent of Unity's global random state.
-                double y = 2.0 * random.NextDouble() - 1.0;
-                double azimuth = 2.0 * Math.PI * random.NextDouble();
-                double horizontal = Math.Sqrt(1.0 - y * y);
-                var direction = new Vector3((float)(horizontal * Math.Cos(azimuth)), (float)y,
-                    (float)(horizontal * Math.Sin(azimuth)));
-                var right = Vector3.Cross(direction, Mathf.Abs(direction.y) > .95f ? Vector3.right : Vector3.up).normalized;
-                var up = Vector3.Cross(right, direction).normalized;
-                float brightnessRoll = (float)random.NextDouble();
-                float brightness = .18f + .58f * brightnessRoll * brightnessRoll * brightnessRoll;
-                float angularSize = Mathf.Lerp(.00075f, .0023f, brightnessRoll * brightnessRoll);
-                float size = radius * angularSize;
-                float tint = (float)random.NextDouble();
-                Color color = Color.Lerp(new Color(.69f, .79f, 1f), new Color(1f, .87f, .71f), tint) * brightness;
-                color.a = 1f;
-                Vector3 center = direction * radius;
-                int v = i * 4;
-                vertices[v] = center - right * size - up * size;
-                vertices[v + 1] = center + right * size - up * size;
-                vertices[v + 2] = center + right * size + up * size;
-                vertices[v + 3] = center - right * size + up * size;
-                uv[v] = new Vector2(0, 0); uv[v + 1] = new Vector2(1, 0);
-                uv[v + 2] = new Vector2(1, 1); uv[v + 3] = new Vector2(0, 1);
-                colors[v] = colors[v + 1] = colors[v + 2] = colors[v + 3] = color;
-                int t = i * 6;
-                triangles[t] = v; triangles[t + 1] = v + 1; triangles[t + 2] = v + 2;
-                triangles[t + 3] = v; triangles[t + 4] = v + 2; triangles[t + 5] = v + 3;
+                axisX = CelestialFrames.J2000ToEcef(new Vector3d(1,0,0), utc);
+                axisY = CelestialFrames.J2000ToEcef(new Vector3d(0,1,0), utc);
+                axisZ = CelestialFrames.J2000ToEcef(new Vector3d(0,0,1), utc);
+                lastUtc = utc;
             }
-            var result = new Mesh { name = "Procedural star directions" };
-            result.vertices = vertices;
-            result.uv = uv;
-            result.colors = colors;
-            result.triangles = triangles;
-            result.bounds = new Bounds(Vector3.zero, Vector3.one * radius * 2.1f);
-            return result;
+            material.SetVector("_ForwardSky", ToJ2000(targetCamera.transform.forward));
+            material.SetVector("_RightSky", ToJ2000(targetCamera.transform.right));
+            material.SetVector("_UpSky", ToJ2000(targetCamera.transform.up));
+            material.SetVector("_ViewParams", new Vector4(Mathf.Tan(targetCamera.fieldOfView * .5f * Mathf.Deg2Rad), targetCamera.aspect, 0, 0));
         }
+
+        private void OnDestroy() { if (mesh) Destroy(mesh); }
     }
 }
