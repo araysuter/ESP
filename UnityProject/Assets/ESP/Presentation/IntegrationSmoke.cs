@@ -233,6 +233,20 @@ namespace ESP.Presentation
             yield return Shot("stats-compact-clamped");
             Screen.SetResolution(1440, 900, false);
             yield return new WaitForSecondsRealtime(.5f);
+            statsPanel.style.left = Mathf.Max(0, root.resolvedStyle.width - statsPanel.resolvedStyle.width - 20);
+            yield return null; yield return null;
+            Vector2 rememberedStatsPosition = new Vector2(statsPanel.resolvedStyle.left, statsPanel.resolvedStyle.top);
+            session.OpenPause();
+            yield return null; yield return null;
+            Screen.SetResolution(960, 540, false);
+            yield return new WaitForSecondsRealtime(.4f);
+            Screen.SetResolution(1440, 900, false);
+            yield return new WaitForSecondsRealtime(.4f);
+            session.ResumeMission();
+            yield return new WaitForSecondsRealtime(.2f);
+            if (!Check(Mathf.Abs(statsPanel.resolvedStyle.left - rememberedStatsPosition.x) < 1 &&
+                Mathf.Abs(statsPanel.resolvedStyle.top - rememberedStatsPosition.y) < 1,
+                "hidden stats panel preserves position across temporary window resize")) yield break;
             var flightCamera = director.launchCamera.GetComponent<FlightCameraControls>();
             var cinematic = root.Q<Button>("cinematic-camera-toggle");
             if (!Check(cinematic != null && flightCamera != null, "cinematic controls exist")) yield break;
