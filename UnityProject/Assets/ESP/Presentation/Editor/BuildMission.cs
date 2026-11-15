@@ -13,6 +13,7 @@ public static class BuildMission
         string buildPath = Environment.GetEnvironmentVariable("ESP_BUILD_PATH");
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
+        WeatherHeightChecks.Validate();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);

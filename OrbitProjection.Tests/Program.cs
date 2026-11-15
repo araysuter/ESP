@@ -17,12 +17,34 @@ static class Program
         Near((circle.EcefPoints[0] - circle.EcefPoints[circle.EcefPoints.Count - 1]).Magnitude(), 0, .001, "closed endpoint");
         Check(!circle.Apoapsis.IsAvailable && !circle.Periapsis.IsAvailable, "circular apsis ambiguity suppressed");
 
+        // Scaling mu and v^2 by the same factor preserves conic geometry.
+        var doubleGravity = OrbitProjection.Build(r, v * Math.Sqrt(2), 0,
+            gravitationalParameter: mu * 2);
+        Check(doubleGravity.IsValid && doubleGravity.IsClosed && !doubleGravity.HasImpact, "doubled gravity circular coast");
+        Check(doubleGravity.EcefPoints.Count == circle.EcefPoints.Count, "scaled gravity sample count");
+        for (int i = 0; i < circle.EcefPoints.Count; i++)
+            Near((doubleGravity.EcefPoints[i] - circle.EcefPoints[i]).Magnitude(), 0, .001, "scaled gravity circular geometry");
+        foreach (double invalidMu in new[] { 0.0, -mu, double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+        {
+            var invalidGravity = OrbitProjection.Build(r, v, 0, gravitationalParameter: invalidMu);
+            Check(!invalidGravity.IsValid && !invalidGravity.IsClosed && !invalidGravity.HasImpact, "invalid gravity unavailable");
+            Check(invalidGravity.EcefPoints.Count == 0, "invalid gravity contains no NaN vertices");
+            Check(!invalidGravity.Apoapsis.IsAvailable && !invalidGravity.Periapsis.IsAvailable, "invalid gravity has no apsides");
+            Check(invalidGravity.Status.Contains(invalidMu == 0 ? "Zero gravity" : "Invalid gravitational parameter"), "invalid gravity clear status");
+        }
+
         // Analytic equatorial ellipse: rp=7 Mm, ra=10 Mm.
         double ra = 1e7, a = (radius + ra) / 2;
         var ellipse = OrbitProjection.Build(r, new Vector3d(0, Math.Sqrt(mu * (2 / radius - 1 / a)), 0), 0);
         Check(ellipse.IsClosed && ellipse.Apoapsis.IsAvailable && ellipse.Periapsis.IsAvailable, "elliptic markers");
         Near(ellipse.Apoapsis.EcefPosition.Magnitude(), ra, .01, "apoapsis radius");
         Near(ellipse.Periapsis.Wgs84AltitudeMeters, radius - EarthFrames.SemiMajorAxisMeters, .01, "WGS84 apsis height");
+        var scaledEllipse = OrbitProjection.Build(r,
+            new Vector3d(0, Math.Sqrt(2 * mu * (2 / radius - 1 / a)), 0), 0,
+            gravitationalParameter: 2 * mu);
+        Check(scaledEllipse.IsClosed && scaledEllipse.Apoapsis.IsAvailable, "scaled gravity elliptical coast");
+        for (int i = 0; i < ellipse.EcefPoints.Count; i++)
+            Near((scaledEllipse.EcefPoints[i] - ellipse.EcefPoints[i]).Magnitude(), 0, .01, "scaled gravity elliptical geometry");
 
         // Low-energy horizontal coast intersects Earth before its subterranean periapsis.
         var impact = OrbitProjection.Build(r, new Vector3d(0, speed * .75, 0), 0);
@@ -86,7 +108,7 @@ static class Program
         Check(!OrbitProjection.Build(r, v, double.NaN).IsValid, "invalid epoch");
         Check(!OrbitProjection.Build(new Vector3d(1e308, 1e308, 0), v, 0).IsValid, "overflow invalid");
         Check(!OrbitProjection.Build(new Vector3d(6e6, 0, 0), v, 0).IsValid, "below surface invalid");
-        Console.WriteLine("PASS orbit projection: circular, ellipse, suborbital/oblate/grazing impact, escape, fixed epoch, invalid states");
+        Console.WriteLine("PASS orbit projection: scaled/invalid gravity, circular, ellipse, suborbital/oblate/grazing impact, escape, fixed epoch, invalid states");
     }
     static void Check(bool condition, string name) { if (!condition) throw new Exception(name); }
     static void Near(double value, double expected, double tolerance, string name) { Check(Math.Abs(value - expected) <= tolerance, name + ": " + value); }

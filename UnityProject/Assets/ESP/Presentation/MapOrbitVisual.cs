@@ -43,7 +43,8 @@ namespace ESP.Presentation
                 nextRefresh = Time.unscaledTime + .25f;
                 var state = ((RocketFlightDriver)director.FlightDriver).Simulation.State;
                 Projection = OrbitProjection.Build(state.Position, state.Velocity,
-                    Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+                    Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime, OrbitProjection.MaximumSamples,
+                    Gravity.EarthGravitationalParameter * ((RocketFlightDriver)director.FlightDriver).Simulation.GravityMultiplier);
                 line.enabled = Projection.IsValid && Projection.EcefPoints.Count >= 2;
                 if (line.enabled)
                 {
