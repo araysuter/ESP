@@ -245,6 +245,21 @@ namespace ESP.Presentation
             });
             nerdToggle.SetValueWithoutNotify(nerdVisible);
             menuScroll.Add(nerdToggle);
+            var panel = GetComponent<UIDocument>().panelSettings;
+            if (panel != null)
+            {
+                menuScroll.Add(Label("INTERFACE", 10, Muted, true));
+                var scaleLabel = Label("GUI scale: " + Mathf.RoundToInt(panel.scale * 100) + "%", 11, Text);
+                menuScroll.Add(scaleLabel);
+                var scale = new Slider(.75f, 1.25f) { name = "gui-scale" };
+                scale.SetValueWithoutNotify(panel.scale);
+                scale.RegisterValueChangedCallback(evt => {
+                    panel.scale = Mathf.Round(evt.newValue * 20) / 20;
+                    scale.SetValueWithoutNotify(panel.scale);
+                    scaleLabel.text = "GUI scale: " + Mathf.RoundToInt(panel.scale * 100) + "%";
+                });
+                menuScroll.Add(scale);
+            }
             menuScroll.Add(Label("KEYBOARD INPUT", 10, Muted, true));
             var keyboardHelp = Note("W / S — pitch down / up\nA / D — turn left / right\nShift / Ctrl — increase / decrease throttle\nSpace — stage\nM — map / flight view\nEsc — pause / back\n\nSteering uses a simplified attitude controller; engine thrust follows the commanded orientation. It is not a physical gimbal simulation.");
             keyboardHelp.name = "keyboard-input-reference";
@@ -263,6 +278,12 @@ namespace ESP.Presentation
             saturation.SetValueWithoutNotify(session.MilkyWaySaturation);
             saturation.RegisterValueChangedCallback(evt => { session.SetMilkyWaySaturation(Mathf.Round(evt.newValue)); saturationLabel.text = "Milky Way saturation: " + Mathf.RoundToInt(session.MilkyWaySaturation) + "%"; });
             menuScroll.Add(saturation);
+            menuScroll.Add(Label("GRAPHICS · AURORA", 10, Muted, true));
+            AddAuroraSlider("Simulated Kp index", "aurora-kp", session.AuroraKp, 0, 9, false, session.SetAuroraKp);
+            AddAuroraSlider("Color boost", "aurora-color-boost", session.AuroraColorBoost, 50, 500, true, session.SetAuroraColorBoost);
+            AddAuroraSlider("Intensity", "aurora-intensity", session.AuroraIntensity, 50, 500, true, session.SetAuroraIntensity);
+            var auroraHelp = Note("Simulated magnetic activity, not live space weather. Higher Kp widens the polar oval toward lower latitudes. Color boost expands saturation and violet/red tones; intensity increases brightness. Enhanced reference look: 150% color / 300% intensity. Best viewed on Earth's night side.");
+            auroraHelp.style.marginBottom = 16; menuScroll.Add(auroraHelp);
             menuScroll.Add(Label("FRAME RATE LIMIT", 10, Muted, true));
             var caps = Row(); caps.style.flexWrap = Wrap.Wrap;
             caps.style.marginTop = 7; caps.style.marginBottom = 12;
@@ -282,6 +303,20 @@ namespace ESP.Presentation
             settingsNote.style.marginTop = 5; settingsNote.style.marginBottom = 17;
             menuScroll.Add(settingsNote);
             AddAction("Back", "settings-back", session.Back);
+        }
+
+        private void AddAuroraSlider(string title, string name, float value, float low, float high, bool percent, Action<float> change)
+        {
+            var label = Label("", 11, Text); label.style.marginTop = 8;
+            Action<float> display = v => label.text = title + ": " + (percent ? Mathf.RoundToInt(v) + "%" : v.ToString("F1"));
+            display(value); menuScroll.Add(label);
+            var slider = new Slider(low, high) { name = name };
+            slider.style.height = 26;
+            slider.SetValueWithoutNotify(value);
+            slider.RegisterValueChangedCallback(evt => { float v = percent ? Mathf.Round(evt.newValue) : Mathf.Round(evt.newValue * 10) / 10; change(v); display(v); });
+            slider.RegisterCallback<PointerUpEvent>(_ => PlayerPrefs.Save());
+            slider.RegisterCallback<FocusOutEvent>(_ => PlayerPrefs.Save());
+            menuScroll.Add(slider);
         }
 
         private void BuildCheats(MissionSession session)
@@ -362,7 +397,8 @@ namespace ESP.Presentation
             nerdPanel = new VisualElement { name = "nerd-stats-panel" };
             nerdPanel.style.position = Position.Absolute;
             nerdPanel.style.left = 12; nerdPanel.style.top = 120;
-            nerdPanel.style.width = 315; nerdPanel.style.maxHeight = Length.Percent(48);
+            nerdPanel.style.width = 315; nerdPanel.style.maxWidth = Length.Percent(90);
+            nerdPanel.style.maxHeight = Length.Percent(48);
             nerdPanel.style.paddingLeft = 9; nerdPanel.style.paddingRight = 9;
             nerdPanel.style.paddingTop = 7; nerdPanel.style.paddingBottom = 7;
             nerdPanel.style.backgroundColor = Surface;
@@ -370,6 +406,7 @@ namespace ESP.Presentation
             nerdPanel.Add(Label("STATS FOR NERDS", 10, Cyan, true));
             var scroll = new ScrollView(ScrollViewMode.Vertical);
             scroll.style.maxHeight = Length.Percent(100);
+            scroll.style.flexShrink = 1;
             nerdText = Label("", 10, Text);
             nerdText.name = "nerd-stats-values";
             nerdText.style.whiteSpace = WhiteSpace.Normal;
@@ -400,9 +437,9 @@ namespace ESP.Presentation
                 (k.spaceKey.isPressed ? "Space " : "");
             if (string.IsNullOrWhiteSpace(input)) input = "none";
             string flight = simulation == null ? "Flight: unavailable" :
-                string.Format("Pitch {0:F1}°  Heading {1:F1}°\nThrottle {2:F0}%  Stage {3}", simulation.PitchDegrees, simulation.HeadingDegrees, driver.Throttle * 100, simulation.State.StageIndex + 1);
+                string.Format("Pitch {0:F1}°  Heading {1:F1}°\nThrottle {2:F0}%  Stage {3}", simulation.ActualPitchDegrees, simulation.ActualHeadingDegrees, driver.Throttle * 100, simulation.State.StageIndex + 1);
             float ms = Time.unscaledDeltaTime * 1000f;
-            nerdText.text = string.Format("Frame {0:F1} ms  ({1:F0} FPS)\nCPU: {2}\nGPU: {3}\nMemory: {4} MB\n{5}\nKeys held: {6}\n\nRecent state changes:\n{7}",
+            nerdText.text = string.Format("Sampled frame {0:F1} ms  ({1:F0} FPS)\nCPU hardware: {2}\nGPU hardware: {3}\nUnity allocated: {4} MB\n{5}\nKeys held: {6}\n\nRecent state changes:\n{7}",
                 ms, ms > 0 ? 1000f / ms : 0, SystemInfo.processorType, SystemInfo.graphicsDeviceName,
                 UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / (1024 * 1024), flight, input, string.Join("\n", nerdEvents));
         }

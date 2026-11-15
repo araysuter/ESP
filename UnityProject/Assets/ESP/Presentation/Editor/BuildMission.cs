@@ -84,7 +84,7 @@ public static class BuildMission
         var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader; stars.sky = sky;
         var launch = new GameObject("Launch camera").AddComponent<Camera>();
         launch.transform.position = new Vector3(75, 38, -90); launch.transform.LookAt(new Vector3(0, 18, 0));
-        launch.nearClipPlane = .1f; launch.farClipPlane = 300000; launch.fieldOfView = 45;
+        launch.nearClipPlane = .1f; launch.farClipPlane = 1200000; launch.fieldOfView = 45;
         if (!launch.GetUniversalAdditionalCameraData().clearDepth) throw new Exception("Flight overlay must clear its depth buffer");
         launch.clearFlags = CameraClearFlags.SolidColor; launch.backgroundColor = new Color(.11f, .20f, .29f);
         var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.5f;
@@ -112,6 +112,8 @@ public static class BuildMission
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
         manager.AddComponent<MissionFlightSmoke>();
         var flight = manager.AddComponent<RocketFlightDriver>(); flight.director = director; flight.nasaWeather = nasaWeather;
+        flight.reentryShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/ReentryPlasma.shader");
+        if (!flight.reentryShader) throw new Exception("Missing reentry plasma shader");
         var explosion = manager.AddComponent<RocketExplosion>();
         explosion.driver = flight; explosion.director = director;
         explosion.effectShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketExplosion.shader");
