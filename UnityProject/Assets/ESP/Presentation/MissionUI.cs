@@ -530,6 +530,9 @@ namespace ESP.Presentation
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
             var localSurface = director.GetComponent<LocalSurfaceTiles>();
             string surfaceInfo = localSurface != null ? "\n\n" + LocalSurfaceTiles.Attribution + "\n" + localSurface.Status : "";
+            if (director.SelectedSiteIndex == 0 && director.siteStructurePrefabs != null &&
+                director.siteStructurePrefabs.Length > 0 && director.siteStructurePrefabs[0])
+                surfaceInfo += "\nStarbase tower and mount: herbys (Enrique Saggese), CC BY 4.0 as declared in the source handoff. Approximate ESP adaptation.";
             if (director.SelectedSiteIndex == 1 && director.siteStructurePrefabs != null && director.siteStructurePrefabs.Length > 1)
             {
                 var structure = director.siteStructurePrefabs[1];
