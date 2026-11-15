@@ -143,7 +143,10 @@ namespace ESP.Presentation
                 impactEcef.X, impactEcef.Y, impactEcef.Z, padLatitude, padLongitude).normalized;
             surfaceRotation = Quaternion.FromToRotation(Vector3.up, up);
             // Include attached upper stages and SRBs, exclude discarded stages.
-            double fuel = Math.Max(0, simulation.Physics.TotalPropellantKg);
+            // Compare equivalent fuel units on both sides, including fictional presets.
+            double fuel = Math.Max(0, state.PropellantKg);
+            if (simulation.BoosterAttached) fuel += Math.Max(0, simulation.BoosterPropellantKg);
+            for (int i = state.StageIndex + 1; i < driver.StageCount; i++) fuel += driver.StagePropellantCapacityKg(i);
             double capacity = 0;
             for (int i = 0; i < driver.StageCount; i++) capacity += driver.StagePropellantCapacityKg(i);
             capacity += driver.BoosterPropellantCapacityKg ?? 0;
