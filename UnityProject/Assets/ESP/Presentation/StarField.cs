@@ -78,8 +78,9 @@ namespace ESP.Presentation
             material.SetVector("_UpSky", ToJ2000(targetCamera.transform.up));
             material.SetVector("_ViewParams", new Vector4(Mathf.Tan(targetCamera.fieldOfView * .5f * Mathf.Deg2Rad), targetCamera.aspect, 0, 0));
             var settings = MissionSession.Instance;
-            material.SetVector("_SkyAdjust", new Vector4(settings != null ? settings.MilkyWayBrightness / 100 : 1,
-                settings != null ? settings.MilkyWaySaturation / 100 : 1, 0, 0));
+            float brightness = settings != null ? settings.MilkyWayBrightness : MissionSession.DefaultMilkyWayBrightness;
+            float saturation = settings != null ? settings.MilkyWaySaturation : MissionSession.DefaultMilkyWaySaturation;
+            material.SetVector("_SkyAdjust", new Vector4(brightness / 100f, saturation / 100f, 0, 0));
             if (sunlight != null && sunlight.CurrentUtc != default)
             {
                 Vector3 towardSun = ToWorld(sunlight.SunEcef).normalized;
