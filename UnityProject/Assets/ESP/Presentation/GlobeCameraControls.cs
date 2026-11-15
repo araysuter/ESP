@@ -24,7 +24,7 @@ namespace ESP.Presentation
         private Camera mapCamera;
         public float Distance => distance;
         public Vector3 FocusPosition => Center;
-        public const float SystemDistance = 900000f;
+        public const float SystemDistance = 30000000f;
 
         private Vector3 Center
         {
@@ -167,7 +167,7 @@ namespace ESP.Presentation
             if (mapCamera != null)
             {
                 mapCamera.nearClipPlane = Mathf.Clamp(distance * .00001f, .01f, 1f);
-                mapCamera.farClipPlane = Mathf.Max(100, distance + 2 * SolarSystemMap.AstronomicalUnit + 1000);
+                mapCamera.farClipPlane = Mathf.Max(100, distance + 120 * SolarSystemMap.AstronomicalUnit + 1000);
             }
         }
     }

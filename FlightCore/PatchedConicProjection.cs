@@ -25,10 +25,10 @@ namespace FlightCore
             {
                 var primary=ephemeris.Primary(position,time);
                 points.Add(new PatchedPoint(position,time,primary));
-                Vector3d center=primary==CelestialPrimary.Moon ? ephemeris.MoonPosition(time) : primary==CelestialPrimary.Sun ? ephemeris.SunPosition(time) : Vector3d.Zero;
-                Vector3d centerV=primary==CelestialPrimary.Moon ? ephemeris.MoonVelocity(time) : primary==CelestialPrimary.Sun ? ephemeris.SunVelocity(time) : Vector3d.Zero;
+                Vector3d center=ephemeris.Position(primary,time);
+                Vector3d centerV=ephemeris.Velocity(primary,time);
                 double r=(position-center).Magnitude(), speed=(velocity-centerV).Magnitude();
-                double radius=primary==CelestialPrimary.Moon ? LunarEphemeris.MoonRadius : primary==CelestialPrimary.Sun ? LunarEphemeris.SunRadius : EarthFrames.SemiMajorAxisMeters;
+                double radius=LunarEphemeris.Radius(primary);
                 if(r<=radius || time-start>365.25*86400) break;
                 // Resolve rapid turns and keep a vessel from crossing an entire lunar
                 // SOI or body in a single step. A prediction remains an estimate.

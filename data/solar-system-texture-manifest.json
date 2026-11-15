@@ -1,0 +1,242 @@
+[
+  {
+    "body": "Mercury",
+    "sourceFilename": "8k_mercury.jpg",
+    "sourceSha256": "5c8bd885ae3571c6ba2cd34b3446b9c6d767e314bf0ee8c1d5c147cadd388fc3",
+    "sourceSize": [
+      8192,
+      4096
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 648596,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Venus",
+    "sourceFilename": "8k_venus_surface.jpg",
+    "sourceSha256": "9bc21a50577ed8ac734cda91058724c7a741c19427aa276224ce349351432c5b",
+    "sourceSize": [
+      8192,
+      4096
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 565527,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Mars",
+    "sourceFilename": "8k_mars.jpg",
+    "sourceSha256": "4cc52149924abc6ae507d63032f994e1d42a55cb82c09e002d1a567ff66c23ee",
+    "sourceSize": [
+      8192,
+      4096
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 447709,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Jupiter",
+    "sourceFilename": "8k_jupiter.jpg",
+    "sourceSha256": "0bd844bf20822c4e3e80882b077859833c0dac44c7e4e1e0cd63d1b1b6d43085",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 326193,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Saturn",
+    "sourceFilename": "8k_saturn.jpg",
+    "sourceSha256": "0d39a4a490c87c3edabe00a3881a29bb3418364178c79c534fe0986e97e09853",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 137672,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Uranus",
+    "sourceFilename": "2k_uranus.jpg",
+    "sourceSha256": "d15239d46f82d3ea13d2b260b5b29b2a382f42f2916dae0694d0387b1204a09d",
+    "sourceSize": [
+      2048,
+      1024
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 36647,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Neptune",
+    "sourceFilename": "2k_neptune.jpg",
+    "sourceSha256": "cb42ea82709741d28b0af44d8b283cbc6dbd0c521a7f0e1e1e010ade00977df6",
+    "sourceSize": [
+      2048,
+      1024
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 89230,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Pluto",
+    "sourceFilename": "Pluto_Made.webp",
+    "sourceSha256": "7e5c852967737e23d5759c14ef78e5c485d753b866cfe556353020782e56c92d",
+    "sourceSize": [
+      1440,
+      720
+    ],
+    "outputSize": [
+      1440,
+      720
+    ],
+    "outputBytes": 336802,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Ceres",
+    "sourceFilename": "4k_ceres_fictional.jpg",
+    "sourceSha256": "e4452a4f84830a30d7a9b8be1b59c5a568e0aae8ed6ba5ebb7be0c3f672e7553",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 796458,
+    "fictional": true,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Eris",
+    "sourceFilename": "4k_eris_fictional.jpg",
+    "sourceSha256": "682787869e69dfcf41ce5f4db2a9b54fb00bd7e28b97b7b61e6a0296956c1278",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 702495,
+    "fictional": true,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Haumea",
+    "sourceFilename": "4k_haumea_fictional.jpg",
+    "sourceSha256": "1e039b82323030cda110eb21e47e38f46a4e9c46dc24eb545428eb0263c28292",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 634426,
+    "fictional": true,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Makemake",
+    "sourceFilename": "4k_makemake_fictional.jpg",
+    "sourceSha256": "d94c950da2614aa643f88db24437d706c1e3975aa38f7943620141f14301625c",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 703319,
+    "fictional": true,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "Sun",
+    "sourceFilename": "8k_sun.jpg",
+    "sourceSha256": "f22b1cfb306ddce72a7e3b628668a0175b745038ce6268557cb2f7f1bdf98b9d",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 461172,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "SaturnRings",
+    "sourceFilename": "8k_saturn_ring_alpha.png",
+    "sourceSha256": "f1f826933c9ff87d64ecf0518d6256b8ed990b003722794f67e96e3d2b876ae4",
+    "sourceSize": [
+      8192,
+      500
+    ],
+    "outputSize": [
+      2048,
+      125
+    ],
+    "outputBytes": 13466,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  },
+  {
+    "body": "VenusClouds",
+    "sourceFilename": "4k_venus_atmosphere.jpg",
+    "sourceSha256": "a14aeba3c6ad7a56f989bb32008dec548077aeded420495b34df98f2dc14ba91",
+    "sourceSize": [
+      4096,
+      2048
+    ],
+    "outputSize": [
+      2048,
+      1024
+    ],
+    "outputBytes": 159191,
+    "fictional": false,
+    "provenance": "User supplied; upstream source and redistribution terms not yet verified"
+  }
+]

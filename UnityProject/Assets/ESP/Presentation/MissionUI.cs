@@ -30,6 +30,7 @@ namespace ESP.Presentation
         private Label rocketMarker, mapMission;
         private Label systemEarth, systemSun, systemVehicle, systemMoon;
         private readonly Label[] orbitMarkers = new Label[3];
+        private readonly Dictionary<FlightCore.CelestialPrimary, Label> planetLabels = new Dictionary<FlightCore.CelestialPrimary, Label>();
         private readonly Label[] transitionMarkers = new Label[6];
         private MissionDirector subscribedDirector;
         private Button roadsterMarker;
@@ -136,6 +137,12 @@ namespace ESP.Presentation
                 root.Add(label);
             }
 
+            foreach(var body in FlightCore.LunarEphemeris.InnerPlanets)
+            {
+                var label=Label("●  "+body.ToString().ToUpperInvariant(),10,Text,FontStyle.Bold);
+                label.style.position=Position.Absolute; label.style.display=DisplayStyle.None; label.pickingMode=PickingMode.Ignore;
+                root.Add(label); planetLabels.Add(body,label);
+            }
             for (int i = 0; i < orbitMarkers.Length; i++)
             {
                 orbitMarkers[i] = Label("", 10, i == 2 ? Amber : Cyan, FontStyle.Bold);
@@ -593,6 +600,12 @@ namespace ESP.Presentation
             RefreshRoadster(camera, solarMap?.RoadsterPosition, systemView);
             PlaceSystemLabel(systemMoon, camera, solarMap != null ? solarMap.MoonPosition : Vector3.zero,
                 director != null && director.IsMapView && solarMap != null);
+            foreach(var pair in planetLabels)
+            {
+                Vector3 planetPosition=Vector3.zero;
+                bool visible=director != null && director.IsMapView && solarMap != null && solarMap.TryPlanetPosition(pair.Key,out planetPosition);
+                PlaceSystemLabel(pair.Value,camera,planetPosition,visible);
+            }
             for (int i = 0; i < orbitMarkers.Length; i++)
             {
                 Vector2 orbitScreen = default;

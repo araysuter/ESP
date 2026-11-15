@@ -22,6 +22,11 @@ namespace ESP.Presentation
         public Vector3? RoadsterPosition { get; private set; }
         private LineRenderer moonOrbit;
         private Material moonMaterial;
+        private readonly System.Collections.Generic.Dictionary<CelestialPrimary, Transform> planets = new System.Collections.Generic.Dictionary<CelestialPrimary, Transform>();
+        private readonly System.Collections.Generic.Dictionary<CelestialPrimary, LineRenderer> planetOrbits = new System.Collections.Generic.Dictionary<CelestialPrimary, LineRenderer>();
+        private readonly System.Collections.Generic.List<Material> planetMaterials = new System.Collections.Generic.List<Material>();
+        private float nextPlanetOrbit;
+        public bool TryPlanetPosition(CelestialPrimary body, out Vector3 position) { if(planets.TryGetValue(body,out var planet) && planet.gameObject.activeInHierarchy) { position=planet.position; return true; } position=default; return false; }
         private Material material, sunMaterial;
 
         public void Initialize(MissionDirector owner)
@@ -71,6 +76,16 @@ namespace ESP.Presentation
             moonMaterial.mainTexture = Resources.Load<Texture2D>("MoonSurface");
             moonRenderer.sharedMaterial = moonMaterial;
             moonObject = moon.transform;
+            foreach(var body in LunarEphemeris.InnerPlanets)
+            {
+                var planet=GameObject.CreatePrimitive(PrimitiveType.Sphere); planet.name=body.ToString(); planet.layer=MissionInsetView.MapLayer;
+                planet.transform.SetParent(owner.mapRoot.transform,false); planet.transform.localScale=Vector3.one*(float)(2*LunarEphemeris.Radius(body)/1000000);
+                var pc=planet.GetComponent<Collider>(); if(pc!=null) Destroy(pc);
+                var pm=lit!=null ? new Material(lit) : new Material(owner.orbitMaterial); pm.mainTexture=Resources.Load<Texture2D>("SolarSystem/"+body);
+                planet.GetComponent<Renderer>().sharedMaterial=pm; planetMaterials.Add(pm); planets.Add(body,planet.transform);
+                var o=new GameObject(body+" orbit"); o.layer=MissionInsetView.MapLayer; o.transform.SetParent(owner.mapRoot.transform,false);
+                var line=o.AddComponent<LineRenderer>(); line.useWorldSpace=true; line.positionCount=129; line.alignment=LineAlignment.View; line.sharedMaterial=material; line.shadowCastingMode=ShadowCastingMode.Off; line.receiveShadows=false; planetOrbits.Add(body,line);
+            }
             var lunarLine = new GameObject("Approximate Moon orbit");
             lunarLine.layer = MissionInsetView.MapLayer; lunarLine.transform.SetParent(owner.mapRoot.transform, false);
             moonOrbit = lunarLine.AddComponent<LineRenderer>(); moonOrbit.useWorldSpace = true;
@@ -116,6 +131,25 @@ namespace ESP.Presentation
             double missionTime = simulation != null ? simulation.State.MissionTime : 0;
             double angle = Aerodynamics.EarthAngularVelocityRadiansPerSecond * missionTime;
             Vector3 sunPosition = ephemeris != null ? ToMap(EarthFrames.InertialToEcef(ephemeris.SunPosition(missionTime), angle)) : towardSun * AstronomicalUnit;
+            foreach(var pair in planets)
+            {
+                bool available=ephemeris!=null && ephemeris.TryPlanet(pair.Key,missionTime,out _,out _,out _);
+                pair.Value.gameObject.SetActive(available);
+                if(available) pair.Value.position=ToMap(EarthFrames.InertialToEcef(ephemeris.Position(pair.Key,missionTime),angle));
+                var pl=planetOrbits[pair.Key]; pl.enabled=available && director.IsMapView && controls!=null && controls.Distance>=1000;
+                if(pl.enabled && Time.unscaledTime>=nextPlanetOrbit)
+                {
+                    double period=pair.Key==CelestialPrimary.Mercury?87.969:pair.Key==CelestialPrimary.Venus?224.701:pair.Key==CelestialPrimary.Mars?686.98:pair.Key==CelestialPrimary.Ceres?1680.0:pair.Key==CelestialPrimary.Jupiter?4332.59:pair.Key==CelestialPrimary.Saturn?10759.22:pair.Key==CelestialPrimary.Uranus?30688.5:pair.Key==CelestialPrimary.Neptune?60182:pair.Key==CelestialPrimary.Pluto?90560:pair.Key==CelestialPrimary.Eris?203646:pair.Key==CelestialPrimary.Haumea?104025:112327;
+                    // The offline dataset spans 17 years. Draw the available arc;
+                    // do not join missing samples to the origin or imply a full orbit.
+                    period=Math.Min(period,3652.5);
+                    var arc=new System.Collections.Generic.List<Vector3>();
+                    for(int j=0;j<=128;j++) { double t=missionTime+(j-64)*period*86400/128; if(ephemeris.TryPlanet(pair.Key,t,out var future,out _,out _)) arc.Add(sunPosition+ToMap(EarthFrames.InertialToEcef(future-ephemeris.SunPosition(t),angle))); }
+                    pl.positionCount=arc.Count; if(arc.Count>0) pl.SetPositions(arc.ToArray());
+                }
+                if(pl.enabled) pl.widthMultiplier=Mathf.Max(.1f,controls.Distance*.0014f);
+            }
+            if(Time.unscaledTime>=nextPlanetOrbit) nextPlanetOrbit=Time.unscaledTime+2;
             if (moonObject != null && ephemeris != null)
             {
                 moonObject.position = ToMap(EarthFrames.InertialToEcef(ephemeris.MoonPosition(missionTime), angle));
@@ -188,6 +222,7 @@ namespace ESP.Presentation
             if (material != null) Destroy(material);
             if (sunMaterial != null) Destroy(sunMaterial);
             if (moonMaterial != null) Destroy(moonMaterial);
+            foreach(var pm in planetMaterials) if(pm!=null) Destroy(pm);
         }
     }
 }

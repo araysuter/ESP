@@ -30,6 +30,8 @@ namespace ESP.Presentation
         private Camera launch, background;
         private GameObject backdropRoot, globe, moon;
         private Material moonMaterial;
+        private readonly System.Collections.Generic.Dictionary<CelestialPrimary, GameObject> planetBackdrops = new System.Collections.Generic.Dictionary<CelestialPrimary, GameObject>();
+        private readonly System.Collections.Generic.List<Material> planetMaterials = new System.Collections.Generic.List<Material>();
         private CloudShell cloudShell;
         private ContinuousAtmosphere atmosphere;
         private Material starMaterial;
@@ -92,6 +94,16 @@ namespace ESP.Presentation
                 moon.transform.position = CameraRelativeCoordinates.FromEcef(moonEcef.X, moonEcef.Y, moonEcef.Z,
                     origin.X, origin.Y, origin.Z, lat, lon) / 1000000f;
                 moon.transform.LookAt(globe.transform.position, Vector3.up);
+                foreach(var pair in planetBackdrops)
+                {
+                    bool available=celestial.TryPlanet(pair.Key,missionTime,out var planetPosition,out _,out _);
+                    pair.Value.SetActive(available);
+                    if(available)
+                    {
+                        var fixedPosition=EarthFrames.InertialToEcef(planetPosition,Aerodynamics.EarthAngularVelocityRadiansPerSecond*missionTime);
+                        pair.Value.transform.position=CameraRelativeCoordinates.FromEcef(fixedPosition.X,fixedPosition.Y,fixedPosition.Z,origin.X,origin.Y,origin.Z,lat,lon)/1000000f;
+                    }
+                }
             }
             var selectedMaterial = mission.mapLayers != null && mission.mapLayers.earth != null
                 ? mission.mapLayers.earth.sharedMaterial : globeMaterial;
@@ -167,6 +179,16 @@ namespace ESP.Presentation
             moonMaterial = moonShader != null ? new Material(moonShader) : new Material(globeMaterial);
             moonMaterial.mainTexture = Resources.Load<Texture2D>("MoonSurface");
             moon.GetComponent<Renderer>().sharedMaterial = moonMaterial;
+            CelestialAssets.EnsureLoaded();
+            foreach(var body in LunarEphemeris.InnerPlanets)
+            {
+                var planet=GameObject.CreatePrimitive(PrimitiveType.Sphere); planet.name=body+" flight backdrop"; planet.layer=backdropLayer;
+                planet.transform.SetParent(backdropRoot.transform,false); planet.transform.localScale=Vector3.one*(float)(2*LunarEphemeris.Radius(body)/1000000);
+                var collider=planet.GetComponent<Collider>(); if(collider!=null) Destroy(collider);
+                var pm=moonShader!=null ? new Material(moonShader) : new Material(globeMaterial);
+                pm.mainTexture=Resources.Load<Texture2D>("SolarSystem/"+body); planet.GetComponent<Renderer>().sharedMaterial=pm;
+                planetMaterials.Add(pm); planetBackdrops.Add(body,planet);
+            }
             var sunObject = new GameObject("Earth backdrop sunlight");
             sunObject.transform.SetParent(backdropRoot.transform, false);
             backgroundSun = sunObject.AddComponent<Light>();
@@ -233,6 +255,7 @@ namespace ESP.Presentation
             if (backdropRoot != null) Destroy(backdropRoot);
             if (starMaterial != null) Destroy(starMaterial);
             if (moonMaterial != null) Destroy(moonMaterial);
+            foreach(var pm in planetMaterials) if(pm!=null) Destroy(pm); planetMaterials.Clear(); planetBackdrops.Clear();
             backdropRoot = null; background = null; globe = null; moon = null; moonMaterial = null; cloudShell = null;
             atmosphere = null; globeRenderer = null; backgroundSun = null; starMaterial = null;
             launch = null; launchData = null; backgroundData = null;
