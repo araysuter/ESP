@@ -1,68 +1,169 @@
 name: Downloadable app builds
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (without v)'
+        required: true
+        default: '0.1.0'
+      publish:
+        description: 'Publish packages as a GitHub release after both platforms pass'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
-  group: esp-download-builds
+  group: esp-release-build
   cancel-in-progress: false
 jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      sha: ${{ steps.version.outputs.sha }}
+    steps:
+      - name: Validate release version and source
+        id: version
+        uses: actions/github-script@v7
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          script: |
+            const tag = context.eventName === 'release' ? context.payload.release.tag_name : 'v' + process.env.REQUESTED_VERSION;
+            if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error('Use a version such as v0.1.0');
+            if (!process.env.UNITY_EMAIL || !process.env.UNITY_PASSWORD) throw new Error('Set UNITY_EMAIL and UNITY_PASSWORD in repository Actions secrets. No UNITY_LICENSE file is needed.');
+            const sha = context.sha;
+            if (context.eventName === 'release' || process.env.PUBLISH === 'true') {
+              const {data} = await github.rest.repos.compareCommitsWithBasehead({...context.repo, basehead: sha + '...main'});
+              if (!['ahead', 'identical'].includes(data.status)) throw new Error('Release source must be on main');
+            }
+            core.setOutput('version', tag.slice(1)); core.setOutput('tag', tag); core.setOutput('sha', sha);
   build:
+    needs: prepare
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
-        os: [macOS, Windows]
-    runs-on: [self-hosted, '${{ matrix.os }}', esp-unity]
+        include:
+          - target: StandaloneOSX
+            runner: macos-15-intel
+            output: ESP.app
+          - target: StandaloneWindows64
+            runner: ubuntu-24.04
+            output: ESP.exe
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
-    env:
-      ESP_RELEASE_BUILD: '1'
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.prepare.outputs.sha }}
           lfs: true
-      - name: Build macOS DMG
-        if: matrix.os == 'macOS'
+          persist-credentials: false
+      - name: Check source assets
         shell: bash
         run: |
-          set -euo pipefail
-          : "${UNITY_EDITOR:?Set UNITY_EDITOR on the runner}"
-          mkdir -p Builds/macOS dist
-          export ESP_BUILD_PATH="$PWD/Builds/macOS/ESP.app"
-          "$UNITY_EDITOR" -batchmode -quit -projectPath "$PWD/UnityProject" -buildTarget StandaloneOSX -executeMethod BuildMission.Build -logFile "$PWD/Builds/unity.log"
-          test -d "$ESP_BUILD_PATH/Contents"
-          ln -s /Applications Builds/macOS/Applications
-          hdiutil create -volname ESP -srcfolder Builds/macOS -ov -format UDZO dist/ESP-macOS.dmg
-          hdiutil verify dist/ESP-macOS.dmg
-      - name: Build Windows installer
-        if: matrix.os == 'Windows'
-        shell: pwsh
+          git lfs fsck
+          test "$(wc -c < UnityProject/Assets/ESP/Art/Sky/CelestialSky.exr)" -gt 1000000
+          df -h .
+      - uses: actions/cache@v4
+        with:
+          path: UnityProject/Library
+          key: unity-6000.6.9f1-${{ matrix.target }}-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'FlightCore/**') }}
+          restore-keys: unity-6000.6.9f1-${{ matrix.target }}-
+      - name: Build release player
+        uses: game-ci/unity-builder@eb1b9fba120c6e62c9fb7a7a81d6c107ce004c45 # v6.0.0
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          cliVersion: v0.1.75
+          projectPath: UnityProject
+          targetPlatform: ${{ matrix.target }}
+          buildName: ESP
+          buildsPath: build
+          buildMethod: BuildMission.Build
+          versioning: Custom
+          version: ${{ needs.prepare.outputs.version }}
+          customParameters: -espRelease -espVersion ${{ needs.prepare.outputs.version }} -espBuildPath build/${{ matrix.target }}/${{ matrix.output }}
+      - name: Bundle notices and build provenance
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
-          $ErrorActionPreference = 'Stop'
-          if (-not $env:UNITY_EDITOR) { throw 'Set UNITY_EDITOR on the runner' }
-          New-Item -ItemType Directory -Force Builds/Windows, dist | Out-Null
-          $env:ESP_BUILD_PATH = Join-Path $PWD 'Builds/Windows/ESP.exe'
-          & $env:UNITY_EDITOR -batchmode -quit -projectPath "$PWD/UnityProject" -buildTarget StandaloneWindows64 -executeMethod BuildMission.Build -logFile "$PWD/Builds/unity.log" | Out-Host
-          if ($LASTEXITCODE -ne 0) { throw 'Unity build failed' }
-          if (-not (Test-Path $env:ESP_BUILD_PATH)) { throw 'Missing player executable' }
-          & ISCC.exe packaging/windows.iss
-          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          python3 packaging/bundle-notices.py "build/$TARGET" "$VERSION" "$SOURCE_SHA"
+      - name: Package and check macOS DMG
+        if: matrix.target == 'StandaloneOSX'
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: bash packaging/package-macos.sh "$VERSION"
+      - name: Archive Windows player for native installer packaging
+        if: matrix.target == 'StandaloneWindows64'
+        run: tar -czf windows-player.tar.gz -C build/StandaloneWindows64 .
+      - uses: actions/upload-artifact@v4
+        if: matrix.target == 'StandaloneWindows64'
+        with:
+          name: windows-player
+          path: windows-player.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: matrix.target == 'StandaloneOSX'
+        with:
+          name: ESP-macOS
+          path: dist/*
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-log-${{ matrix.target }}
+          path: |
+            build/**/*.log
+            artifacts/**
+          if-no-files-found: ignore
+          retention-days: 7
+  windows-installer:
+    needs: [prepare, build]
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-player
+      - name: Package and smoke test Windows installer
+        shell: pwsh
+        env:
+          ESP_VERSION: ${{ needs.prepare.outputs.version }}
+        run: ./packaging/package-windows.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: ESP-${{ matrix.os }}
+          name: ESP-Windows
           path: dist/*
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: unity-log-${{ matrix.os }}
-          path: Builds/unity.log
+          name: windows-install-smoke-log
+          path: build/windows-smoke.log
           if-no-files-found: ignore
   publish:
-    needs: build
-    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || inputs.publish
+    needs: [prepare, build, windows-installer]
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -71,23 +172,38 @@ jobs:
           pattern: ESP-*
           merge-multiple: true
           path: dist
-      - name: Publish packages
+      - name: Attach verified packages to the versioned release
         uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
         with:
           script: |
-            const fs = require('fs');
-            const tag = 'build-' + context.runId + '-' + process.env.GITHUB_RUN_ATTEMPT;
-            const release = await github.rest.repos.createRelease({
-              ...context.repo, tag_name: tag, target_commitish: context.sha,
-              name: 'ESP build ' + context.sha.slice(0, 7), draft: true, prerelease: true,
-              body: 'Automated build of ' + context.sha + '. Unsigned packages. Windows gameplay and macOS notarization remain unverified.'
-            });
-            for (const name of ['ESP-macOS.dmg', 'ESP-Windows-Setup.exe']) {
-              await github.rest.repos.uploadReleaseAsset({
-                ...context.repo, release_id: release.data.id, name,
-                data: fs.readFileSync('dist/' + name)
-              });
+            const fs = require('fs'), crypto = require('crypto');
+            const tag = process.env.RELEASE_TAG, version = process.env.RELEASE_VERSION;
+            const names = [`ESP-${version}-macOS.dmg`, `ESP-${version}-Windows-Setup.exe`, `ESP-${version}-Windows.zip`];
+            for (const name of names) if (!fs.existsSync('dist/' + name)) throw new Error('Missing package: ' + name);
+            const sums = names.map(name => crypto.createHash('sha256').update(fs.readFileSync('dist/' + name)).digest('hex') + '  ' + name).join('\n') + '\n';
+            fs.writeFileSync('dist/SHA256SUMS.txt', sums); names.push('SHA256SUMS.txt');
+            let release, created = false;
+            try { release = (await github.rest.repos.getReleaseByTag({...context.repo, tag})).data; }
+            catch (error) {
+              if (error.status !== 404) throw error;
+              created = true;
+              release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, target_commitish: process.env.SOURCE_SHA,
+                name: 'ESP ' + tag, draft: true, prerelease: false,
+                body: `Download the macOS DMG or Windows installer below. A portable Windows ZIP is also included.\n\nBuilt from ${process.env.SOURCE_SHA} with Unity 6000.6.9f1 on standard GitHub-hosted runners. Packages include source/license notices. Packages are not Developer ID notarized or Windows Authenticode signed. Windows CI checks installation and headless startup/ascent; interactive graphics still need testing on a Windows PC.\n\nmacOS: open the DMG and drag ESP to Applications. Windows: run the Setup.exe, or extract the entire portable ZIP and run ESP.exe. Checksums are in SHA256SUMS.txt.`})).data;
             }
-            await github.rest.repos.updateRelease({
-              ...context.repo, release_id: release.data.id, draft: false
-            });
+            if (!created) {
+              const {data: commit} = await github.rest.repos.getCommit({...context.repo, ref: tag});
+              if (commit.sha !== process.env.SOURCE_SHA) throw new Error('Release tag points to a different commit; refusing replacement');
+            }
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, {...context.repo, release_id: release.id});
+            for (const name of names) {
+              const old = assets.find(asset => asset.name === name);
+              if (old) await github.rest.repos.deleteReleaseAsset({...context.repo, asset_id: old.id});
+              await github.rest.repos.uploadReleaseAsset({...context.repo, release_id: release.id, name, data: fs.readFileSync('dist/' + name)});
+            }
+            if (release.draft) await github.rest.repos.updateRelease({...context.repo, release_id: release.id, draft: false});
+            await core.summary.addLink('Download ESP ' + tag, release.html_url).write();
