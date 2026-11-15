@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
@@ -11,7 +12,12 @@ public static class BuildMission
 {
     public static void Build()
     {
-        string buildPath = Environment.GetEnvironmentVariable("ESP_BUILD_PATH");
+        string buildPath = Argument("-espBuildPath") ?? Environment.GetEnvironmentVariable("ESP_BUILD_PATH");
+        bool release = Array.IndexOf(Environment.GetCommandLineArgs(), "-espRelease") >= 0 || Environment.GetEnvironmentVariable("ESP_RELEASE_BUILD") == "1";
+        string version = Argument("-espVersion");
+        if (version != null) PlayerSettings.bundleVersion = version;
+        if (!string.IsNullOrEmpty(buildPath) && !Path.IsPathRooted(buildPath))
+            buildPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../..", buildPath));
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
         WeatherHeightChecks.Validate();
@@ -147,12 +153,27 @@ public static class BuildMission
         PlayerSettings.runInBackground = true;
         PlayerSettings.resizableWindow = true;
         PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720; PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-        var target = Environment.GetEnvironmentVariable("ESP_RELEASE_BUILD") == "1"
+        var target = release
             ? EditorUserBuildSettings.activeBuildTarget : BuildTarget.StandaloneOSX;
         if (target != BuildTarget.StandaloneOSX && target != BuildTarget.StandaloneWindows64)
             throw new Exception("Downloadable builds support macOS and Windows x64.");
-        var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scenePath }, locationPathName = buildPath, target = target, options = Environment.GetEnvironmentVariable("ESP_RELEASE_BUILD") == "1" ? BuildOptions.None : BuildOptions.Development });
+        if (release)
+        {
+            PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
+            if (target == BuildTarget.StandaloneOSX)
+                EditorUserBuildSettings.SetPlatformSettings("OSXUniversal", "Architecture", "x64ARM64");
+        }
+        var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scenePath }, locationPathName = buildPath, target = target, options = release ? BuildOptions.None : BuildOptions.Development });
         if (report.summary.result != BuildResult.Succeeded) throw new Exception("Mission build failed");
-        Debug.Log("ESP_MISSION_BUILD_OK");
+        Debug.Log("ESP_MISSION_BUILD_OK version=" + PlayerSettings.bundleVersion + " target=" + target + " release=" + release);
     }
+    private static string Argument(string name)
+    {
+        var args = Environment.GetCommandLineArgs();
+        int index = Array.IndexOf(args, name);
+        if (index < 0) return null;
+        if (index + 1 >= args.Length || args[index + 1].StartsWith("-")) throw new ArgumentException("Missing value for " + name);
+        return args[index + 1];
+    }
+
 }
