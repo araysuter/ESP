@@ -34,6 +34,8 @@ namespace FlightCore
         public bool BoosterBurning => commanded && !landed && boosterAttached && boosterFuel > 0;
         public double ActualPitchDegrees => actualPitch;
         public double ActualHeadingDegrees => actualHeading;
+        /// <summary>Current thrust axis in the nonrotating Earth-centered launch frame, independent of throttle.</summary>
+        public Vector3d ThrustDirectionInertial => ThrustDirection(position,time,Geo(position,time));
         public double Throttle {get=>throttle;set {Check(value,0,1);throttle=value;}}
         public double PitchDegrees {get=>pitch;set {Check(value,-90,90);pitch=value;}}
         public double HeadingDegrees {get=>heading;set {Check(value,0,360);heading=value;}}

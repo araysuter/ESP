@@ -57,6 +57,8 @@ public static class LunarChecks
         var thrustDelta=powered.State.Velocity-coast.State.Velocity;
         if(thrustDelta.Magnitude()<.01 || (thrustDelta.Normalize()-localUp).Magnitude()>.001)
             throw new Exception("Moon thrust does not follow local radial up");
+        if((powered.ThrustDirectionInertial-thrustDelta.Normalize()).Magnitude()>.001)
+            throw new Exception("Displayed thrust axis differs from simulated thrust");
         var sun=e.SunPosition(0); var sunV=e.SunVelocity(0);
         var sunRocket=new RocketSimulation(.02,StageDefinition.DemoStages(),atmosphere,0,0,0,null,epoch);
         Set(sunRocket,"position",sun+new Vector3d(LunarEphemeris.SunRadius+10,0,0));

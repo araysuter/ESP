@@ -277,16 +277,11 @@ namespace ESP.Presentation
                     if (view.booster != null) view.booster.gameObject.SetActive(state.StageIndex == 0);
                     view.SetThrottle(state.IsLaunched && !state.IsLanded && state.PropellantKg > 0 ? (float)simulation.Throttle : 0);
                 }
-                // Actual attitude is defined in ENU at the vehicle, not at the pad.
-                double pitch = simulation.ActualPitchDegrees * Math.PI / 180;
-                double heading = simulation.ActualHeadingDegrees * Math.PI / 180;
-                double vlat = geodetic.LatitudeRadians, vlon = geodetic.LongitudeRadians;
-                double east = Math.Cos(pitch) * Math.Sin(heading);
-                double north = Math.Cos(pitch) * Math.Cos(heading);
-                double up = Math.Sin(pitch);
-                double x = -Math.Sin(vlon) * east - Math.Sin(vlat) * Math.Cos(vlon) * north + Math.Cos(vlat) * Math.Cos(vlon) * up;
-                double y = Math.Cos(vlon) * east - Math.Sin(vlat) * Math.Sin(vlon) * north + Math.Cos(vlat) * Math.Sin(vlon) * up;
-                double z = Math.Cos(vlat) * north + Math.Sin(vlat) * up;
+                // Render the same thrust axis used by the force model, expressed
+                // in the Earth-fixed pad frame used by the camera-relative scene.
+                var axis = EarthFrames.InertialToEcef(simulation.ThrustDirectionInertial,
+                    Aerodynamics.EarthAngularVelocityRadiansPerSecond * state.MissionTime);
+                double x = axis.X, y = axis.Y, z = axis.Z;
                 double localEast = -Math.Sin(lon) * x + Math.Cos(lon) * y;
                 double localNorth = -Math.Sin(lat) * Math.Cos(lon) * x - Math.Sin(lat) * Math.Sin(lon) * y + Math.Cos(lat) * z;
                 double localUp = Math.Cos(lat) * Math.Cos(lon) * x + Math.Cos(lat) * Math.Sin(lon) * y + Math.Sin(lat) * z;
