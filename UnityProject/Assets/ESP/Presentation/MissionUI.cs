@@ -498,7 +498,7 @@ namespace ESP.Presentation
             float navSize = narrow ? 92 : 120;
             navball.style.width = navSize; navball.style.height = navSize;
             navballHousing.style.height = navSize + 25;
-            float previewWidth = narrow ? 160 : compact ? 220 : 280;
+            float previewWidth = narrow ? 130 : compact ? 180 : 220;
             previewHousing.style.width = previewMinimized ? 130 : previewWidth;
             previewHousing.style.height = previewMinimized ? 21 : previewWidth * 9f / 16f + 21;
             inputStrip.style.top = 0;

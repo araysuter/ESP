@@ -22,6 +22,9 @@ namespace ESP.Presentation
         private MissionMenuPage? renderedPage;
         private float nextReadout;
         private bool physicsCollapsed;
+        private VisualElement nerdHeader;
+        private Vector2 nerdPointerStart, nerdPanelStart;
+        private bool draggingNerdPanel;
         private VisualElement nerdPanel;
         private Label nerdText;
         private Toggle nerdToggle;
@@ -397,13 +400,18 @@ namespace ESP.Presentation
             nerdPanel = new VisualElement { name = "nerd-stats-panel" };
             nerdPanel.style.position = Position.Absolute;
             nerdPanel.style.left = 12; nerdPanel.style.top = 120;
-            nerdPanel.style.width = 315; nerdPanel.style.maxWidth = Length.Percent(90);
-            nerdPanel.style.maxHeight = Length.Percent(48);
-            nerdPanel.style.paddingLeft = 9; nerdPanel.style.paddingRight = 9;
-            nerdPanel.style.paddingTop = 7; nerdPanel.style.paddingBottom = 7;
+            nerdPanel.style.maxWidth = Length.Percent(90);
+            nerdPanel.style.width = 270; nerdPanel.style.maxHeight = Length.Percent(42);
+            nerdPanel.style.paddingLeft = 7; nerdPanel.style.paddingRight = 7;
+            nerdPanel.style.paddingTop = 5; nerdPanel.style.paddingBottom = 5;
             nerdPanel.style.backgroundColor = Surface;
             Border(nerdPanel, Edge); Radius(nerdPanel, 5);
-            nerdPanel.Add(Label("STATS FOR NERDS", 10, Cyan, true));
+            nerdHeader = Row(); nerdHeader.Add(Label("STATS FOR NERDS  ·  DRAG", 9, Cyan, true));
+            nerdHeader.RegisterCallback<PointerDownEvent>(BeginNerdDrag);
+            nerdHeader.RegisterCallback<PointerMoveEvent>(MoveNerdDrag);
+            nerdHeader.RegisterCallback<PointerUpEvent>(EndNerdDrag);
+            nerdHeader.RegisterCallback<PointerCaptureOutEvent>(_ => draggingNerdPanel = false);
+            nerdPanel.Add(nerdHeader);
             var scroll = new ScrollView(ScrollViewMode.Vertical);
             scroll.style.maxHeight = Length.Percent(100);
             scroll.style.flexShrink = 1;
@@ -411,6 +419,29 @@ namespace ESP.Presentation
             nerdText.name = "nerd-stats-values";
             nerdText.style.whiteSpace = WhiteSpace.Normal;
             scroll.Add(nerdText); nerdPanel.Add(scroll); overlayRoot.Add(nerdPanel);
+        }
+
+        private void BeginNerdDrag(PointerDownEvent evt)
+        {
+            if (evt.button != 0) return;
+            draggingNerdPanel = true;
+            nerdPointerStart = evt.position;
+            nerdPanelStart = new Vector2(nerdPanel.resolvedStyle.left, nerdPanel.resolvedStyle.top);
+            nerdHeader.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+        private void MoveNerdDrag(PointerMoveEvent evt)
+        {
+            if (!draggingNerdPanel || !nerdHeader.HasPointerCapture(evt.pointerId)) return;
+            Vector2 delta = (Vector2)evt.position - nerdPointerStart;
+            nerdPanel.style.left = Mathf.Clamp(nerdPanelStart.x + delta.x, 0, Mathf.Max(0, root.resolvedStyle.width - nerdPanel.resolvedStyle.width));
+            nerdPanel.style.top = Mathf.Clamp(nerdPanelStart.y + delta.y, 0, Mathf.Max(0, root.resolvedStyle.height - 40));
+            evt.StopPropagation();
+        }
+        private void EndNerdDrag(PointerUpEvent evt)
+        {
+            draggingNerdPanel = false;
+            if (nerdHeader.HasPointerCapture(evt.pointerId)) nerdHeader.ReleasePointer(evt.pointerId);
         }
 
         private void RefreshNerdStats()
