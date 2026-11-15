@@ -30,3 +30,6 @@ UnityProject/Assets/ESP/Art/Sites/NasaMobileLauncher/*.png -filter -diff -merge 
 # Small licensed exhaust textures are bundled directly for clean clones.
 UnityProject/Assets/ESP/Resources/Waterfall/*.png -filter -diff -merge -text
 AssetsSource/ThirdParty/Waterfall/*.dds -filter -diff -merge -text
+
+# Small offline NASA city-light atlas (under 1 MB), bundled like the Earth fallback.
+UnityProject/Assets/ESP/Art/Earth/BlackMarble2016Lights.png -filter -diff -merge -text
