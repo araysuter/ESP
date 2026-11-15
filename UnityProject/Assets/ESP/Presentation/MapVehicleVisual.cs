@@ -60,7 +60,7 @@ namespace ESP.Presentation
 
         private void LateUpdate()
         {
-            if (director == null || director.mapCamera == null || icon == null) return;
+            if (director == null || director.MapRenderCamera == null || icon == null) return;
             var driver = director.FlightDriver as RocketFlightDriver;
             var simulation = driver != null ? driver.Simulation : null;
             Vector3 point;
@@ -77,7 +77,7 @@ namespace ESP.Presentation
                 var ecef = EarthFrames.GeodeticToEcef(lat, lon, site.ElevationMeters);
                 point = new Vector3((float)(ecef.X / 1000000), (float)(ecef.Z / 1000000), (float)(ecef.Y / 1000000));
             }
-            var camera = director.mapCamera;
+            var camera = director.MapRenderCamera;
             // Test the true anchor against the ellipsoid, so enlargement never reveals a rear-side vehicle.
             bool visible = IsVisible(point, camera.transform.position);
             icon.gameObject.SetActive(visible);
@@ -100,6 +100,7 @@ namespace ESP.Presentation
             }
             float logicalHeight = missionDocument != null ? missionDocument.rootVisualElement.resolvedStyle.height : 0;
             if (float.IsNaN(logicalHeight) || logicalHeight <= 0) logicalHeight = 800;
+            if (!director.IsMapView) logicalHeight = 216;
             float iconHeight = height * Mathf.Min(24f / logicalHeight, .025f);
             icon.position = point + point.normalized * .01f;
             // This is an enlarged model marker, not a scale or attitude rendering.

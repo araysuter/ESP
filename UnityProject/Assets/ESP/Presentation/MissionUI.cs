@@ -11,7 +11,12 @@ namespace ESP.Presentation
     {
         public MissionDirector director;
         private VisualElement mapControls, flightControls, weatherDetails, flightDetails;
-        private Label site, status, altitude, speed, missionTime, weather, mapCredit, nasaStatus, flightDetailText;
+        private Label site, status, missionTime, weather, mapCredit, nasaStatus, flightDetailText;
+        private BroadcastGauge speedGauge, altitudeGauge;
+        private VisualElement telemetry, inputStrip, previewHousing;
+        private ScrollView informationBody;
+        private Image previewImage;
+        private Label previewCaption, previewMarker;
         private Label throttleValue, vehicleNote, mapVehicleNote;
         private Label stageFuel, boosterFuel;
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
@@ -176,46 +181,50 @@ namespace ESP.Presentation
             Absolute(flightControls, 12, null, 12, 10);
             flightControls.pickingMode = PickingMode.Ignore;
             flightDetails = Panel(); flightDetails.name = "flight-information-panel";
-            Absolute(flightDetails, 12, null, null, 174);
+            Absolute(flightDetails, 18, null, null, 292);
             flightDetails.style.width = 400;
             var closeDetails = Button("CLOSE", () => { detailsOpen = false; Refresh(); }, false, "close-information");
             closeDetails.style.alignSelf = Align.FlexEnd;
+            closeDetails.style.flexShrink = 0;
             flightDetails.Add(closeDetails);
             flightDetailText = Label("", 11, Text, FontStyle.Normal);
             flightDetailText.style.whiteSpace = WhiteSpace.Normal;
-            flightDetails.Add(flightDetailText);
+            informationBody = new ScrollView(ScrollViewMode.Vertical);
+            informationBody.name = "flight-information-scroll";
+            informationBody.style.flexShrink = 1;
+            informationBody.style.minHeight = 0;
+            informationBody.Add(flightDetailText);
+            flightDetails.Add(informationBody);
             root.Add(flightDetails);
 
-            var dock = Row(); dock.name = "cockpit-bottom-strip";
+            var dock = new VisualElement(); dock.name = "cockpit-bottom-strip";
             dock.pickingMode = PickingMode.Ignore;
-            dock.style.height = 84;
-            dock.style.flexDirection = FlexDirection.Row; dock.style.alignItems = Align.Center;
-            var left = Row(); left.name = "cockpit-left-instruments"; left.pickingMode = PickingMode.Ignore;
-            left.style.flexGrow = 1; left.style.flexBasis = 0; left.style.minWidth = 0;
-            left.style.alignItems = Align.Center;
-            vehicleGroup = VehicleSelector(false); left.Add(vehicleGroup);
-            flightDetails.Add(modelCredit);
-            var telemetry = Panel(); telemetry.name = "primary-telemetry";
-            telemetry.style.flexDirection = FlexDirection.Row;
-            telemetry.style.marginLeft = 8;
-            telemetry.style.flexGrow = 1; telemetry.style.justifyContent = Justify.SpaceAround;
-            altitude = Metric(telemetry, "ALTITUDE", "altitude-readout");
-            speed = Metric(telemetry, "SURFACE SPEED", "speed-readout");
-            var fuel = Column();
-            fuel.name = "fuel-readout";
-            fuel.Add(Label("PROPELLANT", 9, Muted, FontStyle.Bold));
-            stageFuel = Label("", 11, Text, FontStyle.Bold);
-            stageFuel.name = "stage-fuel-readout";
-            fuel.Add(stageFuel);
-            boosterFuel = Label("", 10, Muted, FontStyle.Normal);
-            boosterFuel.name = "booster-fuel-readout";
-            boosterFuel.style.display = DisplayStyle.None;
-            fuel.Add(boosterFuel);
-            telemetry.Add(fuel);
-            left.Add(telemetry); dock.Add(left);
+            dock.style.height = 268;
+            vehicleGroup = VehicleSelector(false);
+            Absolute(vehicleGroup, 6, 0, null, null);
+            dock.Add(vehicleGroup);
+            informationBody.Add(modelCredit);
+            telemetry = Row(); telemetry.name = "primary-telemetry";
+            telemetry.pickingMode = PickingMode.Ignore;
+            Absolute(telemetry, 0, null, null, 0);
+            speedGauge = new BroadcastGauge("SPEED", "KM/H", "speed-readout");
+            altitudeGauge = new BroadcastGauge("ALTITUDE", "KM", "altitude-readout");
+            speedGauge.tooltip = "Speed relative to the rotating Earth surface";
+            altitudeGauge.tooltip = "Altitude above the WGS84 ellipsoid";
+            telemetry.Add(speedGauge); telemetry.Add(altitudeGauge);
+            dock.Add(telemetry);
+            var fuel = Row(); fuel.name = "fuel-readout";
+            fuel.pickingMode = PickingMode.Ignore;
+            Absolute(fuel, 8, null, null, 0);
+            stageFuel = Label("", 9, Text, FontStyle.Normal); stageFuel.name = "stage-fuel-readout";
+            boosterFuel = Label("", 9, Muted, FontStyle.Normal); boosterFuel.name = "booster-fuel-readout";
+            boosterFuel.style.marginLeft = 12;
+            fuel.Add(stageFuel); fuel.Add(boosterFuel); dock.Add(fuel);
 
             navballHousing = Column(); navballHousing.name = "navball-housing";
             navballHousing.style.width = 144; navballHousing.style.flexShrink = 0;
+            navballHousing.pickingMode = PickingMode.Ignore;
+            Absolute(navballHousing, null, null, null, 0);
             navballHousing.style.height = 145; navballHousing.style.alignSelf = Align.FlexEnd;
             navballHousing.style.alignItems = Align.Center;
             navball = new NavballElement(); navball.name = "flight-navball";
@@ -226,8 +235,9 @@ namespace ESP.Presentation
             missionTime.style.marginTop = 4;
             navballHousing.Add(missionTime); dock.Add(navballHousing);
 
-            var right = Row(); right.name = "cockpit-flight-inputs"; right.pickingMode = PickingMode.Ignore;
-            right.style.flexGrow = 1; right.style.flexBasis = 0; right.style.minWidth = 0;
+            var right = Row(); inputStrip = right; right.name = "cockpit-flight-inputs"; right.pickingMode = PickingMode.Ignore;
+            Absolute(right, null, 0, 0, null);
+            right.style.width = 300;
             right.style.justifyContent = Justify.SpaceBetween; right.style.alignItems = Align.Center;
             var guidance = Column(); guidance.style.width = 102; guidance.style.flexShrink = 0;
             assist = Button("ASSIST ON", () => { if (director?.FlightDriver is RocketFlightDriver f) f.ToggleAssistance(); Refresh(); }, false, "assistance-toggle");
@@ -271,7 +281,32 @@ namespace ESP.Presentation
             detailsToggle.tooltip = "Flight details, atmosphere source and keyboard controls";
             detailsToggle.style.width = 23; detailsToggle.style.height = 23; detailsToggle.style.paddingLeft = 0; detailsToggle.style.paddingRight = 0;
             utility.Add(detailsToggle); staging.Add(utility); right.Add(staging);
-            dock.Add(right); flightControls.Add(dock); root.Add(flightControls);
+            dock.Add(right);
+            previewHousing = Column(); previewHousing.name = "live-preview";
+            previewHousing.style.backgroundColor = new Color(.015f, .025f, .035f, .6f);
+            Border(previewHousing, new Color(1, 1, 1, .45f));
+            Absolute(previewHousing, null, null, 4, 4);
+            previewHousing.RegisterCallback<ClickEvent>(_ => ToggleView());
+            previewHousing.tooltip = "Click to swap main and inset views [M]";
+            previewImage = new Image { name = "live-preview-image", scaleMode = ScaleMode.ScaleToFit };
+            previewImage.pickingMode = PickingMode.Ignore;
+            previewImage.style.width = Length.Percent(100); previewImage.style.flexGrow = 1;
+            previewImage.style.flexBasis = 0; previewImage.style.minHeight = 0;
+            previewHousing.Add(previewImage);
+            previewMarker = Label("▲", 12, Color.white, FontStyle.Bold);
+            previewMarker.name = "live-preview-vehicle-marker";
+            previewMarker.style.position = Position.Absolute;
+            previewMarker.style.display = DisplayStyle.None;
+            previewMarker.style.unityTextOutlineColor = Color.black;
+            previewMarker.style.unityTextOutlineWidth = 1;
+            previewHousing.Add(previewMarker);
+            previewCaption = Label("LIVE  ·  ALTERNATE VIEW", 9, Text, FontStyle.Normal);
+            previewCaption.name = "live-preview-caption";
+            previewCaption.style.paddingLeft = 8; previewCaption.style.height = 21;
+            previewCaption.style.unityTextAlign = TextAnchor.MiddleLeft;
+            previewHousing.Add(previewCaption);
+            dock.Add(previewHousing);
+            flightControls.Add(dock); root.Add(flightControls);
         }
 
         private VisualElement VehicleSelector(bool map)
@@ -304,11 +339,30 @@ namespace ESP.Presentation
         private void Resize()
         {
             if (vehicleGroup == null) return;
-            bool compact = root.resolvedStyle.width > 0 && root.resolvedStyle.width < 1050;
+            float width = root.resolvedStyle.width;
+            if (width <= 0) return;
+            // Leave the close button outside the scrolling copy and constrain the panel
+            // to the actual UI viewport, including short windows and compact displays.
+            float height = root.resolvedStyle.height;
+            float detailsBottom = Mathf.Min(292, Mathf.Max(16, height * .4f));
+            flightDetails.style.bottom = detailsBottom;
+            flightDetails.style.maxHeight = Mathf.Max(80, height - detailsBottom - 24);
+            flightDetails.style.width = Mathf.Min(400, Mathf.Max(160, width - 36));
+            bool compact = width < 1050;
+            bool narrow = width < 760;
+            float gaugeSize = narrow ? 100 : compact ? 130 : 160;
             vehicleGroup.style.width = compact ? 112 : 140;
-            navballHousing.style.width = compact ? 130 : 144;
-            altitude.style.fontSize = compact ? 18 : 21;
-            speed.style.fontSize = compact ? 18 : 21;
+            speedGauge.SetSize(gaugeSize); altitudeGauge.SetSize(gaugeSize);
+            telemetry.style.bottom = 18;
+            navballHousing.style.left = (width - 24 - 144) * .5f;
+            float navSize = narrow ? 92 : 120;
+            navball.style.width = navSize; navball.style.height = navSize;
+            navballHousing.style.height = navSize + 25;
+            previewHousing.style.width = narrow ? 160 : compact ? 220 : 280;
+            previewHousing.style.height = (narrow ? 160 : compact ? 220 : 280) * 9f / 16f + 21;
+            inputStrip.style.top = 0;
+            flightControls.style.height = narrow ? 252 : 268;
+
         }
 
         private void Update()
@@ -408,18 +462,17 @@ namespace ESP.Presentation
             var flight = available ? director.FlightDriver as RocketFlightDriver : null;
             bool mapFlying = isMap && flight != null && flight.HasPosition;
             mapControls.style.display = isMap ? DisplayStyle.Flex : DisplayStyle.None;
-            flightControls.style.display = !isMap || mapFlying ? DisplayStyle.Flex : DisplayStyle.None;
-            // Keep map selectors in a separate corner once the shared flight dock is visible.
-            // Its navball reaches 155 px above the bottom, so popovers clear it by 19 px.
-            mapControls.style.top = mapFlying ? new StyleLength(48) : new StyleLength(StyleKeyword.Auto);
-            mapControls.style.bottom = mapFlying ? new StyleLength(StyleKeyword.Auto) : new StyleLength(10);
-            mapControls.style.right = mapFlying ? new StyleLength(StyleKeyword.Auto) : new StyleLength(12);
-            mapControls.style.width = mapFlying ? new StyleLength(350) : new StyleLength(StyleKeyword.Auto);
-            mapVehicleGroup.style.display = mapFlying ? DisplayStyle.None : DisplayStyle.Flex;
-            mapDetailsToggle.style.display = mapFlying ? DisplayStyle.None : DisplayStyle.Flex;
+            flightControls.style.display = DisplayStyle.Flex;
+            // Map layers stay above the shared broadcast instruments in both preflight and flight.
+            mapControls.style.top = 48;
+            mapControls.style.bottom = new StyleLength(StyleKeyword.Auto);
+            mapControls.style.right = new StyleLength(StyleKeyword.Auto);
+            mapControls.style.width = 350;
+            mapVehicleGroup.style.display = DisplayStyle.None;
+            mapDetailsToggle.style.display = DisplayStyle.None;
             flightDetails.style.display = detailsOpen ? DisplayStyle.Flex : DisplayStyle.None;
             weatherDetails.style.display = isMap && weatherOpen ? DisplayStyle.Flex : DisplayStyle.None;
-            weatherDetails.style.bottom = mapFlying ? 174 : 80;
+            weatherDetails.style.bottom = 292;
             viewToggle.text = isMap ? "FLIGHT  [M]" : "MAP  [M]";
             viewToggle.SetEnabled(available);
             if (director != null && director.mapLayers != null) selectedLayer = director.mapLayers.SelectedIndex + 1;
@@ -428,6 +481,16 @@ namespace ESP.Presentation
             Selected(detailsToggle, detailsOpen);
             Selected(mapDetailsToggle, detailsOpen);
             if (!available) return;
+            var inset = director.GetComponent<MissionInsetView>();
+            SetPreview(inset != null && inset.HasPreview ? inset.PreviewTexture : null, inset != null && inset.PreviewIsMap);
+            bool showPreviewMarker = inset != null && inset.HasPreview && inset.PreviewIsMap && inset.HasMarker;
+            previewMarker.style.display = showPreviewMarker ? DisplayStyle.Flex : DisplayStyle.None;
+            if (showPreviewMarker)
+            {
+                var point = inset.MarkerViewportPosition;
+                previewMarker.style.left = Mathf.Clamp01(point.x) * previewImage.resolvedStyle.width - 6;
+                previewMarker.style.top = (1 - Mathf.Clamp01(point.y)) * previewImage.resolvedStyle.height - 6;
+            }
             // The shared dock carries mission time/rate in both views; avoid duplicate clocks.
             mapMission.style.display = DisplayStyle.None;
             double seconds = Math.Max(0, director.MissionTimeSeconds);
@@ -462,7 +525,7 @@ namespace ESP.Presentation
             string flightInfo = (director.FlightStatus ?? "READY") + "\n\n" +
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
                 "\n" + (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n\n" + steeringInfo;
-            flightDetailText.text = isMap ? mapInfo + (mapFlying ? "\n\n" + flightInfo : "") : flightInfo + "\n\n" + vehicleInfo + surfaceInfo;
+            flightDetailText.text = isMap ? mapInfo + (mapFlying ? "\n\n" + flightInfo : "") + surfaceInfo : flightInfo + "\n\n" + vehicleInfo + surfaceInfo;
             assist.SetEnabled(flight != null);
             assist.text = flight != null && flight.AssistanceEnabled ? "ASSIST ON" : "MANUAL";
             Selected(assist, flight != null && flight.AssistanceEnabled);
@@ -471,12 +534,12 @@ namespace ESP.Presentation
                 rateButtons[i].SetEnabled(flight != null);
                 Selected(rateButtons[i], flight != null && flight.TimeRate == Rates[i]);
             }
-            altitude.text = Distance(director.AltitudeMeters);
-            speed.text = director.SpeedMetersPerSecond.ToString("N0") + " m/s";
+            altitudeGauge.SetValue((director.AltitudeMeters / 1000).ToString(Math.Abs(director.AltitudeMeters) < 10000 ? "N2" : "N1"));
+            speedGauge.SetValue((director.SpeedMetersPerSecond * 3.6).ToString("N0"));
             if (flight != null)
             {
                 var fuel = flight.FuelTelemetry;
-                stageFuel.text = $"Stage {fuel.StageNumber} · {fuel.StageKg:N0} kg";
+                stageFuel.text = $"FUEL  S{fuel.StageNumber}  {fuel.StageKg:N0} kg";
                 boosterFuel.style.display = fuel.BoosterKg.HasValue ? DisplayStyle.Flex : DisplayStyle.None;
                 if (fuel.BoosterKg.HasValue)
                     boosterFuel.text = $"SRBs · {fuel.BoosterKg.Value:N0} kg";
@@ -495,12 +558,12 @@ namespace ESP.Presentation
         }
 
         private static string Distance(double meters) => Math.Abs(meters) >= 10000 ? (meters / 1000).ToString("N1") + " km" : meters.ToString("N0") + " m";
-        private static Label Metric(VisualElement parent, string title, string name)
+        /// <summary>The alternate-view renderer supplies its live texture without owning HUD layout.</summary>
+        public void SetPreview(RenderTexture texture, bool isMap)
         {
-            var group = Column(); group.style.minWidth = 78;
-            group.Add(Label(title, 9, Muted, FontStyle.Normal));
-            var value = Label("—", 21, Text, FontStyle.Bold); value.name = name;
-            group.Add(value); parent.Add(group); return value;
+            if (previewImage == null) return;
+            if (previewImage.image != texture) previewImage.image = texture;
+            previewCaption.text = texture == null ? "PREVIEW UNAVAILABLE" : isMap ? "LIVE  ·  EARTH MAP  ↗" : "LIVE  ·  FLIGHT  ↗";
         }
         private static void Selected(Button button, bool selected)
         {

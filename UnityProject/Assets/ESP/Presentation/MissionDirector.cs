@@ -24,6 +24,9 @@ namespace ESP.Presentation
     {
         public Camera mapCamera, launchCamera;
         public GameObject mapRoot;
+        public MissionInsetView Inset { get; private set; }
+        public Camera MapRenderCamera => IsMapView ? mapCamera : Inset != null ? Inset.MapPreviewCamera : null;
+        public Camera FlightRenderCamera => IsMapView ? (Inset != null ? Inset.FlightPreviewCamera : null) : launchCamera;
         public NasaMapLayers mapLayers;
         public LaunchWeatherProfile weather;
         public NasaWeatherProfile nasaWeather;
@@ -44,7 +47,12 @@ namespace ESP.Presentation
             VehicleIndex = index; rocketPrefab = vehiclePrefabs[index];
             FlightDriver?.ResetMission();
             ReleaseEnvironment();
-            if (!IsMapView) GoToLaunch(SelectedSiteIndex);
+            if (Inset != null || !IsMapView)
+            {
+                bool wasMap = IsMapView;
+                GoToLaunch(SelectedSiteIndex);
+                if (wasMap) ShowMap();
+            }
         }
         public Texture[] siteGroundTextures;
         public GameObject[] siteStructurePrefabs;
@@ -108,6 +116,9 @@ namespace ESP.Presentation
             }
             if (picker != null) picker.PointSelected += OnPointSelected;
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
+            Inset = gameObject.AddComponent<MissionInsetView>();
+            Inset.Initialize(this);
+            GoToLaunch(SelectedSiteIndex);
             ShowMap();
             RequestWeather();
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-espMissionCapture") >= 0) StartCoroutine(Capture());
@@ -119,7 +130,8 @@ namespace ESP.Presentation
             if (mapRoot) mapRoot.SetActive(true);
             if (mapCamera) mapCamera.gameObject.SetActive(true);
             if (launchCamera) launchCamera.gameObject.SetActive(false);
-            if (environment) environment.SetActive(false);
+            if (environment) environment.SetActive(true);
+            Inset?.SynchronizeView();
             RefreshFlightBackdrop();
         }
 
@@ -157,7 +169,7 @@ namespace ESP.Presentation
         private void SetLaunchView()
         {
             IsMapView = false;
-            if (mapRoot) mapRoot.SetActive(false);
+            if (mapRoot) mapRoot.SetActive(true);
             if (mapCamera) mapCamera.gameObject.SetActive(false);
             if (launchCamera) launchCamera.gameObject.SetActive(true);
             if (launchCamera)
@@ -166,6 +178,7 @@ namespace ESP.Presentation
                 if (!controls) controls = launchCamera.gameObject.AddComponent<FlightCameraControls>();
                 controls.director = this;
             }
+            Inset?.SynchronizeView();
             RefreshFlightBackdrop();
         }
         private void CaptureLaunchCameraHome()
