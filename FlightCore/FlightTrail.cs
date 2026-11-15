@@ -46,6 +46,17 @@ namespace FlightCore
                 throw new ArgumentOutOfRangeException(nameof(missionTimeSeconds));
             // Rewind is a new history; never draw a line between separate mission epochs.
             if (retained.Count > 0 && missionTimeSeconds < latest.MissionTimeSeconds) Reset();
+            // A repeat observation at the latest mission timestamp replaces that
+            // timestamp's endpoint instead of opening a second sample, whether the
+            // endpoint is already retained or still provisional between committed samples.
+            if (retained.Count > 0 && missionTimeSeconds == latest.MissionTimeSeconds)
+            {
+                var replacement = new FlightTrailSample(missionTimeSeconds, inertialPositionMeters);
+                if (retained[retained.Count - 1].MissionTimeSeconds == missionTimeSeconds)
+                    retained[retained.Count - 1] = replacement;
+                latest = replacement;
+                return;
+            }
             latest = new FlightTrailSample(missionTimeSeconds, inertialPositionMeters);
             if (retained.Count == 0) { retained.Add(latest); return; }
             var anchor = retained[retained.Count - 1];

@@ -19,6 +19,38 @@ static class Program
         for (int i = 0; i < 100; i++) trail.Record(.02, liftoff);
         Check(trail.Count == 2, "pause does not accumulate duplicate history");
 
+        // A repeat observation at the latest mission timestamp replaces that
+        // timestamp's endpoint instead of adding a second point. Each jump below is
+        // large enough to defeat the distance-threshold early-out, which is exactly the
+        // case the old code mishandled by committing a second point at one time.
+
+        // Endpoint already retained: a committed sample at the latest time is updated in place.
+        trail.Reset();
+        trail.Record(0, pad);
+        var moved = pad + new Vector3d(5000, 0, 0);
+        trail.Record(1, moved);
+        Check(trail.Count == 2, "retained endpoint keeps its committed segment");
+        var movedJump = moved + new Vector3d(5000, 0, 0);
+        trail.Record(1, movedJump);
+        Check(trail.Count == 2, "duplicate retained timestamp updates the endpoint");
+        Near(trail[0].InertialPositionMeters, pad, 0, "duplicate retained timestamp preserves earlier sample");
+        Near(trail[trail.Count - 1].InertialPositionMeters, movedJump, 0, "duplicate retained timestamp replaces final point");
+
+        // Endpoint still provisional: repeated same-timestamp observations stay held and
+        // only update the endpoint, never opening a second point.
+        trail.Reset();
+        trail.Record(0, pad);
+        var near = pad + new Vector3d(1, 0, 0);
+        trail.Record(.1, near);
+        Check(trail.Count == 2, "provisional endpoint held before threshold");
+        var provisionalA = near + new Vector3d(5000, 0, 0);
+        trail.Record(.1, provisionalA);
+        var provisionalB = provisionalA + new Vector3d(5000, 0, 0);
+        trail.Record(.1, provisionalB);
+        Check(trail.Count == 2, "duplicate provisional timestamp updates the endpoint");
+        Near(trail[0].InertialPositionMeters, pad, 0, "duplicate provisional timestamp preserves earlier sample");
+        Near(trail[trail.Count - 1].InertialPositionMeters, provisionalB, 0, "duplicate provisional timestamp replaces final point");
+
         // A multi-hour high-speed observed path forces repeated downsampling.
         // Every retained point must still be an actual input, in time order;
         // memory remains bounded while preserving the full mission's first point.
