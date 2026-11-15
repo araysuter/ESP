@@ -44,7 +44,21 @@ public static class BuildMission
         var starShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/StarField.shader");
         if (!starShader) throw new Exception("Missing star field shader");
         // Serialized scene reference preserves the shader without runtime lookup.
-        var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader;
+        const string skyPath = "Assets/ESP/Art/Sky/CelestialSky.exr";
+        var skyImporter = (TextureImporter)AssetImporter.GetAtPath(skyPath);
+        if (!skyImporter) throw new Exception("Missing offline NASA sky texture");
+        skyImporter.textureShape = TextureImporterShape.Texture2D;
+        skyImporter.sRGBTexture = false; skyImporter.mipmapEnabled = true; skyImporter.isReadable = false;
+        skyImporter.maxTextureSize = 8192; skyImporter.alphaSource = TextureImporterAlphaSource.None;
+        skyImporter.wrapModeU = TextureWrapMode.Repeat; skyImporter.wrapModeV = TextureWrapMode.Clamp;
+        skyImporter.filterMode = FilterMode.Trilinear; skyImporter.anisoLevel = 1;
+        var skyPlatform = skyImporter.GetPlatformTextureSettings("Standalone");
+        skyPlatform.overridden = true; skyPlatform.maxTextureSize = 8192;
+        skyPlatform.format = TextureImporterFormat.BC6H;
+        skyImporter.SetPlatformTextureSettings(skyPlatform); skyImporter.SaveAndReimport();
+        var sky = AssetDatabase.LoadAssetAtPath<Texture2D>(skyPath);
+        if (!sky || sky.width != 8192 || sky.height != 4096) throw new Exception("Expected 8192x4096 NASA sky");
+        var stars = map.gameObject.AddComponent<StarFieldSetup>(); stars.shader = starShader; stars.sky = sky;
         var launch = new GameObject("Launch camera").AddComponent<Camera>();
         launch.transform.position = new Vector3(75, 38, -90); launch.transform.LookAt(new Vector3(0, 18, 0));
         launch.nearClipPlane = .1f; launch.farClipPlane = 300000; launch.fieldOfView = 45;
@@ -79,7 +93,7 @@ public static class BuildMission
         var backdrop = manager.AddComponent<FlightEarthBackdrop>();
         backdrop.driver = flight; backdrop.director = director; backdrop.globeMesh = mesh; backdrop.globeMaterial = earthMaterial;
         backdrop.atmosphereShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Art/ContinuousAtmosphere.shader");
-        backdrop.starShader = starShader; backdrop.earthSun = sun;
+        backdrop.starShader = starShader; backdrop.celestialSky = sky; backdrop.earthSun = sun;
         var sunlight = manager.AddComponent<MissionSunlight>();
         sunlight.director = director; sunlight.driver = flight; sunlight.sun = sun;
         backdrop.sunlight = sunlight;
