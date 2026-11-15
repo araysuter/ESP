@@ -14,7 +14,7 @@ namespace ESP.Presentation
         private Material material;
         private Renderer shellRenderer;
 
-        public bool Show(Texture density, Shader shader, float displayOpacity = .68f)
+        public bool Show(Texture density, Shader shader, float displayOpacity = .38f)
         {
             if (!density) { if (shell) shell.SetActive(false); return true; }
             if (!shell)
@@ -100,9 +100,11 @@ namespace ESP.Presentation
         {
             readonly Vector2[] field;
             readonly int[] ages;
+            readonly int width, height;
 
             public ObservationBlend(int width, int height)
             {
+                this.width = width; this.height = height;
                 field = new Vector2[width * height];
                 ages = new int[field.Length];
                 for (int i = 0; i < ages.Length; i++) ages[i] = int.MaxValue;
@@ -132,16 +134,71 @@ namespace ESP.Presentation
                 return selected;
             }
 
+            const int FeatherRadius = 8;
+
+            // Latitude reflection continues over the pole on the opposite meridian.
+            int Index(int x, int y)
+            {
+                while (y < 0 || y >= height)
+                {
+                    if (y < 0) y = -y - 1;
+                    else y = 2 * height - y - 1;
+                    x += width / 2;
+                }
+                return y * width + (x % width + width) % width;
+            }
+
             public Color32[] Finish()
             {
+                var horizontal = new Vector2[field.Length];
+                var smooth = new Vector2[field.Length];
+                var boundary = new float[field.Length];
+                const int r = FeatherRadius, span = 2 * r + 1;
+                // Mark both sides of a date or missing-data boundary. The raw mask
+                // is kept in the x component of the second temporary buffer.
+                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    int i = y * width + x, age = ages[i];
+                    if (ages[Index(x - 1, y)] != age || ages[Index(x + 1, y)] != age ||
+                        ages[Index(x, y - 1)] != age || ages[Index(x, y + 1)] != age)
+                        smooth[i].x = 1;
+                }
+                // Horizontal running sums of premultiplied RG and boundary mask.
+                for (int y = 0; y < height; y++)
+                {
+                    Vector2 sum = Vector2.zero; float mask = 0;
+                    for (int x = -r; x <= r; x++) { int j = Index(x, y); sum += field[j]; mask += smooth[j].x; }
+                    for (int x = 0; x < width; x++)
+                    {
+                        int i = y * width + x; horizontal[i] = sum / span; boundary[i] = mask / span;
+                        int add = Index(x + r + 1, y), remove = Index(x - r, y);
+                        sum += field[add] - field[remove]; mask += smooth[add].x - smooth[remove].x;
+                    }
+                }
+                // Vertical running sums; reflection preserves continuity at poles.
+                // Reuse smooth for the final filtered field and boundary influence.
+                for (int x = 0; x < width; x++)
+                {
+                    Vector2 sum = Vector2.zero; float mask = 0;
+                    for (int y = -r; y <= r; y++) { int j = Index(x, y); sum += horizontal[j]; mask += boundary[j]; }
+                    for (int y = 0; y < height; y++)
+                    {
+                        int i = y * width + x;
+                        Vector2 filtered = sum / span;
+                        float influence = Mathf.Clamp01(mask / span * span * .5f);
+                        smooth[i] = Vector2.Lerp(field[i], filtered, influence);
+                        int add = Index(x, y + r + 1), remove = Index(x, y - r);
+                        sum += horizontal[add] - horizontal[remove]; mask += boundary[add] - boundary[remove];
+                    }
+                }
                 var pixels = new Color32[field.Length];
                 for (int i = 0; i < pixels.Length; i++)
-                    pixels[i] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(field[i].x) * 255),
-                        (byte)Mathf.RoundToInt(Mathf.Clamp01(field[i].y) * 255), 0, 255);
-                // Texture sampling and mipmaps provide local edge antialiasing;
-                // do not blur observations or synthesize coverage on the CPU.
+                    pixels[i] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(smooth[i].x) * 255),
+                        (byte)Mathf.RoundToInt(Mathf.Clamp01(smooth[i].y) * 255), 0, 255);
                 return pixels;
             }
+
         }
         private void OnDestroy()
         {

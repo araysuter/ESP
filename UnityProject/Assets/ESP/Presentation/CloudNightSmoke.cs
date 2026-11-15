@@ -44,6 +44,22 @@ namespace ESP.Presentation
                 lighting.ReviewUtc = new DateTime(2026, 3, 20, hour, 0, 0, DateTimeKind.Utc);
                 yield return Shot("map-hour-" + hour);
             }
+            // Exercise both actual pad surfaces, not only an upward sky view.
+            foreach (int site in new[] { 0, 1 })
+            {
+                director.GoToLaunch(site);
+                var padCamera = director.launchCamera;
+                padCamera.GetComponent<FlightCameraControls>().enabled = false;
+                padCamera.transform.position = new Vector3(90, 110, -180);
+                padCamera.transform.LookAt(new Vector3(0, 20, 0));
+                yield return new WaitForSecondsRealtime(8);
+                foreach (int hour in new[] { 6, 18 })
+                {
+                    lighting.ReviewUtc = new DateTime(2026, 3, 20, hour, 0, 0, DateTimeKind.Utc);
+                    yield return Shot("pad-" + site + "-hour-" + hour);
+                }
+                padCamera.GetComponent<FlightCameraControls>().enabled = true;
+            }
             director.GoToLaunch(1);
             director.RefreshPointWeather(true);
             var camera = director.launchCamera;

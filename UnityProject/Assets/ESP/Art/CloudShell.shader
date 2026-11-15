@@ -3,7 +3,7 @@ Shader "ESP/ObservedCloudShell"
     Properties
     {
         _CloudDensity ("Observed cloud fraction", 2D) = "black" {}
-        _Opacity ("Display opacity", Range(0, 1)) = 0.68
+        _Opacity ("Display opacity", Range(0, 1)) = 0.38
     }
     SubShader
     {
