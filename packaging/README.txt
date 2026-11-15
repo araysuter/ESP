@@ -1,6 +1,10 @@
 ESP - Earth-scale rocket sandbox
 
-macOS: open the DMG and drag ESP to Applications. The app is not Apple-notarized.
+macOS: open the DMG, drag ESP to Applications, eject the disk image, then open
+ESP from Applications. This build is not Apple-notarized. If macOS blocks an
+unverified-developer launch and you trust the official release, use System
+Settings > Privacy & Security > Open Anyway for ESP. Read Install ESP.txt in the
+DMG and https://support.apple.com/en-us/102445. Do not disable Gatekeeper globally.
 Windows: run the Setup.exe installer, or extract the entire portable ZIP and run
 ESP.exe. Keep ESP_Data, UnityPlayer.dll and all other files beside the executable.
 The Windows installer is not Authenticode signed.

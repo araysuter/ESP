@@ -6,7 +6,21 @@ Install ESP on macOS
    Replace when Finder asks.
 
 This build is not Apple Developer ID signed or notarized. macOS may show a
-security warning when you first open ESP.
+security warning when you first open ESP. Ad-hoc signing verifies the package's
+integrity but does not make it an Apple-verified developer release.
+
+First launch if macOS blocks ESP:
+- Confirm you downloaded it from https://github.com/araysuter/ESP/releases.
+- Open ESP from Applications once, then dismiss the warning.
+- If you trust this build, open System Settings > Privacy & Security and use
+  Open Anyway for ESP. Follow the macOS confirmation prompt.
+- Do not disable Gatekeeper globally. If macOS reports malware or a damaged app,
+  stop and verify the release/checksum rather than treating it as this warning.
+Apple's guidance: https://support.apple.com/en-us/102445
+
+An Apple Developer ID signed and notarized release is required to eliminate
+this first-launch approval. A successful CI smoke test does not establish that
+Gatekeeper accepts a browser-downloaded copy.
 
 To read source and license notices, Control-click ESP in Applications,
 select Show Package Contents, and open Contents/Resources/Notices.
