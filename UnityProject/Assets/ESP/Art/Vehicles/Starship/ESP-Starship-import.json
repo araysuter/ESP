@@ -1677,7 +1677,8 @@
     "Supplied image path recovery",
     "Uniform scale from measured tank barrel to 9 m",
     "Existing stage hierarchy mapped to Booster__/Ship__ groups",
-    "Existing material inputs baked to PBR maps on a separate runtime UV layer"
+    "Existing material inputs baked to PBR maps on a separate runtime UV layer",
+    "Authored Heatshield Tiles face regions adapted to matte black nonmetallic ceramic; see docs/starship-heatshield.md and AssetsSource/heatshield-correction.json"
   ],
   "limitations": [
     "Artist model, not a SpaceX engineering survey.",

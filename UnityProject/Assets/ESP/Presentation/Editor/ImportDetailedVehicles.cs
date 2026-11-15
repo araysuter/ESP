@@ -185,6 +185,8 @@ public static class ImportDetailedVehicles
         output.SetColor("_BaseColor", match.base_color != null && match.base_color.Length == 4 ? new Color(match.base_color[0], match.base_color[1], match.base_color[2], match.base_color[3]) : Color.white);
         output.SetTexture("_BaseMap", albedo);
         output.SetTexture("_MetallicGlossMap", metallic); output.EnableKeyword("_METALLICSPECGLOSSMAP");
+        output.SetFloat("_SmoothnessTextureChannel", 0);
+        output.DisableKeyword("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A");
         output.SetTexture("_BumpMap", normal); output.EnableKeyword("_NORMALMAP");
         output.SetFloat("_Metallic", match.metallic); output.SetFloat("_Smoothness", match.smoothness);
         EditorUtility.SetDirty(output); return output;
