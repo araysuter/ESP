@@ -1,0 +1,24 @@
+name: Refresh NASA data
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nasa-data-feed
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+      - name: Refresh public NASA observations
+        env:
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/nasa_feed.py --publish
