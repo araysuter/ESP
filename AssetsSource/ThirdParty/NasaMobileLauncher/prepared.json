@@ -1,0 +1,55 @@
+{
+  "sourceSha256": "411ad36727a4290123431e77ca7a4622dcd534e2e76eb1134dc19fc07dd5be65",
+  "blenderVersion": "5.2.3 LTS",
+  "units": "meters",
+  "targetHeightMeters": 121.92,
+  "sourceBoundsBlender": [
+    [
+      -0.3209179639816284,
+      -0.43358874320983887,
+      2.0028369362989906e-06
+    ],
+    [
+      0.6984767913818359,
+      0.4335812032222748,
+      2.4643290042877197
+    ]
+  ],
+  "normalizationScale": 49.47395371159104,
+  "sourcePivotBlender": [
+    0.18877941370010376,
+    -3.769993782043457e-06,
+    2.0028369362989906e-06
+  ],
+  "normalizedBoundsBlender": [
+    [
+      -25.21674346923828,
+      -21.451162338256836,
+      7.275957614183426e-12
+    ],
+    [
+      25.21674346923828,
+      21.451162338256836,
+      121.92000579833984
+    ]
+  ],
+  "materialObjects": [
+    "ML_Railings",
+    "ML_Base"
+  ],
+  "sourceTriangles": 19296,
+  "outputs": {
+    "MobileLauncher.fbx": {
+      "sha256": "df48c177d328ac5a14aeba3fcbe5400775fce93bf99300c7d9c03deec8a247ec",
+      "bytes": 679500
+    },
+    "MobileLauncherBase.png": {
+      "sha256": "1a25dff5d1519b04843b0d0a03503eeb7e1f916fc2fc51db52adb81e54d5777c",
+      "bytes": 10553
+    },
+    "MobileLauncherRailings.png": {
+      "sha256": "a9b95f5269f32508833a375f806df7d21107e00c79e9019451b7bcbc0f88c066",
+      "bytes": 8373
+    }
+  }
+}

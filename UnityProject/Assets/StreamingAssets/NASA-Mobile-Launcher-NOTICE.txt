@@ -1,0 +1,14 @@
+NASA mobile launcher model
+
+Original model and textures: NASA / Samuel H. Neblett
+https://science.nasa.gov/3d-resources/mobile-launcher/
+Source SHA-256: 411ad36727a4290123431e77ca7a4622dcd534e2e76eb1134dc19fc07dd5be65
+
+ESP's conversion uniformly scales, repositions, and converts the NASA source
+model and its textures for this game. The model is a simplified, approximate
+visual reference; it is not a current surveyed launch facility reconstruction.
+No NASA endorsement of ESP is implied.
+
+NASA 3D Resources describes its collection as free and without copyright:
+https://github.com/nasa/NASA-3D-Resources
+NASA media usage guidance: https://www.nasa.gov/nasa-brand-center/images-and-media/

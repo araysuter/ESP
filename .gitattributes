@@ -20,6 +20,10 @@ UnityProject/Assets/ESP/Art/Vehicles/**/*.png -filter -diff -merge -text
 # Compact NASA geometry bundle, expanded by the editor importer for clean builds.
 UnityProject/Assets/ESP/Art/Sites/NasaGantry/*.obj.gz -filter -diff -merge -text
 
+# Compact NASA mobile launcher mesh and original-derived textures are bundled directly.
+UnityProject/Assets/ESP/Art/Sites/NasaMobileLauncher/*.fbx -filter -diff -merge -text
+UnityProject/Assets/ESP/Art/Sites/NasaMobileLauncher/*.png -filter -diff -merge -text
+
 # HDR celestial assets use LFS; full-resolution source downloads stay outside Assets.
 *.exr filter=lfs diff=lfs merge=lfs -text
 

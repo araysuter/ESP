@@ -168,7 +168,7 @@ namespace ESP.Presentation
                 driver.TimeRate == 1 && driver.Throttle == 0, label + ": stale flight state") &&
                 Check(director.EnvironmentRoot != null && director.RocketVisual != null &&
                     director.EnvironmentRoot.position.sqrMagnitude < .001f &&
-                    Vector3.Distance(director.RocketVisual.position, Vector3.up * LaunchEnvironment.RocketBaseHeightMeters) < .001f &&
+                    Vector3.Distance(director.RocketVisual.position, Vector3.up * director.RocketBaseHeightMeters) < .001f &&
                     Quaternion.Angle(director.RocketVisual.rotation, Quaternion.identity) < .01f, label + ": stale pad pose") && CheckRendering(label);
         }
 

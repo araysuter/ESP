@@ -6,7 +6,7 @@ The bundled historical NASA Cape image was centered on LC-39A, so its local
 crop is shifted within the original 0.2-degree image footprint for LC-39B.
 It is a coarse 2000-era visual composite, not modern pad geometry or terrain.
 
-`LaunchEnvironment.Build(site, groundMaterial)` builds a fictional, reusable coastal-pad scene in local meters. Its 2 km square visual ground lies at y=0 and the main deck top at y=1 m. The small mount extends to y=1.2 m. `LaunchEnvironment.RocketBaseHeightMeters` is 2.4 m; the rocket's assembly origin should be placed there to put its engines' lowest point (1.2 m below the base origin) on that mount; verify the actual imported model and clearance. The camera, lighting and rocket are supplied by the caller. Structure and site layout are illustrative, not replicas.
+`LaunchEnvironment.Build(site, groundMaterial)` builds a coastal-pad scene in local meters. Its 2 km square visual ground lies at y=0. Starbase uses a fictional pad and mount with the rocket's assembly origin at 2.4 m. Kennedy uses a [simplified NASA-derived mobile launcher](nasa-mobile-launcher.md) and puts the rocket origin at approximately 15.9 m, aligning it visually with the normalized model's deck. These offsets are visual only and do not alter the simulation's geodetic launch state. Structure and site layouts are illustrative, not surveyed replicas.
 
 An optional ground material can carry regional imagery, but texture orientation and scale must be independently verified. Imagery is visual only, not collision or elevation data; all generated primitive colliders are removed. The scene is not authoritative flight state or terrain. The representative scene has been rendered and packaged on macOS ARM64; imagery renders with an unlit material; flight integration is tracked in mission-integration.md.
 
@@ -23,4 +23,7 @@ Source/hash/conversion details: [NASA gantry preparation](nasa-gantry-preparatio
 The packaged macOS VM review passed model presence, height/base bounds,
 map/reset persistence and isolation from Starbase (`-espGantryReview`).
 
-The normal build deliberately excludes this historical gantry while the modern SLS mobile launcher is sourced. Set `ESP_HISTORICAL_GANTRY_REVIEW=1` only when building the documented historical asset review. Do not describe that review as modern SLS infrastructure.
+The normal Kennedy build uses the approximate NASA mobile launcher instead of
+this historical gantry. Set `ESP_HISTORICAL_GANTRY_REVIEW=1` only when building
+the documented historical asset review. Do not describe that review as modern
+SLS infrastructure.

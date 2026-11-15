@@ -7,6 +7,15 @@ namespace ESP.Presentation
     {
         /// <summary>Rocket base-origin height placing the placeholder engine bottoms on the mount.</summary>
         public const float RocketBaseHeightMeters = 2.4f;
+        public const string ModernLauncherName = "NASA Mobile Launcher ML1 (approximate)";
+        // The normalized source geometry's deck is about 14.7 m above its feet.
+        // This is only a local visual offset; flight state stays in the existing SI frame.
+        public const float MobileLauncherDeckHeightMeters = 14.7f;
+
+        public static bool IsModernLauncher(GameObject prefab) => prefab && prefab.GetComponent<MobileLauncherIdentity>();
+
+        public static float RocketBaseHeightFor(GameObject prefab) => IsModernLauncher(prefab)
+            ? MobileLauncherDeckHeightMeters + 1.2f : RocketBaseHeightMeters;
 
         public static GameObject Build(LaunchSite site, Material groundMaterial, GameObject importedStructure = null)
         {
@@ -44,6 +53,16 @@ namespace ESP.Presentation
             plane.AddComponent<MeshFilter>().sharedMesh = mesh;
             plane.AddComponent<MeshRenderer>().sharedMaterial = ground;
             Box(root, "Approach road", new Vector3(0, 0.025f, -300), new Vector3(14, 0.05f, 600), dark);
+            if (IsModernLauncher(importedStructure))
+            {
+                var mobileLauncher = Object.Instantiate(importedStructure, root.transform);
+                mobileLauncher.name = ModernLauncherName;
+                // The imported opening is at +10 m X and is longer along Z.
+                // Rotate its long side along the SLS booster line and center it.
+                mobileLauncher.transform.localPosition = new Vector3(0, 0, 10);
+                mobileLauncher.transform.localRotation = Quaternion.Euler(0, 90, 0);
+                return root;
+            }
             Box(root, "Pad deck", new Vector3(0, 0.5f, 0), new Vector3(35, 1, 35), concrete);
             Box(root, "Launch mount", new Vector3(0, 1.1f, 0), new Vector3(8, 0.2f, 8), dark);
             if (importedStructure != null)
