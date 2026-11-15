@@ -186,6 +186,9 @@ jobs:
           versioning: Custom
           version: ${{ needs.prepare.outputs.version }}
           customParameters: -espRelease -espVersion ${{ needs.prepare.outputs.version }} -espBuildPath build/StandaloneWindows64/ESP.exe
+      # The Linux builder container creates these generated files as root.
+      - name: Restore runner ownership of Windows build output
+        run: sudo chown -R "$(id -u):$(id -g)" build UnityProject/Library
       # Save after compilation, so a later packaging/smoke failure does not
       # discard the expensive import and shader cache.
       - name: Save imported Unity assets
