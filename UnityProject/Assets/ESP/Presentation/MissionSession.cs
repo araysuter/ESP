@@ -12,6 +12,9 @@ namespace ESP.Presentation
     [DefaultExecutionOrder(-500)]
     public sealed class MissionSession : MonoBehaviour
     {
+        internal const float DefaultMilkyWayBrightness = 500f;
+        internal const float DefaultMilkyWaySaturation = 200f;
+
         public static MissionSession Instance { get; private set; }
         public static bool BlocksInput => Instance != null && Instance.Page != MissionMenuPage.None;
         public static bool IsSimulationPaused => BlocksInput;
@@ -25,8 +28,8 @@ namespace ESP.Presentation
         public bool ModifiedFlight => modified || (driver?.Simulation?.HasUsedCheats ?? false);
         public int FrameRateLimit { get; private set; } = 60;
         public bool VSync { get; private set; }
-        public float MilkyWayBrightness { get; private set; } = 100;
-        public float MilkyWaySaturation { get; private set; } = 100;
+        public float MilkyWayBrightness { get; private set; } = DefaultMilkyWayBrightness;
+        public float MilkyWaySaturation { get; private set; } = DefaultMilkyWaySaturation;
         public string PhysicsText { get; private set; } = "Launch to inspect forces.\nSI units · authoritative flight core";
         private MissionDirector director;
         private RocketFlightDriver driver;
@@ -53,8 +56,8 @@ namespace ESP.Presentation
             int saved = PlayerPrefs.GetInt("ESP.Video.FrameLimit", 60);
             FrameRateLimit = Array.IndexOf(FrameLimits, saved) >= 0 ? saved : 60;
             VSync = PlayerPrefs.GetInt("ESP.Video.VSync", 0) == 1;
-            MilkyWayBrightness = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWayBrightness", 100), 10, 500);
-            MilkyWaySaturation = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWaySaturation", 100), 10, 300);
+            MilkyWayBrightness = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWayBrightness", DefaultMilkyWayBrightness), 10, 500);
+            MilkyWaySaturation = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWaySaturation", DefaultMilkyWaySaturation), 10, 300);
             ApplyVideo();
             string[] args = Environment.GetCommandLineArgs();
             // Existing opt-in flight rehearsals retain their explicit entry path.
