@@ -16,6 +16,10 @@ namespace FlightCore
         Vector3d position,velocity; double time,fuel,actualPitch,actualHeading,throttle,pitch=90,heading=90; int stage; bool commanded,launched,landed,destroyed;
         double gravityMultiplier = 1;
         bool infiniteFuel, crashDestructionEnabled = true;
+        readonly LunarEphemeris? celestial;
+        string impactBody = "ground";
+        public LunarEphemeris? Celestial => celestial;
+        public CelestialPrimary Primary => celestial?.Primary(position,time) ?? CelestialPrimary.Earth;
         /// <summary>Scales the same inverse-square acceleration used by integration and liftoff. Scientific default: 1.</summary>
         public double GravityMultiplier { get => gravityMultiplier; set { Check(value,0,5); gravityMultiplier=value; if(value!=1) HasUsedCheats=true; } }
         /// <summary>Freezes remaining liquid and attached solid propellant; never refills an empty tank.</summary>
@@ -31,23 +35,34 @@ namespace FlightCore
         public double ActualPitchDegrees => actualPitch;
         public double ActualHeadingDegrees => actualHeading;
         public double Throttle {get=>throttle;set {Check(value,0,1);throttle=value;}}
-        public double PitchDegrees {get=>pitch;set {Check(value,0,90);pitch=value;}}
+        public double PitchDegrees {get=>pitch;set {Check(value,-90,90);pitch=value;}}
         public double HeadingDegrees {get=>heading;set {Check(value,0,360);heading=value;}}
-        public RocketSimulation(double step,StageDefinition[] stages,WeatherAtmosphere atmosphere,double latitudeRadians,double longitudeRadians,double padAltitudeMeters=0, SolidBoosterDefinition? booster=null)
+        public RocketSimulation(double step,StageDefinition[] stages,WeatherAtmosphere atmosphere,double latitudeRadians,double longitudeRadians,double padAltitudeMeters=0, SolidBoosterDefinition? booster=null, DateTime? launchUtc=null)
         {
             if(!Finite(step)||step<=0||step>10)throw new ArgumentOutOfRangeException(nameof(step)); if(stages==null||stages.Length==0||Array.Exists(stages,x=>x==null))throw new ArgumentException("At least one valid stage required",nameof(stages));
             Check(latitudeRadians,-Math.PI/2,Math.PI/2);if(!Finite(longitudeRadians)||!Finite(padAltitudeMeters))throw new ArgumentOutOfRangeException(nameof(longitudeRadians));
-            this.step=step;this.stages=(StageDefinition[])stages.Clone();this.atmosphere=atmosphere??throw new ArgumentNullException(nameof(atmosphere));lat=latitudeRadians;lon=longitudeRadians;pad=padAltitudeMeters;this.booster=booster;Reset();
+            celestial=launchUtc.HasValue ? new LunarEphemeris(launchUtc.Value) : null;this.step=step;this.stages=(StageDefinition[])stages.Clone();this.atmosphere=atmosphere??throw new ArgumentNullException(nameof(atmosphere));lat=latitudeRadians;lon=longitudeRadians;pad=padAltitudeMeters;this.booster=booster;Reset();
         }
-        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;}
+        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;impactBody="ground";}
         public void Launch(){if(!landed)commanded=true;}
         public bool Stage(){if(landed||stage>=stages.Length-1)return false;stage++;fuel=stages[stage].PropellantKg;return true;}
         /// <summary>Discard spent booster dry mass without a separation impulse. Burning boosters cannot be jettisoned.</summary>
         public bool JettisonBoosters(){if(!boosterAttached||boosterFuel>0||landed)return false;boosterAttached=false;return true;}
         public RocketSnapshot State {get {
             var forces=CurrentForces();
-            string status=destroyed?"Destroyed: ground impact":landed?"Landed":launched?(fuel<=0&&!BoosterBurning?"Coasting: fuel depleted":"Flight"):commanded?"Holding on pad":"Ready";
-            return new RocketSnapshot(position,velocity,time,fuel,stage,forces.Mass,forces.Geodetic.AltitudeMeters,(velocity-Rotation(position)).Magnitude(),forces.Drag.DynamicPressurePascals,landed,launched,landed,destroyed,status);
+            string status=destroyed?"Destroyed: " + impactBody + " impact":landed?(impactBody=="ground"?"Landed":"Landed: " + impactBody):launched?(fuel<=0&&!BoosterBurning?"Coasting: fuel depleted":"Flight"):commanded?"Holding on pad":"Ready";
+            double altitude=forces.Geodetic.AltitudeMeters, speed=(velocity-Rotation(position)).Magnitude();
+            if(celestial != null && Primary==CelestialPrimary.Moon)
+            {
+                altitude=(position-celestial.MoonPosition(time)).Magnitude()-LunarEphemeris.MoonRadius;
+                speed=(velocity-celestial.MoonVelocity(time)).Magnitude();
+            }
+            else if(celestial != null && Primary==CelestialPrimary.Sun)
+            {
+                altitude=(position-celestial.SunPosition(time)).Magnitude()-LunarEphemeris.SunRadius;
+                speed=(velocity-celestial.SunVelocity(time)).Magnitude();
+            }
+            return new RocketSnapshot(position,velocity,time,fuel,stage,forces.Mass,altitude,speed,forces.Drag.DynamicPressurePascals,landed,launched,landed,destroyed,status);
         }}
         /// <summary>Instantaneous shared force evaluation at the current state. Net acceleration excludes pad/ground support; label it free-flight acceleration when constrained.</summary>
         public RocketPhysicsTelemetry Physics {get {
@@ -78,6 +93,26 @@ namespace FlightCore
                 var end=Integrate(start,time,duration,coreBurn,solidBurn);
                 if(coreBurn&&!infiniteFuel&&end.f<0){double lo=0,hi=duration;for(int i=0;i<50;i++){double mid=(lo+hi)*.5;if(Integrate(start,time,mid,true,solidBurn).f>0)lo=mid;else hi=mid;}duration=hi;end=Integrate(start,time,duration,true,solidBurn);end.f=0;}
                 if(solidBurn&&duration>=solidDuration)end.b=0;
+                if(celestial != null)
+                {
+                    var moon0 = celestial.MoonPosition(time); var moon1 = celestial.MoonPosition(time+duration);
+                    var sun0 = celestial.SunPosition(time); var sun1 = celestial.SunPosition(time+duration);
+                    double moonHit = SphereHit(start.p-moon0,end.p-moon1,LunarEphemeris.MoonRadius);
+                    double sunHit = SphereHit(start.p-sun0,end.p-sun1,LunarEphemeris.SunRadius);
+                    double fraction = Math.Min(moonHit,sunHit);
+                    if(fraction <= 1)
+                    {
+                        bool moon = moonHit <= sunHit; double hitTime = time+duration*fraction;
+                        var center = moon ? celestial.MoonPosition(hitTime) : celestial.SunPosition(hitTime);
+                        var centerVelocity = moon ? celestial.MoonVelocity(hitTime) : celestial.SunVelocity(hitTime);
+                        position = start.p+(end.p-start.p)*fraction;
+                        var impactVelocity = start.v+(end.v-start.v)*fraction;
+                        ImpactSpeedMetersPerSecond=(impactVelocity-centerVelocity).Magnitude();
+                        destroyed=crashDestructionEnabled&&ImpactSpeedMetersPerSecond>DestructiveImpactSpeedMetersPerSecond;
+                        velocity=centerVelocity;fuel=Math.Max(0,start.f+(end.f-start.f)*fraction);boosterFuel=Math.Max(0,start.b+(end.b-start.b)*fraction);
+                        impactBody=moon?"Moon":"Sun";time=hitTime;landed=true;break;
+                    }
+                }
                 double oldAlt=Geo(position,time).AltitudeMeters-pad,newAlt=Geo(end.p,time+duration).AltitudeMeters-pad;
                 if(oldAlt>=0&&newAlt<0){double fraction=oldAlt/(oldAlt-newAlt);position=start.p+(end.p-start.p)*fraction;time+=duration*fraction;var geo=Geo(position,time);position=EarthFrames.EcefToInertial(EarthFrames.GeodeticToEcef(geo.LatitudeRadians,geo.LongitudeRadians,pad),Omega*time);
                     var impactVelocity=start.v+(end.v-start.v)*fraction;
@@ -86,6 +121,18 @@ namespace FlightCore
                     velocity=Rotation(position);fuel=Math.Max(0,start.f+(end.f-start.f)*fraction);boosterFuel=Math.Max(0,start.b+(end.b-start.b)*fraction);landed=true;break;}
                 position=end.p;velocity=end.v;fuel=Math.Max(0,end.f);boosterFuel=Math.Max(0,end.b);time+=duration;remaining-=duration;
             }
+        }
+        static double SphereHit(Vector3d start, Vector3d end, double radius)
+        {
+            var delta=end-start;
+            double a=delta.X*delta.X+delta.Y*delta.Y+delta.Z*delta.Z;
+            double b=2*(start.X*delta.X+start.Y*delta.Y+start.Z*delta.Z);
+            double c=start.X*start.X+start.Y*start.Y+start.Z*start.Z-radius*radius;
+            if(c<=0) return 0;
+            double discriminant=b*b-4*a*c;
+            if(a<=0 || discriminant<0) return double.PositiveInfinity;
+            double root=(-b-Math.Sqrt(discriminant))/(2*a);
+            return root>=0 && root<=1 ? root : double.PositiveInfinity;
         }
         struct Y {public Vector3d p,v;public double f,b;public Y(Vector3d p,Vector3d v,double f,double b){this.p=p;this.v=v;this.f=f;this.b=b;} public static Y operator +(Y a,Y b)=>new Y(a.p+b.p,a.v+b.v,a.f+b.f,a.b+b.b);public static Y operator *(Y a,double n)=>new Y(a.p*n,a.v*n,a.f*n,a.b*n);}
         Y Integrate(Y y,double t,double h,bool burn,bool solidBurn){var k1=Derivative(y,t,burn,solidBurn);var k2=Derivative(y+k1*(h*.5),t+h*.5,burn,solidBurn);var k3=Derivative(y+k2*(h*.5),t+h*.5,burn,solidBurn);var k4=Derivative(y+k3*h,t+h,burn,solidBurn);return y+(k1+k2*2+k3*2+k4)*(h/6);}
@@ -108,7 +155,7 @@ namespace FlightCore
             double thrust=coreThrust+(solidBurn?booster!.ThrustNewtons:0);
             double mass=Mass(Math.Max(0,y.f),Math.Max(0,y.b));
             var drag=Aerodynamics.Compute(y.v,air.velocity,air.sample.DensityKgPerCubicMeter,stages[stage].DragCoefficient,stages[stage].ReferenceAreaSquareMeters,mass);
-            var gravity=Gravity.Acceleration(y.p)*gravityMultiplier;
+            var gravity=celestial != null ? celestial.Acceleration(y.p,t,gravityMultiplier) : Gravity.Acceleration(y.p)*gravityMultiplier;
             var acceleration=gravity+Direction(geo,t,actualPitch,actualHeading)*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
             return new ForceSample(geo,air.sample,gravity,acceleration,drag,thrust,coreThrust,engine.isp,mass);
         }

@@ -25,8 +25,9 @@ namespace ESP.Presentation
         private StagingFuelRow boosterRow;
         private VisualElement regionalImage, navballHousing, vehicleGroup, mapVehicleGroup;
         private Label rocketMarker, mapMission;
-        private Label systemEarth, systemSun, systemVehicle;
+        private Label systemEarth, systemSun, systemVehicle, systemMoon;
         private readonly Label[] orbitMarkers = new Label[3];
+        private readonly Label[] transitionMarkers = new Label[6];
         private MissionDirector subscribedDirector;
         private Button viewToggle, action, assist, vehicleChoice, mapVehicleChoice, modelCredit, mapModelCredit, weatherToggle, detailsToggle, mapDetailsToggle;
         private readonly Button[] rateButtons = new Button[2];
@@ -104,8 +105,9 @@ namespace ESP.Presentation
 
             systemEarth = Label("●  EARTH", 10, Cyan, FontStyle.Bold);
             systemSun = Label("SUN", 10, Amber, FontStyle.Bold);
+            systemMoon = Label("●  MOON", 10, Text, FontStyle.Bold);
             systemVehicle = Label("▲  STARSHIP", 10, Text, FontStyle.Bold);
-            foreach (var label in new[] { systemEarth, systemSun, systemVehicle })
+            foreach (var label in new[] { systemEarth, systemSun, systemVehicle, systemMoon })
             {
                 label.style.position = Position.Absolute;
                 label.style.display = DisplayStyle.None;
@@ -125,6 +127,14 @@ namespace ESP.Presentation
                 root.Add(orbitMarkers[i]);
             }
 
+            for (int i=0; i<transitionMarkers.Length; i++)
+            {
+                var marker=Label("",10,Amber,FontStyle.Bold);
+                marker.style.position=Position.Absolute; marker.style.display=DisplayStyle.None;
+                marker.style.backgroundColor=new Color(.02f,.04f,.06f,.78f);
+                marker.style.paddingLeft=marker.style.paddingRight=4;
+                marker.pickingMode=PickingMode.Ignore; root.Add(marker); transitionMarkers[i]=marker;
+            }
             BuildMapControls();
             BuildFlightControls();
             Resize();
@@ -478,9 +488,10 @@ namespace ESP.Presentation
             systemVehicle.text = director != null && director.VehicleIndex == 1 ? "▲  STARSHIP" :
                 director != null && director.VehicleIndex == 2 ? "▲  SLS" : "▲  ESP DEMO";
             PlaceSystemLabel(systemVehicle, camera, controls != null ? controls.FocusPosition : Vector3.zero, systemView, 4);
-            Vector3 sunPosition = sunlight != null ? new Vector3((float)sunlight.SunEcef.X, (float)sunlight.SunEcef.Z,
-                (float)sunlight.SunEcef.Y) * SolarSystemMap.AstronomicalUnit : Vector3.zero;
-            PlaceSystemLabel(systemSun, camera, sunPosition, systemView && sunlight != null && sunlight.CurrentUtc != default);
+            var solarMap = director != null ? director.GetComponent<SolarSystemMap>() : null;
+            PlaceSystemLabel(systemSun, camera, solarMap != null ? solarMap.SunPosition : Vector3.zero, systemView && solarMap != null);
+            PlaceSystemLabel(systemMoon, camera, solarMap != null ? solarMap.MoonPosition : Vector3.zero,
+                director != null && director.IsMapView && solarMap != null);
             for (int i = 0; i < orbitMarkers.Length; i++)
             {
                 Vector2 orbitScreen = default;
@@ -495,6 +506,17 @@ namespace ESP.Presentation
                 marker.text = i == 0 ? "Ap" : i == 1 ? "Pe" : "Impact";
                 marker.tooltip = (i == 2 ? "Predicted WGS84 surface intersection" : (i == 0 ? "Apoapsis " : "Periapsis ") + Distance(apsisHeight) + " above WGS84 at this point") +
                     ". Coast prediction — engines cut now; ignores drag.";
+            }
+            for (int i=0;i<transitionMarkers.Length;i++)
+            {
+                Vector2 screen=default; string text="";
+                bool visible=director != null && director.IsMapView && director.OrbitVisual != null &&
+                    director.OrbitVisual.TryGetTransitionScreenPosition(i,out screen,out text);
+                var marker=transitionMarkers[i]; marker.style.display=visible ? DisplayStyle.Flex : DisplayStyle.None;
+                if(!visible) continue;
+                var point=RuntimePanelUtils.ScreenToPanel(root.panel,new Vector2(screen.x,Screen.height-screen.y));
+                marker.style.left=point.x+5; marker.style.top=point.y-16; marker.text=text;
+                marker.tooltip="Estimated unpowered influence change; thrust and drag are not predicted.";
             }
             Vector2 rocketScreen = default;
             bool rocketVisible = !systemView && director != null && director.TryGetRocketScreenPosition(out rocketScreen);
