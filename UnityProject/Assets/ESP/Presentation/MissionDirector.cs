@@ -112,6 +112,7 @@ namespace ESP.Presentation
         private void Start()
         {
             CaptureLaunchCameraHome();
+            if (mapRoot != null) PolarAurora.Create(mapRoot.transform);
             // Driver registers in Awake; choose the real model before any preflight view is built.
             if (vehiclePrefabs != null && vehiclePrefabs.Length > 1 && vehiclePrefabs[1] != null && CanLaunch)
                 SelectVehicle(1);

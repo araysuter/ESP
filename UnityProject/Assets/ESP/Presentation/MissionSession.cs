@@ -28,6 +28,9 @@ namespace ESP.Presentation
         public bool ModifiedFlight => modified || (driver?.Simulation?.HasUsedCheats ?? false);
         public int FrameRateLimit { get; private set; } = 60;
         public bool VSync { get; private set; }
+        public float AuroraBrightness { get; private set; } = 1;
+        public float AuroraColorIntensity { get; private set; } = 1;
+        public float AuroraStormStrength { get; private set; } = 1;
         public float MilkyWayBrightness { get; private set; } = DefaultMilkyWayBrightness;
         public float MilkyWaySaturation { get; private set; } = DefaultMilkyWaySaturation;
         public string PhysicsText { get; private set; } = "Launch to inspect forces.\nSI units · authoritative flight core";
@@ -56,6 +59,9 @@ namespace ESP.Presentation
             int saved = PlayerPrefs.GetInt("ESP.Video.FrameLimit", 60);
             FrameRateLimit = Array.IndexOf(FrameLimits, saved) >= 0 ? saved : 60;
             VSync = PlayerPrefs.GetInt("ESP.Video.VSync", 0) == 1;
+            AuroraBrightness = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.AuroraBrightness", 1), 0, 2);
+            AuroraColorIntensity = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.AuroraColor", 1), 0, 2);
+            AuroraStormStrength = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.AuroraStorm", 1), 0, 3);
             MilkyWayBrightness = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWayBrightness", DefaultMilkyWayBrightness), 10, 500);
             MilkyWaySaturation = Mathf.Clamp(PlayerPrefs.GetFloat("ESP.Video.MilkyWaySaturation", DefaultMilkyWaySaturation), 10, 300);
             ApplyVideo();
@@ -157,6 +163,14 @@ namespace ESP.Presentation
             ApplyVideo(); SaveVideo();
         }
         public void SetVSync(bool value) { VSync = value; ApplyVideo(); SaveVideo(); }
+        public void SetAuroraBrightness(float value) { AuroraBrightness = SaveAurora("ESP.Video.AuroraBrightness", value, 2); }
+        public void SetAuroraColorIntensity(float value) { AuroraColorIntensity = SaveAurora("ESP.Video.AuroraColor", value, 2); }
+        public void SetAuroraStormStrength(float value) { AuroraStormStrength = SaveAurora("ESP.Video.AuroraStorm", value, 3); }
+        private static float SaveAurora(string key, float value, float maximum)
+        {
+            value = float.IsNaN(value) ? 0 : Mathf.Clamp(value, 0, maximum);
+            PlayerPrefs.SetFloat(key, value); PlayerPrefs.Save(); return value;
+        }
         public void SetMilkyWayBrightness(float value) { MilkyWayBrightness = Mathf.Clamp(value, 10, 500); PlayerPrefs.SetFloat("ESP.Video.MilkyWayBrightness", MilkyWayBrightness); PlayerPrefs.Save(); }
         public void SetMilkyWaySaturation(float value) { MilkyWaySaturation = Mathf.Clamp(value, 10, 300); PlayerPrefs.SetFloat("ESP.Video.MilkyWaySaturation", MilkyWaySaturation); PlayerPrefs.Save(); }
         private void ApplyVideo() { QualitySettings.vSyncCount = VSync ? 1 : 0; Application.targetFrameRate = VSync || FrameRateLimit == 0 ? -1 : FrameRateLimit; }
