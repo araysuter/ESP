@@ -1,0 +1,117 @@
+{
+  "source_blend_sha256": "d83f49158707ed0adaa1d3e4d1a2b852c5de09fc458e73c1f02aa559852fb37a",
+  "material": "Heatshield Tiles",
+  "adaptation": "Matte black ceramic tiles; metallic=0, smoothness=0.18; authored face mask, unchanged geometry/UV/normals.",
+  "parts": [
+    {
+      "source_object": "Starship Block 3 V4",
+      "tile_faces": 3084,
+      "files": [
+        {
+          "file": "V3_Starship_Block_3_V4_BaseColor.png",
+          "input_sha256": "21ed7f2c4134ce1fa87166c6f3820ebb038bd7a64f030a066318d00e5c5fa854",
+          "output_sha256": "de08c18ae14631c03e7de2666329ba82294415efd14f3b7f9c8640e28a21813f",
+          "tile_pixels": 121219,
+          "pixels": 4194304,
+          "untouched_non_tile_pixels": true
+        },
+        {
+          "file": "V3_Starship_Block_3_V4_MetallicSmoothness.png",
+          "input_sha256": "c2b560852fb6b9bbce8f3db54a6dada9dce02eb0fe76badfda65fcc75fd14a74",
+          "output_sha256": "606abaab579e2fd490e2dfa7c815e08e0ae77b7f61268ee4417f3b127091ff9d",
+          "tile_pixels": 43766,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        }
+      ]
+    },
+    {
+      "source_object": "Aft Flaps.002",
+      "tile_faces": 78,
+      "files": [
+        {
+          "file": "V3_Aft_Flaps_002_BaseColor.png",
+          "input_sha256": "35673ac6f97175fabb8c51b38547ca75bdb53bd0aea999436216ef263bd7cfd4",
+          "output_sha256": "df5b9edef8cc4b8cf35d6bd04d7fad76cff52e62434b853c0ff3a480d57c43bc",
+          "tile_pixels": 518730,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        },
+        {
+          "file": "V3_Aft_Flaps_002_MetallicSmoothness.png",
+          "input_sha256": "b323f0f56f9c2d4999c4983599245ae68af7864face58a6b3925af012702caad",
+          "output_sha256": "e837ade374d3aa1fed2b21398d507047b40ef5a203dc81682a193b050ebce47f",
+          "tile_pixels": 518730,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        }
+      ]
+    },
+    {
+      "source_object": "Aft Flaps.003",
+      "tile_faces": 78,
+      "files": [
+        {
+          "file": "V3_Aft_Flaps_003_BaseColor.png",
+          "input_sha256": "35673ac6f97175fabb8c51b38547ca75bdb53bd0aea999436216ef263bd7cfd4",
+          "output_sha256": "df5b9edef8cc4b8cf35d6bd04d7fad76cff52e62434b853c0ff3a480d57c43bc",
+          "tile_pixels": 518730,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        },
+        {
+          "file": "V3_Aft_Flaps_003_MetallicSmoothness.png",
+          "input_sha256": "b323f0f56f9c2d4999c4983599245ae68af7864face58a6b3925af012702caad",
+          "output_sha256": "e837ade374d3aa1fed2b21398d507047b40ef5a203dc81682a193b050ebce47f",
+          "tile_pixels": 518730,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        }
+      ]
+    },
+    {
+      "source_object": "Foward Flap.002",
+      "tile_faces": 474,
+      "files": [
+        {
+          "file": "V3_Foward_Flap_002_BaseColor.png",
+          "input_sha256": "24977968138f69adae31e3eeb523933e3c379705a5ef0d97b9ae96af9c1e3e97",
+          "output_sha256": "01137057ef8b5055759d6bf565ab726a94469e95de1a23867a9a95ab032b0fd1",
+          "tile_pixels": 361651,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        },
+        {
+          "file": "V3_Foward_Flap_002_MetallicSmoothness.png",
+          "input_sha256": "15554b0b7d14106024b8f0a94de9dada9955f6761e094dacddad1a18cba6db3b",
+          "output_sha256": "6fda4f3690a84cfc5129d10bbb2a8d03c8bd180c4aa26c7ed84916d281886f9f",
+          "tile_pixels": 361651,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        }
+      ]
+    },
+    {
+      "source_object": "Foward Flap.003",
+      "tile_faces": 474,
+      "files": [
+        {
+          "file": "V3_Foward_Flap_003_BaseColor.png",
+          "input_sha256": "24977968138f69adae31e3eeb523933e3c379705a5ef0d97b9ae96af9c1e3e97",
+          "output_sha256": "01137057ef8b5055759d6bf565ab726a94469e95de1a23867a9a95ab032b0fd1",
+          "tile_pixels": 361651,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        },
+        {
+          "file": "V3_Foward_Flap_003_MetallicSmoothness.png",
+          "input_sha256": "15554b0b7d14106024b8f0a94de9dada9955f6761e094dacddad1a18cba6db3b",
+          "output_sha256": "6fda4f3690a84cfc5129d10bbb2a8d03c8bd180c4aa26c7ed84916d281886f9f",
+          "tile_pixels": 361651,
+          "pixels": 1048576,
+          "untouched_non_tile_pixels": true
+        }
+      ]
+    }
+  ]
+}
