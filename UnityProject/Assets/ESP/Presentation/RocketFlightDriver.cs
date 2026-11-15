@@ -66,6 +66,10 @@ namespace ESP.Presentation
         public double MissionTimeSeconds => simulation != null ? simulation.State.MissionTime : 0;
         public float Throttle => simulation != null ? (float)simulation.Throttle : pendingThrottle;
         public string WeatherSourceLabel => weatherSource;
+        // True when the atmosphere actually driving this launch was built from a
+        // frozen weather column. False when the deterministic standard atmosphere is used
+        // (no weather available, or an offline launch forced the standard atmosphere).
+        public bool LaunchUsesWeather { get; private set; }
         public string FlightTelemetry => simulation == null ? (AssistanceEnabled ? "Assisted" : "Manual") + " • WASD or arrows to steer • " + TimeRate + "× selected" :
             string.Format("{0} • pitch {1:F0}° • {2}× • {3}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (accumulator >= StepSeconds ? " • simulation catching up" : "");
         public RocketSimulation Simulation => simulation;
@@ -87,31 +91,39 @@ namespace ESP.Presentation
         }
         public void Launch(LaunchSite site, WeatherSnapshot weather)
         {
+            Launch(site, weather, false);
+        }
+        public void Launch(LaunchSite site, WeatherSnapshot weather, bool forceOfflineAtmosphere)
+        {
             if (IsPaused || started || site == null) return;
             DateTime now = DateTime.UtcNow;
             LaunchUtc = now;
             WeatherProfile profile = null;
             TimeSpan maxAge = TimeSpan.FromHours(12);
-            if (nasaWeather != null && nasaWeather.Snapshot != null &&
-                Math.Abs(nasaWeather.RequestedLatitudeDegrees - site.Latitude) < 1e-6 &&
-                Math.Abs(nasaWeather.RequestedLongitudeDegrees - site.Longitude) < 1e-6 &&
-                Fresh(nasaWeather.Snapshot.ValidTimeUtc, now, maxAge))
-                profile = nasaWeather.Snapshot;
-            else if (weather != null && Fresh(weather.ValidTimeUtc, now, TimeSpan.FromHours(2)))
+            if (!forceOfflineAtmosphere)
             {
-                try
+                if (nasaWeather != null && nasaWeather.Snapshot != null &&
+                    Math.Abs(nasaWeather.RequestedLatitudeDegrees - site.Latitude) < 1e-6 &&
+                    Math.Abs(nasaWeather.RequestedLongitudeDegrees - site.Longitude) < 1e-6 &&
+                    Fresh(nasaWeather.Snapshot.ValidTimeUtc, now, maxAge))
+                    profile = nasaWeather.Snapshot;
+                else if (weather != null && Fresh(weather.ValidTimeUtc, now, TimeSpan.FromHours(2)))
                 {
-                    var levels = new List<WeatherLevel>();
-                    foreach (var sample in weather.Samples)
-                        levels.Add(new WeatherLevel(sample.AltitudeMSL, new AtmosphereSample(sample.TemperatureK, sample.PressurePa,
-                            new Vector3d(sample.WindEastMps, sample.WindNorthMps, 0))));
-                    profile = new WeatherProfile(levels, "Open-Meteo", weather.ValidTimeUtc, site.Latitude, site.Longitude);
-                    maxAge = TimeSpan.FromHours(2);
+                    try
+                    {
+                        var levels = new List<WeatherLevel>();
+                        foreach (var sample in weather.Samples)
+                            levels.Add(new WeatherLevel(sample.AltitudeMSL, new AtmosphereSample(sample.TemperatureK, sample.PressurePa,
+                                new Vector3d(sample.WindEastMps, sample.WindNorthMps, 0))));
+                        profile = new WeatherProfile(levels, "Open-Meteo", weather.ValidTimeUtc, site.Latitude, site.Longitude);
+                        maxAge = TimeSpan.FromHours(2);
+                    }
+                    catch (ArgumentException e) { Debug.LogWarning("Weather profile rejected: " + e.Message); }
                 }
-                catch (ArgumentException e) { Debug.LogWarning("Weather profile rejected: " + e.Message); }
             }
             var atmosphere = new WeatherAtmosphere(profile, now, maxAge);
             launchAtmosphere = atmosphere;
+            LaunchUsesWeather = atmosphere.UsesWeather;
             weatherSource = atmosphere.SourceDescription;
             launchSite = site;
             var preset = SelectedPreset;
@@ -137,6 +149,7 @@ namespace ESP.Presentation
             LatitudeDegrees = LongitudeDegrees = 0;
             LaunchUtc = default;
             weatherSource = "Standard atmosphere (no launch yet)";
+            LaunchUsesWeather = false;
             if (director != null && director.EnvironmentRoot != null) director.EnvironmentRoot.position = Vector3.zero;
             if (director != null && director.RocketVisual != null)
             {

@@ -14,7 +14,11 @@ namespace ESP.Presentation
         double SpeedMetersPerSecond { get; }
         double MissionTimeSeconds { get; }
         float Throttle { get; }
+        // Whether the atmosphere currently driving the flight was built from a
+        // frozen weather column rather than the deterministic standard atmosphere.
+        bool LaunchUsesWeather { get; }
         void Launch(LaunchSite site, WeatherSnapshot weather);
+        void Launch(LaunchSite site, WeatherSnapshot weather, bool forceOfflineAtmosphere);
         void ResetMission();
         void Stage();
         void SetThrottle(float value);
@@ -232,13 +236,16 @@ namespace ESP.Presentation
             if (weather != null) weather.Fetch(site.Latitude, site.Longitude);
             if (nasaWeather != null) nasaWeather.Fetch(site.Latitude, site.Longitude);
         }
-        public void Launch()
+        public void Launch() => Launch(false);
+        public void Launch(bool offline)
         {
             if (!CanLaunch) return;
             // A null snapshot explicitly requests the driver's documented offline atmosphere.
+            // In offline smoke mode the driver forces the standard atmosphere and
+            // ignores any fresh weather profile passed here.
             var snapshot = weather != null ? weather.Snapshot : null;
             if (snapshot != null && !snapshot.IsCurrent(DateTime.UtcNow)) snapshot = null;
-            FlightDriver.Launch(LaunchSites.All[SelectedSiteIndex], snapshot);
+            FlightDriver.Launch(LaunchSites.All[SelectedSiteIndex], snapshot, offline);
         }
         public void ResetMission() { FlightDriver?.ResetMission(); if (!IsMapView) SetLaunchView(); }
         public void Stage() { FlightDriver?.Stage(); }
