@@ -22,3 +22,7 @@ UnityProject/Assets/ESP/Art/Sites/NasaGantry/*.obj.gz -filter -diff -merge -text
 
 # HDR celestial assets use LFS; full-resolution source downloads stay outside Assets.
 *.exr filter=lfs diff=lfs merge=lfs -text
+
+# Small licensed exhaust textures are bundled directly for clean clones.
+UnityProject/Assets/ESP/Resources/Waterfall/*.png -filter -diff -merge -text
+AssetsSource/ThirdParty/Waterfall/*.dds -filter -diff -merge -text

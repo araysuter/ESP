@@ -458,6 +458,7 @@ namespace ESP.Presentation
             string surfaceInfo = localSurface != null ? "\n\n" + LocalSurfaceTiles.Attribution + "\n" + localSurface.Status : "";
             if (director.SelectedSiteIndex == 1 && director.siteStructurePrefabs != null && director.siteStructurePrefabs.Length > 1 && director.siteStructurePrefabs[1] != null)
                 surfaceInfo += "\nHistorical LC-39 gantry: NASA / Michael D. Carbajal. Approximate scale and placement; not the current facility layout.";
+            surfaceInfo += "\nExhaust textures: Waterfall / Chris Adderley (Nertea) and contributors, CC BY-NC-SA 4.0; converted to PNG. SRB emission scheduling: SmokeScreen / Sarbian, BSD-2-Clause. Full notices accompany the game.";
             string flightInfo = (director.FlightStatus ?? "READY") + "\n\n" +
                 (flight != null ? flight.FlightTelemetry : "Flight simulation unavailable") +
                 "\n" + (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n\n" + steeringInfo;

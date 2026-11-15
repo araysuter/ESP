@@ -51,28 +51,17 @@ ESP uses explicit mission time, deterministic rate, bounded newest-emission
 retention, and ECEF endpoint interpolation. It does not import KSP assemblies,
 `KSPParticleEmitter`, `FlightGlobals`, `Krakensbane`, stock models or textures.
 
-## Verification status
+## Packaged verification
 
-Not compiled, rendered, or tested during authoring. The owning VM coordinator
-must run `ESP/Verify smoke emission scheduling` (or its static `Run` entry point),
-then verify an actual SLS launch, time rates 1/5/20, map toggling, menu pause,
-booster burnout/jettison, mission reset and Starship's lack of SRB smoke. Inspect
-`ActiveParticleCount <= 256`, fading after cutoff and camera-relative anchoring.
-No presentation-only sample should be labeled a verified flight checkpoint.
+The macOS VM player passed `-espSrbSmoke -espDaylightReview`: actual SLS flight,
+bounded pool, pause, map switching, natural SRB exhaustion, jettison retaining
+the trail, 26-second expiration, reset, and Starship exclusion. At the recorded
+6.58 s / 48.8 m capture there were 52 active puffs; the 50.98 s / 2391 m capture
+had 196, below the 256 cap. Scheduling checks passed during the Unity build.
 
-The development-player flag `-espSrbSmoke` bootstraps
-`RocketSmokeTrailSmoke` without scene wiring. It has a 110-second real-time
-timeout and performs a real manual SLS climb at 20×, liquid engines commanded
-off and pitch commanded to 60 degrees through the existing finite-rate controls.
-It observes the final seconds before burnout at 1× to retain a useful inspection
-window even with slow rendering, then restores 20×. It checks prelaunch, the 256-puff cap, menu freeze (including `VisualTimeSeconds`),
-map aging, natural SRB fuel exhaustion, jettison persistence, expiration after
-26 mission seconds, reset, and a Starship launch producing no SRB smoke.
-Screenshots are `srb-smoke-pad.png` and `srb-smoke-climb.png` in persistent data.
-This rehearsal is implemented but has not been executed during authoring.
-
-Add `-espDaylightReview` only for labeled daylight screenshots. This sets
-`MissionSunlight.ReviewUtc` to 18:00 UTC on the current UTC date and displays an
-on-screen DEVELOPMENT / DAYLIGHT UTC OVERRIDE label. The flight remains the
-real simulated flight; this option does not claim the lighting matches the
-current real-world time. The previous review override is restored on teardown.
+The development flag runs the real manual SLS climb at 20× with liquid engines
+off and pitch commanded to 60 degrees through the existing controls. It slows
+to 1× near burnout, then accelerates through the remaining tail. The optional
+`-espDaylightReview` label identifies a lighting-only UTC override. No synthetic
+flight checkpoint or altered flight state is used. Windows and performance
+benchmarking remain unverified.

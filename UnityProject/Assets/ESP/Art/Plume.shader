@@ -1,3 +1,6 @@
+// Original ESP URP shader. Waterfall noise images are separately licensed
+// CC BY-NC-SA 4.0; see StreamingAssets/Waterfall-NOTICE.txt. No Waterfall
+// shader source, KSP includes, assemblies or compiled shaders are used here.
 Shader "ESP/ProceduralPlume"
 {
     Properties
@@ -12,6 +15,9 @@ Shader "ESP/ProceduralPlume"
         _Seed ("Nozzle variation", Float) = 0
         _Expansion ("Vacuum radial spread in nozzle radii", Float) = 12
         _ClusterGain ("Overlapping nozzle fan gain", Range(0,1)) = 1
+        _NoiseTex1 ("Waterfall fine breakup", 2D) = "gray" {}
+        _NoiseTex2 ("Waterfall broad breakup", 2D) = "gray" {}
+        _TextureNoiseStrength ("Texture breakup", Range(0,1)) = 0
     }
     SubShader
     {
@@ -30,7 +36,10 @@ Shader "ESP/ProceduralPlume"
             CBUFFER_START(UnityPerMaterial)
                 float4 _CoreColor, _SheathColor, _TailColor;
                 float _Throttle, _Vacuum, _MachStrength, _Density, _Seed, _Expansion, _ClusterGain;
+                float _TextureNoiseStrength;
             CBUFFER_END
+            TEXTURE2D(_NoiseTex1); SAMPLER(sampler_NoiseTex1);
+            TEXTURE2D(_NoiseTex2); SAMPLER(sampler_NoiseTex2);
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings
             {
@@ -91,6 +100,18 @@ Shader "ESP/ProceduralPlume"
                     * sin(along * 61.0 - _Time.y * 17.0 + _Seed);
                 float throat = exp(-along * 28.0) * pow(facing, 3.0);
                 float filaments = .82 + .18 * sin(input.uv.x * 18.84956 + along * 29.0 - _Time.y * 7.0 + _Seed);
+                // Two small upstream noise images replace regular-looking bands
+                // with subtle downstream breakup. Integer angular tiling keeps
+                // the envelope seam continuous. The hot core stays stable.
+                float2 noiseUV1 = float2(input.uv.x * 2.0 + _Seed * .11 + _Time.y * .04,
+                    along * 2.8 - _Time.y * 1.15);
+                float2 noiseUV2 = float2(input.uv.x * 3.0 + _Seed * .17 - _Time.y * .03,
+                    along * 6.0 - _Time.y * .61);
+                float noise1 = SAMPLE_TEXTURE2D(_NoiseTex1, sampler_NoiseTex1, noiseUV1).r;
+                float noise2 = SAMPLE_TEXTURE2D(_NoiseTex2, sampler_NoiseTex2, noiseUV2).r;
+                float textureNoise = noise1 * .65 + noise2 * .35;
+                float breakup = lerp(1.0, .55 + .9 * textureNoise,
+                    _TextureNoiseStrength * smoothstep(.02, .25, along));
                 float tailMix = smoothstep(.28, .9, along) * (1.0 - .28 * _Vacuum);
                 float3 sheath = lerp(_SheathColor.rgb, _TailColor.rgb, tailMix);
                 // Front and back add to form the volume. No opaque flame surface.
@@ -98,7 +119,7 @@ Shader "ESP/ProceduralPlume"
                 // individual nozzle cores remain legible at ignition and staging.
                 float diffuseGain = lerp(1.0, _ClusterGain, _Vacuum);
                 float dilution = rsqrt(1.0 + _Vacuum * _Expansion * along * .06);
-                float3 color = sheath * (.44 * softEdge * filaments * diffuseGain * dilution)
+                float3 color = sheath * (.44 * softEdge * filaments * diffuseGain * dilution * breakup)
                     + _CoreColor.rgb * (core * lerp(.68, 1.25, _Vacuum) + diamond * 1.9 + throat * .55);
                 color *= tailFade * turbulence * _Throttle * _Density * .5;
                 return half4(color, 0);

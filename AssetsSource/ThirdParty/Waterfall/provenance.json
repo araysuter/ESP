@@ -1,0 +1,43 @@
+{
+  "repository": "https://github.com/KSPModStewards/Waterfall",
+  "revision": "c232b6722496ec991fa0c6fbd87b0ad694b8eb49",
+  "license": "CC-BY-NC-SA-4.0",
+  "attribution": "Chris Adderley (Nertea) and Waterfall contributors",
+  "files": [
+    {
+      "name": "fx-noise-1.dds",
+      "upstream_path": "GameData/Waterfall/FX/fx-noise-1.dds",
+      "bytes": 87536,
+      "sha256": "6cecbfd4c4e148c4c4bb11baa1d2037f89af44bfe9bd34be4db0ce3beb964b78",
+      "width": 256,
+      "height": 256,
+      "fourcc": "DXT5"
+    },
+    {
+      "name": "fx-noise-2.dds",
+      "upstream_path": "GameData/Waterfall/FX/fx-noise-2.dds",
+      "bytes": 87536,
+      "sha256": "d8262828ec0bb469f1a8cbb50a2f0b17cbaefeee7b4d5e968eb229bcc2460277",
+      "width": 256,
+      "height": 256,
+      "fourcc": "DXT5"
+    }
+  ],
+  "conversion": {
+    "tool": "Blender 5.2.3 LTS",
+    "operation": "DDS image load and PNG save, original 256x256 RGBA dimensions",
+    "license": "CC-BY-NC-SA-4.0",
+    "outputs": [
+      {
+        "name": "fx-noise-1.png",
+        "bytes": 68859,
+        "sha256": "8e14ecf78cba90253e6b5343cbbadfd79f383d53b84b49960670e557cc968090"
+      },
+      {
+        "name": "fx-noise-2.png",
+        "bytes": 101881,
+        "sha256": "d5ebbf58b809e00e85a0445942dc27e2daf17c204e5bca0d047230837e9d497b"
+      }
+    ]
+  }
+}

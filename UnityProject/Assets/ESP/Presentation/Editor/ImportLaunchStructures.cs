@@ -25,6 +25,7 @@ public static class ImportLaunchStructures
     {
         public string compressedSha256, objSha256, sourceSha256, sourceUrl, attribution, upAxis;
         public long objBytes;
+        public int triangles;
         public float heightMeters, baseY;
         public string[] materialNames;
         public MaterialRecord[] materials;
@@ -105,6 +106,10 @@ public static class ImportLaunchStructures
             ValidateBounds(combined.bounds, "combined prefab mesh");
             if (combined.vertexCount == 0 || combined.subMeshCount != materials.Count)
                 throw new InvalidDataException("NASA gantry combined mesh is empty or lost a source material group");
+            long combinedIndices = 0;
+            for (int i = 0; i < combined.subMeshCount; i++) combinedIndices += combined.GetIndexCount(i);
+            if (manifest.triangles > 0 && combinedIndices != (long)manifest.triangles * 3)
+                throw new InvalidDataException("NASA gantry Unity import changed the source triangle count");
             var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
             if (savedMesh)
             {
@@ -195,6 +200,7 @@ public static class ImportLaunchStructures
     {
         // A private temporary name prevents a failed decompression/hash/bounds check replacing a good import.
         string temporary = GeneratedDirectory + "/.NasaGantry-" + Guid.NewGuid().ToString("N") + ".tmp";
+        string staged = temporary + ".unity.obj";
         try
         {
             long total = 0;
@@ -215,11 +221,70 @@ public static class ImportLaunchStructures
             if (total != manifest.objBytes) throw new InvalidDataException("NASA gantry decompressed size differs from manifest");
             VerifyHash(temporary, manifest.objSha256, "uncompressed OBJ");
             ValidateObjBounds(temporary, manifest);
-            if (File.Exists(ObjPath) && string.Equals(Sha256(ObjPath), Sha256(temporary), StringComparison.OrdinalIgnoreCase)) return;
-            if (File.Exists(ObjPath)) File.Replace(temporary, ObjPath, null);
-            else File.Move(temporary, ObjPath);
+            // Unity's OBJ importer uses g records for mesh names and can collapse o-only exports to "default".
+            // Preserve the verified source bytes above; this generated derivative changes only object/group records.
+            StageUnityGroups(temporary, staged, manifest);
+            ValidateObjBounds(staged, manifest);
+            string stagedHash = Sha256(staged);
+            if (File.Exists(ObjPath) && string.Equals(Sha256(ObjPath), stagedHash, StringComparison.OrdinalIgnoreCase)) return;
+            if (File.Exists(ObjPath)) File.Replace(staged, ObjPath, null);
+            else File.Move(staged, ObjPath);
+            Debug.Log("ESP_NASA_GANTRY_OBJ_STAGED sourceSha256=" + Sha256(temporary) + " generatedSha256=" + stagedHash);
         }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+            if (File.Exists(staged)) File.Delete(staged);
+        }
+    }
+
+    private static void StageUnityGroups(string sourcePath, string stagedPath, Manifest manifest)
+    {
+        int current = -1;
+        var faceCounts = new int[manifest.materialNames.Length];
+        using (var reader = new StreamReader(sourcePath))
+        using (var writer = new StreamWriter(stagedPath, false, new System.Text.UTF8Encoding(false)))
+        {
+            writer.NewLine = "\n";
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                string trimmed = line.TrimStart();
+                if (trimmed.StartsWith("o ", StringComparison.Ordinal) || trimmed.StartsWith("o\t", StringComparison.Ordinal))
+                {
+                    string name = trimmed.Substring(1).Trim();
+                    current = Array.IndexOf(manifest.materialNames, name);
+                    if (current < 0) throw new InvalidDataException("Unexpected source NASA gantry OBJ object: " + name);
+                    writer.WriteLine("g " + name);
+                    continue;
+                }
+                // Blender may also emit a concatenated object+mesh g name. The canonical group above owns it.
+                if (trimmed.StartsWith("g ", StringComparison.Ordinal) || trimmed.StartsWith("g\t", StringComparison.Ordinal)) continue;
+                if (trimmed.StartsWith("usemtl ", StringComparison.Ordinal) || trimmed.StartsWith("usemtl\t", StringComparison.Ordinal))
+                {
+                    string name = trimmed.Substring(6).Trim();
+                    if (current < 0 || manifest.materialNames[current] != name)
+                        throw new InvalidDataException("NASA gantry OBJ material differs from its source object group: " + name);
+                }
+                if (trimmed.StartsWith("f ", StringComparison.Ordinal) || trimmed.StartsWith("f\t", StringComparison.Ordinal))
+                {
+                    if (current < 0 || trimmed.Split((char[])null, StringSplitOptions.RemoveEmptyEntries).Length != 4)
+                        throw new InvalidDataException("NASA gantry OBJ requires named, triangulated material groups");
+                    faceCounts[current]++;
+                }
+                writer.WriteLine(line);
+            }
+        }
+        int triangles = 0;
+        for (int i = 0; i < faceCounts.Length; i++)
+        {
+            if (faceCounts[i] == 0) throw new InvalidDataException("NASA gantry source group contains no faces: " + manifest.materialNames[i]);
+            triangles += faceCounts[i];
+        }
+        if (manifest.triangles > 0 && triangles != manifest.triangles)
+            throw new InvalidDataException("NASA gantry OBJ triangle count differs from manifest");
+        if (new FileInfo(stagedPath).Length > MaximumObjBytes)
+            throw new InvalidDataException("NASA gantry generated OBJ exceeds 32 MiB");
     }
 
     private static void ValidateObjBounds(string path, Manifest manifest)

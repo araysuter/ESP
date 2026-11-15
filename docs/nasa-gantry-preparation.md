@@ -81,3 +81,16 @@ The preparation script was authored without executing Blender, Python, Unity or
 tests locally. Conversion, optional preview rendering, geometric placement and
 Unity import remain VM qualification steps. Preserve the original downloaded
 GLB alongside the editable blend for source recovery.
+
+## Integrated VM check
+
+Unity 6000.6.9f1 imported the normalized source as a 105.700 m mesh with three
+submeshes and 144,945 imported vertices. Unity's OBJ importer requires explicit
+`g` groups; the importer verifies the original compressed and expanded hashes,
+then rewrites only object/group records in the generated derivative. Coordinates,
+normals, UVs and triangle records remain unchanged. Both source and staged bounds
+are checked, and the combined mesh must retain all 172,602 source triangles.
+
+The macOS packaged review passed structure presence, height/base, map/reset
+persistence, and absence at Starbase. Screenshot inspection confirmed the
+historical model beside SLS; its offset is illustrative, not a survey alignment.
