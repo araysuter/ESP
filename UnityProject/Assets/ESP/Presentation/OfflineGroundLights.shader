@@ -25,7 +25,9 @@ Shader "ESP/Offline Ground Lights"
                 output.geographicUv = input.geographicUv;
                 return output;
             }
-            half4 Frag(Varyings input) : SV_Target { return half4(EspNightEmission(input.geographicUv), 0); }
+            // Keep the serialized fallback material compatible, but do not paint
+            // the coarse orbital light atlas onto the authored local ground.
+            half4 Frag(Varyings input) : SV_Target { return half4(0, 0, 0, 0); }
             ENDHLSL
         }
     }
