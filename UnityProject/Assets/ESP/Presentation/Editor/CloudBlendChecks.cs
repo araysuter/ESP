@@ -137,20 +137,25 @@ namespace ESP.Presentation.Editor
             for (int x = 0; x < Width; x++)
             {
                 if (x < Width / 2) newer[y * Width + x] = Clear;
-                else if (x < 3 * Width / 4) older[y * Width + x] = Full;
+                if (x < 3 * Width / 4) older[y * Width + x] = Full;
             }
-            var observed = new bool[Count]; var blend = NewBlend();
-            blend.Add(newer, 0, observed, out _); blend.Add(older, 1, observed, out _);
-            var result = blend.Finish(); int row = (Height / 2) * Width;
-            Require(result[row + Width / 4].r == 0 && result[row + Width / 4].g == 255,
-                "Clear interior must remain clear.");
-            Require(Fraction(result[row + Width / 2 - 1]) > 0 && Fraction(result[row + Width / 2]) < 1,
-                "Cross-date boundary must blend on both sides.");
-            int gap = row + 3 * Width / 4;
-            Require(!observed[gap] && result[gap].g > 0, "Feather must not change observation mask.");
-            Require(result[gap + 8].g > 0 && result[gap + 8].g < result[gap].g,
-                "Feather must taper across several pixels.");
-            Require(result[gap + 17].g == 0, "Feather must end beyond its sixteen-pixel radius.");
+            foreach (bool reverse in new[] { false, true })
+            {
+                var observed = new bool[Count]; var blend = NewBlend();
+                if (reverse) { blend.Add(older, 1, observed, out _); blend.Add(newer, 0, observed, out _); }
+                else { blend.Add(newer, 0, observed, out _); blend.Add(older, 1, observed, out _); }
+                var result = blend.Finish(); int row = (Height / 2) * Width;
+                Require(result[row + Width / 4].r == 0 && result[row + Width / 4].g == 255,
+                    "Clear interior must retain newest observation.");
+                int join = row + Width / 2;
+                Near(Fraction(result[join - 1]), 1, .005f, "Newer edge must match older overlapping field.");
+                Near(Fraction(result[join]), 1, .005f, "Older side must remain unchanged.");
+                float middle = Fraction(result[join - 17]);
+                Require(middle > .1f && middle < .9f, "Overlap must taper over the interior band.");
+                Require(result[join - 33].r == 0, "Newest interior beyond feather must remain clear.");
+                int gap = row + 3 * Width / 4;
+                Require(!observed[gap] && result[gap].g == 0, "Missing observations remain transparent.");
+            }
         }
 
         static CloudShell.ObservationBlend NewBlend() => new CloudShell.ObservationBlend(Width, Height);

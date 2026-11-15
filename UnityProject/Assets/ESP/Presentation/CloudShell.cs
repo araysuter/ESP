@@ -98,8 +98,8 @@ namespace ESP.Presentation
         /// </summary>
         public sealed class ObservationBlend
         {
-            readonly Vector2[] field;
-            readonly int[] ages;
+            readonly Vector2[] field, fallback;
+            readonly int[] ages, fallbackAges;
             readonly int width, height;
 
             public ObservationBlend(int width, int height)
@@ -107,7 +107,9 @@ namespace ESP.Presentation
                 this.width = width; this.height = height;
                 field = new Vector2[width * height];
                 ages = new int[field.Length];
-                for (int i = 0; i < ages.Length; i++) ages[i] = int.MaxValue;
+                fallback = new Vector2[field.Length];
+                fallbackAges = new int[field.Length];
+                for (int i = 0; i < ages.Length; i++) ages[i] = fallbackAges[i] = int.MaxValue;
             }
 
             public int Add(Color32[] source, int daysOld, bool[] observed, out int unknown)
@@ -118,14 +120,19 @@ namespace ESP.Presentation
                     if (TryCloudFraction(source[i], out byte percent))
                     {
                         observed[i] = true;
-                        // A valid zero is an observation and must prevent an older
-                        // cloudy pixel from showing through. Equal-age ties retain
+                        // A valid zero is an observation and wins in the interior;
+                        // boundary crossfades are display-only. Equal-age ties retain
                         // the first observation; no implied sub-day ordering.
+                        float support = source[i].a / 255f;
+                        var sample = new Vector2(percent * .01f * support, support);
                         if (daysOld < ages[i])
                         {
-                            float support = source[i].a / 255f;
-                            field[i] = new Vector2(percent * .01f * support, support);
-                            ages[i] = daysOld; selected++;
+                            fallback[i] = field[i]; fallbackAges[i] = ages[i];
+                            field[i] = sample; ages[i] = daysOld; selected++;
+                        }
+                        else if (daysOld > ages[i] && daysOld < fallbackAges[i])
+                        {
+                            fallback[i] = sample; fallbackAges[i] = daysOld;
                         }
                     }
                     else if (source[i].a > 0 &&
@@ -134,7 +141,7 @@ namespace ESP.Presentation
                 return selected;
             }
 
-            const int FeatherRadius = 16;
+            const int FeatherRadius = 32;
 
             // Latitude reflection continues over the pole on the opposite meridian.
             int Index(int x, int y)
@@ -150,52 +157,47 @@ namespace ESP.Presentation
 
             public Color32[] Finish()
             {
-                var horizontal = new Vector2[field.Length];
-                var smooth = new Vector2[field.Length];
-                var boundary = new float[field.Length];
-                const int r = FeatherRadius, span = 2 * r + 1;
-                // Mark both sides of a date or missing-data boundary. The raw mask
-                // is kept in the x component of the second temporary buffer.
+                // Seed the newer side only where its next-older overlapping sample
+                // matches the date selected on the adjacent side. Expand within the
+                // same date pair; no missing or unrelated date is synthesized.
+                var distance = new byte[field.Length];
+                var queue = new int[field.Length];
+                for (int i = 0; i < distance.Length; i++) distance[i] = byte.MaxValue;
+                int head = 0, tail = 0;
                 for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                 {
-                    int i = y * width + x, age = ages[i];
-                    if (ages[Index(x - 1, y)] != age || ages[Index(x + 1, y)] != age ||
-                        ages[Index(x, y - 1)] != age || ages[Index(x, y + 1)] != age)
-                        smooth[i].x = 1;
-                }
-                // Horizontal running sums of premultiplied RG and boundary mask.
-                for (int y = 0; y < height; y++)
-                {
-                    Vector2 sum = Vector2.zero; float mask = 0;
-                    for (int x = -r; x <= r; x++) { int j = Index(x, y); sum += field[j]; mask += smooth[j].x; }
-                    for (int x = 0; x < width; x++)
+                    int i = y * width + x, older = fallbackAges[i];
+                    if (older == int.MaxValue) continue;
+                    if (ages[Index(x - 1, y)] == older || ages[Index(x + 1, y)] == older ||
+                        ages[Index(x, y - 1)] == older || ages[Index(x, y + 1)] == older)
                     {
-                        int i = y * width + x; horizontal[i] = sum / span; boundary[i] = mask / span;
-                        int add = Index(x + r + 1, y), remove = Index(x - r, y);
-                        sum += field[add] - field[remove]; mask += smooth[add].x - smooth[remove].x;
+                        distance[i] = 0; queue[tail++] = i;
                     }
                 }
-                // Vertical running sums; reflection preserves continuity at poles.
-                // Reuse smooth for the final filtered field and boundary influence.
-                for (int x = 0; x < width; x++)
+                while (head < tail)
                 {
-                    Vector2 sum = Vector2.zero; float mask = 0;
-                    for (int y = -r; y <= r; y++) { int j = Index(x, y); sum += horizontal[j]; mask += boundary[j]; }
-                    for (int y = 0; y < height; y++)
+                    int i = queue[head++], d = distance[i];
+                    if (d >= FeatherRadius) continue;
+                    int x = i % width, y = i / width;
+                    for (int direction = 0; direction < 4; direction++)
                     {
-                        int i = y * width + x;
-                        Vector2 filtered = sum / span;
-                        float influence = Mathf.Clamp01(mask / span * span * .5f);
-                        smooth[i] = Vector2.Lerp(field[i], filtered, influence);
-                        int add = Index(x, y + r + 1), remove = Index(x, y - r);
-                        sum += horizontal[add] - horizontal[remove]; mask += boundary[add] - boundary[remove];
+                        int j = Index(x + (direction == 0 ? -1 : direction == 1 ? 1 : 0),
+                            y + (direction == 2 ? -1 : direction == 3 ? 1 : 0));
+                        if (distance[j] != byte.MaxValue || ages[j] != ages[i] ||
+                            fallbackAges[j] != fallbackAges[i]) continue;
+                        distance[j] = (byte)(d + 1); queue[tail++] = j;
                     }
                 }
                 var pixels = new Color32[field.Length];
                 for (int i = 0; i < pixels.Length; i++)
-                    pixels[i] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(smooth[i].x) * 255),
-                        (byte)Mathf.RoundToInt(Mathf.Clamp01(smooth[i].y) * 255), 0, 255);
+                {
+                    float t = distance[i] == byte.MaxValue ? 0 : 1f - distance[i] / (float)FeatherRadius;
+                    t = t * t * (3f - 2f * t);
+                    Vector2 value = Vector2.Lerp(field[i], fallback[i], t);
+                    pixels[i] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(value.x) * 255),
+                        (byte)Mathf.RoundToInt(Mathf.Clamp01(value.y) * 255), 0, 255);
+                }
                 return pixels;
             }
 

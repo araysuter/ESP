@@ -44,6 +44,15 @@ namespace ESP.Presentation
                 lighting.ReviewUtc = new DateTime(2026, 3, 20, hour, 0, 0, DateTimeKind.Utc);
                 yield return Shot("map-hour-" + hour);
             }
+            var reviewLatitudes = new[] { 30f, 30f, 0f, 85f, -85f };
+            var reviewLongitudes = new[] { 20f, 115f, 180f, 0f, 0f };
+            var reviewHours = new[] { 11, 4, 0, 12, 12 };
+            for (int region = 0; region < reviewLatitudes.Length; region++)
+            {
+                controls.Focus(reviewLatitudes[region], reviewLongitudes[region]);
+                lighting.ReviewUtc = new DateTime(2026, 3, 20, reviewHours[region], 0, 0, DateTimeKind.Utc);
+                yield return Shot("global-region-" + region);
+            }
             // Exercise both actual pad surfaces, not only an upward sky view.
             foreach (int site in new[] { 0, 1 })
             {
