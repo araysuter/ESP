@@ -31,6 +31,7 @@ public static class BuildMission
             throw new Exception("Unity build support is not installed for " + target);
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
         ESP.Presentation.Editor.NasaImageryTimeChecks.Validate();
+        ESP.Presentation.Editor.KeyboardCameraChecks.Validate();
         WeatherHeightChecks.Validate();
         ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;

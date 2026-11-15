@@ -61,8 +61,8 @@ Keep `ESP.exe`, `ESP_Data`, `UnityPlayer.dll`, and the other generated files tog
 | Physics / cheats | Pause → **Live physics panel** or **Cheats**; modified flights cannot receive normal orbit verification |
 | Frame rate | Settings → **30 / 60 / 90 / 120 / 144 / Unlimited**, plus VSync; default 60 FPS, VSync off |
 | Fly | Select **Launch**. Assistance is enabled by default and uses the same flight controls as manual flight |
-| Take manual control | Use the throttle slider or **W/S** or **↑/↓** to change pitch and disable assistance |
-| Separate stages | Press **Space** or use the staging button after launch. For SLS, the action jettisons attached, spent solids before advancing the liquid stage |
+| Take manual control | **W/↑** pitches down, **S/↓** pitches up, **A/D** changes heading; **Shift/Ctrl** or the throttle slider increases/decreases throttle. Manual input disables assistance |
+| Separate stages | Press **Space** in map or flight view, or use the staging button after launch. For SLS, the action jettisons attached, spent solids before advancing the liquid stage |
 | Change simulation speed | Select **1×**, **5×**, or **20×**. The HUD displays mission time and the selected rate |
 | Start again | Select **Reset** or change launch sites |
 
