@@ -67,13 +67,19 @@ Shader "ESP/Local Surface Imagery"
                 // opaque: fading alpha would expose the same aliased globe below.
                 float3 towardCamera = _WorldSpaceCameraPos - input.positionWS;
                 float distanceMeters = length(towardCamera);
-                float airDensity = exp(-max(_CameraAltitude, 0) / 18000);
-                float baseHaze = (1 - exp(-distanceMeters / 60000)) * airDensity;
+                // Approximate the average density along a path from the surface
+                // to the camera, using an exponential atmosphere. Sampling only
+                // at camera altitude incorrectly removes all haze from orbit.
+                float heightInScaleHeights = max(_CameraAltitude, 0) / 18000;
+                float meanDensity = heightInScaleHeights < .001 ? 1 :
+                    (1 - exp(-heightInScaleHeights)) / heightInScaleHeights;
+                float airColumnMeters = distanceMeters * meanDensity;
+                float baseHaze = 1 - exp(-airColumnMeters / 60000);
                 float viewElevation = saturate(dot(normal, towardCamera / max(distanceMeters, .001)));
                 float grazing = 1 - smoothstep(.015, .12, viewElevation);
                 // No added horizon haze inside 400 m. It becomes strong only
                 // beyond the detailed pad footprint and near the visual horizon.
-                float horizonHaze = grazing * smoothstep(400, 3500, distanceMeters) * airDensity;
+                float horizonHaze = grazing * smoothstep(400, 3500, distanceMeters) * meanDensity;
                 half haze = daylight * min(.985, 1 - (1 - baseHaze) * (1 - horizonHaze));
                 color = lerp(color, half3(.26, .48, .90), haze);
                 // The global satellite night composite cannot resolve individual
