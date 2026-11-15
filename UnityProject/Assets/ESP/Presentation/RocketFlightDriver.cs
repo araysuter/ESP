@@ -79,7 +79,7 @@ namespace ESP.Presentation
         }
 
         public bool CanLaunch => !started;
-        public string Status => ReentryActive ? ReentryStatus : simulation != null ? (OrbitVerified ? "Orbit verified (60 s unpowered)" : simulation.State.Status) : "Ready — " + (AssistanceEnabled ? "assisted" : "manual") + " • " + TimeRate + "× selected";
+        public string Status => ReentryActive ? ReentryStatus : simulation != null ? (OrbitVerified ? "Orbit verified (60 s unpowered)" : !simulation.State.IsLanded && AssistanceEnabled && guidance != null && guidance.IsCoasting ? "Coasting to ICPS circularization burn" : simulation.State.Status) : "Ready — " + (AssistanceEnabled ? "assisted" : "manual") + " • " + TimeRate + "× selected";
         public double AltitudeMeters => simulation != null ? simulation.State.AltitudeMeters : 0;
         public double SpeedMetersPerSecond => simulation != null ? simulation.State.SpeedRelativeGround : 0;
         public double MissionTimeSeconds => simulation != null ? simulation.State.MissionTime : 0;
@@ -156,7 +156,7 @@ namespace ESP.Presentation
             director.GetComponent<RocketSmokeTrail>()?.Arm(simulation);
             director.GetComponent<FlightTrailRecorder>()?.RecordSimulation(simulation);
             if (simulation.GravityMultiplier != 1) AssistanceEnabled = false;
-            guidance = new AssistedAscent(director.VehicleIndex == 1 ? 220000 : director.VehicleIndex == 2 ? 120000 : 160000, director.VehicleIndex == 2 ? 3 : 2);
+            guidance = director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsGuidance() : new AssistedAscent(director.VehicleIndex == 1 ? 220000 : 160000, 2);
             simulation.Throttle = pendingThrottle;
             simulation.Launch();
             accumulator = 0;
