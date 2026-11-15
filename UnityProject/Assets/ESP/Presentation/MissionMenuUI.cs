@@ -225,6 +225,11 @@ namespace ESP.Presentation
 
         private void BuildSettings(MissionSession session)
         {
+            menuScroll.Add(Label("KEYBOARD INPUT", 10, Muted, true));
+            var keyboardHelp = Note("W / S — pitch down / up\nA / D — turn left / right\nShift / Ctrl — increase / decrease throttle\nSpace — stage\nM — map / flight view\nEsc — pause / back\n\nSteering uses a simplified attitude controller; engine thrust follows the commanded orientation. It is not a physical gimbal simulation.");
+            keyboardHelp.name = "keyboard-input-reference";
+            keyboardHelp.style.marginBottom = 16;
+            menuScroll.Add(keyboardHelp);
             menuScroll.Add(Label("GRAPHICS · NIGHT SKY", 10, Muted, true));
             var brightnessLabel = Label("Milky Way brightness: " + Mathf.RoundToInt(session.MilkyWayBrightness) + "%", 11, Text);
             menuScroll.Add(brightnessLabel);
@@ -444,3 +449,4 @@ namespace ESP.Presentation
         }
     }
 }
+

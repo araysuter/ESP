@@ -190,7 +190,7 @@ namespace ESP.Presentation
                 focused?.GetFirstAncestorOfType<Button>() != null || focused?.GetFirstAncestorOfType<Slider>() != null;
             if (keyboard != null && Application.isFocused && !editingText && !simulation.State.IsLanded)
             {
-                float pitchInput = (keyboard.wKey.isPressed || (!controlFocused && keyboard.upArrowKey.isPressed) ? 1 : 0) - (keyboard.sKey.isPressed || (!controlFocused && keyboard.downArrowKey.isPressed) ? 1 : 0);
+                float pitchInput = (keyboard.sKey.isPressed || (!controlFocused && keyboard.downArrowKey.isPressed) ? 1 : 0) - (keyboard.wKey.isPressed || (!controlFocused && keyboard.upArrowKey.isPressed) ? 1 : 0);
                 float headingInput = (keyboard.dKey.isPressed || (!controlFocused && keyboard.rightArrowKey.isPressed) ? 1 : 0) - (keyboard.aKey.isPressed || (!controlFocused && keyboard.leftArrowKey.isPressed) ? 1 : 0);
                 if (pitchInput != 0 || headingInput != 0)
                 {
@@ -198,7 +198,10 @@ namespace ESP.Presentation
                     simulation.PitchDegrees = Math.Max(0, Math.Min(90, simulation.PitchDegrees + pitchInput * 20 * Time.unscaledDeltaTime));
                     simulation.HeadingDegrees = (simulation.HeadingDegrees + headingInput * 20 * Time.unscaledDeltaTime + 360) % 360;
                 }
-                if (!controlFocused && director != null && !director.IsMapView && keyboard.spaceKey.wasPressedThisFrame) Stage();
+                float throttleInput = (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed ? 1 : 0) -
+                    (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed ? 1 : 0);
+                if (throttleInput != 0) SetThrottle(Throttle + throttleInput * .35f * Time.unscaledDeltaTime);
+                if (!controlFocused && keyboard.spaceKey.wasPressedThisFrame) Stage();
             }
             // Cap requested work to what can be simulated this frame. Do not queue
             // unbounded future flight after the player selects a lower rate.
@@ -292,3 +295,4 @@ namespace ESP.Presentation
         }
     }
 }
+

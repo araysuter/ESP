@@ -140,7 +140,10 @@ namespace ESP.Presentation
                 Vector3 radial = center.normalized;
                 Vector3 candidate = center + offset;
                 if (SolarSystemMap.EarthOccludes(center, candidate))
-                    offset -= 2 * Mathf.Min(0, Vector3.Dot(offset, radial)) * radial;
+                {
+                    float inward = Vector3.Dot(offset, radial);
+                    offset = (offset - Mathf.Min(0, inward) * radial + radial * .1f).normalized * distance;
+                }
             }
             transform.position = center + offset;
             Vector3 up = Vector3.up;
@@ -161,3 +164,4 @@ namespace ESP.Presentation
         }
     }
 }
+
