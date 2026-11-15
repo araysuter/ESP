@@ -28,7 +28,7 @@ namespace ESP.Presentation
         public bool ReturnNeedsRealTime => !IsPlanningReturn && returnController != null &&
             (returnController.Phase == StarshipReturnPhase.LandingFlip || returnController.Phase == StarshipReturnPhase.PoweredLanding);
         public bool CanBeginReentry => !ReentryActive && !IsPaused && !MissionSession.BlocksInput &&
-            director != null && director.VehicleIndex == 1 && OrbitVerified && simulation != null &&
+            director != null && (director.VehicleIndex == 1 || director.VehicleIndex == 3) && OrbitVerified && simulation != null &&
             simulation.Primary == CelestialPrimary.Earth &&
             simulation.State.StageIndex == 1 && !simulation.HasUsedCheats && !simulation.State.IsComplete;
         public string ReentryStatus => (simulation != null && simulation.HasUsedCheats ? "Modified flight · " : "") + (returnPlanningError ?? (IsPlanningReturn ? string.Format("Planning return · {0} trajectories checked · {1:0}s elapsed\nSimulation time paused · camera and map available", returnController.PlanningCompletedCandidates, ReturnPlanningElapsedSeconds) : returnController != null ? returnController.Status :

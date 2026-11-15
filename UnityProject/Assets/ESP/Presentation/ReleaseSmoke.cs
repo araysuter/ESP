@@ -39,7 +39,7 @@ namespace ESP.Presentation
             var sunlight = FindFirstObjectByType<MissionSunlight>();
             if (!director || !driver || !sunlight || !director.mapCamera || !director.launchCamera)
             { Fail("missing mission scene components"); yield break; }
-            if (director.vehiclePrefabs == null || director.vehiclePrefabs.Length != 3)
+            if (director.vehiclePrefabs == null || director.vehiclePrefabs.Length != 4)
             { Fail("missing vehicle catalog"); yield break; }
             foreach (var prefab in director.vehiclePrefabs)
                 if (!prefab || prefab.GetComponentsInChildren<MeshFilter>(true).Length == 0)

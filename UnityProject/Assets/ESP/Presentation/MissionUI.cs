@@ -466,7 +466,7 @@ namespace ESP.Presentation
         {
             var group = Column(); group.name = map ? "map-vehicle-selector" : "flight-vehicle-selector";
             group.style.width = 140; group.style.flexShrink = 0;
-            var choice = Button("STARSHIP  ›", () => { if (director != null) director.SelectVehicle((director.VehicleIndex + 1) % 3); Refresh(); }, false, map ? "map-vehicle-choice" : "flight-vehicle-choice");
+            var choice = Button("STARSHIP  ›", () => { if (director != null) director.SelectVehicle((director.VehicleIndex + 1) % 4); Refresh(); }, false, map ? "map-vehicle-choice" : "flight-vehicle-choice");
             choice.style.unityTextAlign = TextAnchor.MiddleLeft;
             choice.tooltip = "Choose vehicle before launch";
             group.Add(choice);
@@ -484,7 +484,7 @@ namespace ESP.Presentation
         private void OpenModelCredit()
         {
             if (director == null) return;
-            Application.OpenURL(director.VehicleIndex == 1
+            Application.OpenURL((director.VehicleIndex == 1 || director.VehicleIndex == 3)
                 ? "https://sketchfab.com/3d-models/spacex-starship-block-3-6f6c6f88a3eb4b4d822fdca66733fbb2"
                 : "https://science.nasa.gov/3d-resources/space-launch-system-sls-block-1/");
         }
@@ -604,7 +604,7 @@ namespace ESP.Presentation
             bool systemView = director != null && director.IsMapView && controls != null && controls.Distance >= 1000;
             var sunlight = director != null ? director.GetComponent<MissionSunlight>() : null;
             PlaceSystemLabel(systemEarth, camera, Vector3.zero, systemView);
-            systemVehicle.text = director != null && director.VehicleIndex == 1 ? "▲  STARSHIP" :
+            systemVehicle.text = director != null && director.VehicleIndex == 3 ? "▲  SUPER STARSHIP" : director != null && director.VehicleIndex == 1 ? "▲  STARSHIP" :
                 director != null && director.VehicleIndex == 2 ? "▲  SLS" : "▲  ESP DEMO";
             PlaceSystemLabel(systemVehicle, camera, controls != null ? controls.FocusPosition : Vector3.zero, systemView, 4);
             var solarMap = director != null ? director.GetComponent<SolarSystemMap>() : null;
@@ -651,7 +651,7 @@ namespace ESP.Presentation
             {
                 Vector2 p = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(rocketScreen.x, Screen.height - rocketScreen.y));
                 rocketMarker.style.left = p.x - 13; rocketMarker.style.top = p.y - 13;
-                rocketMarker.tooltip = director.VehicleIndex == 1 ? "Starship — current position" : director.VehicleIndex == 2 ? "SLS — current position" : "Vehicle — current position";
+                rocketMarker.tooltip = (director.VehicleIndex == 1 || director.VehicleIndex == 3) ? "Starship — current position" : director.VehicleIndex == 2 ? "SLS — current position" : "Vehicle — current position";
             }
             for (int i = 0; i < markers.Length; i++)
             {
@@ -775,19 +775,19 @@ namespace ESP.Presentation
             nasaStatus.text = director.NasaStatus;
             regionalImage.style.display = director.RegionalImage != null ? DisplayStyle.Flex : DisplayStyle.None;
             regionalImage.style.backgroundImage = director.RegionalImage != null ? new StyleBackground((Texture2D)director.RegionalImage) : new StyleBackground(StyleKeyword.None);
-            string vehicleName = director.VehicleIndex == 1 ? "STARSHIP" : director.VehicleIndex == 2 ? "SLS" : "ESP DEMO";
+            string vehicleName = director.VehicleIndex == 3 ? "SUPER STARSHIP" : director.VehicleIndex == 1 ? "STARSHIP" : director.VehicleIndex == 2 ? "SLS" : "ESP DEMO";
             vehicleChoice.text = mapVehicleChoice.text = vehicleName + "  ›";
             vehicleChoice.SetEnabled(director.CanLaunch); mapVehicleChoice.SetEnabled(director.CanLaunch);
-            vehicleNote.text = mapVehicleNote.text = director.VehicleIndex == 0 ? "DEMO PRESET" : "ESTIMATED SPECS";
+            vehicleNote.text = mapVehicleNote.text = director.VehicleIndex == 3 ? "FICTIONAL · 5× FUEL" : director.VehicleIndex == 0 ? "DEMO PRESET" : "ESTIMATED SPECS";
             modelCredit.style.display = mapModelCredit.style.display = director.VehicleIndex == 0 ? DisplayStyle.None : DisplayStyle.Flex;
-            modelCredit.text = mapModelCredit.text = director.VehicleIndex == 1 ? "Clarence365 · CC BY 4.0 ↗" : "NASA · adapted ↗";
-            modelCredit.tooltip = mapModelCredit.tooltip = director.VehicleIndex == 1 ? "Starship model by Clarence365, CC BY 4.0; adapted for ESP. Open source model." : "NASA SLS model adapted for ESP. Open source model.";
+            modelCredit.text = mapModelCredit.text = (director.VehicleIndex == 1 || director.VehicleIndex == 3) ? "Clarence365 · CC BY 4.0 ↗" : "NASA · adapted ↗";
+            modelCredit.tooltip = mapModelCredit.tooltip = (director.VehicleIndex == 1 || director.VehicleIndex == 3) ? "Starship model by Clarence365, CC BY 4.0; adapted for ESP. Open source model." : "NASA SLS model adapted for ESP. Open source model.";
             site.text = (director.SiteName ?? "Launch site").Replace(" (approximate)", "").Replace(" (Approximate)", "").ToUpperInvariant();
             status.text = (director.FlightStatus ?? "READY").ToUpperInvariant();
             status.style.display = flight != null && flight.ReentryActive ? DisplayStyle.Flex : DisplayStyle.None;
             status.tooltip = director.FlightStatus ?? "";
             status.style.color = flight != null && flight.OrbitVerified ? Cyan : Text;
-            string vehicleInfo = director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
+            string vehicleInfo = director.VehicleIndex == 3 ? "Fictional preset: five times the fuel at the same loaded mass." : director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
             string mapInfo = (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n" + director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
                 "\nCyan: coast prediction — engines cut now; ignores drag. Muted blue: actual flown path behind the vehicle. Ap/Pe mark radial apsides with local WGS84 heights. Impact clips the path at the surface." +
                 "\nSun / Earth view: the Sun follows the lighting direction; Earth's orbit is a visual, circular 1 AU approximation, not a simulated heliocentric trajectory.";
@@ -826,7 +826,7 @@ namespace ESP.Presentation
             {
                 var fuel = flight.FuelTelemetry;
                 if (showStaging) RefreshStaging(flight, fuel);
-                stageFuel.text = $"FUEL  S{fuel.StageNumber}  {fuel.StageKg:N0} kg";
+                stageFuel.text = $"FUEL  S{fuel.StageNumber}  {fuel.StageKg:N0} {(director.VehicleIndex == 3 ? "eq. units" : "kg")}";
                 boosterFuel.style.display = fuel.BoosterKg.HasValue ? DisplayStyle.Flex : DisplayStyle.None;
                 if (fuel.BoosterKg.HasValue)
                     boosterFuel.text = $"SRBs · {fuel.BoosterKg.Value:N0} kg";
@@ -839,7 +839,7 @@ namespace ESP.Presentation
             action.text = countdownRemaining > 0 ? "T−" + Mathf.CeilToInt(countdownRemaining) :
                 director.FlightDriver == null || director.CanLaunch ? "LAUNCH" : "STAGE";
             action.SetEnabled(countdownRemaining <= 0 && director.FlightDriver != null && !(flight?.ReentryActive ?? false));
-            reentry.style.display = director.VehicleIndex == 1 ? DisplayStyle.Flex : DisplayStyle.None;
+            reentry.style.display = (director.VehicleIndex == 1 || director.VehicleIndex == 3) ? DisplayStyle.Flex : DisplayStyle.None;
             reentry.SetEnabled(flight != null && flight.CanBeginReentry);
             reentry.text = flight != null && flight.IsPlanningReturn ? "SEARCHING" : flight?.Simulation?.IsCaught == true ? "CAUGHT" : flight != null && flight.ReentryActive ? "RETURNING" : "RE-ENTRY";
             reentry.tooltip = flight != null ? flight.ReentryStatus : "Starship return to Starbase";
@@ -893,7 +893,7 @@ namespace ESP.Presentation
                 double capacity = flight.StagePropellantCapacityKg(i);
                 double remaining = active ? fuel.StageKg : capacity;
                 string state = separated ? "SEPARATED" : !active ? "QUEUED" : remaining <= 0 ? "EMPTY" : "CURRENT";
-                row.UpdateFuel($"STAGE {stage}", state, separated ? (double?)null : remaining, capacity, active);
+                row.UpdateFuel($"STAGE {stage}", state, separated ? (double?)null : remaining, capacity, active, director.VehicleIndex == 3 ? "eq. units" : "kg");
             }
 
             double? boosterCapacity = flight.BoosterPropellantCapacityKg;
@@ -940,7 +940,7 @@ namespace ESP.Presentation
                 Add(readout);
             }
 
-            public void UpdateFuel(string label, string state, double? remaining, double capacity, bool active)
+            public void UpdateFuel(string label, string state, double? remaining, double capacity, bool active, string unit = "kg")
             {
                 float fraction = remaining.HasValue && capacity > 0
                     ? Mathf.Clamp01((float)(remaining.Value / capacity)) : 0f;
@@ -950,7 +950,7 @@ namespace ESP.Presentation
                 status.style.color = active ? Amber : Muted;
                 fill.style.backgroundColor = active ? Cyan : Muted;
                 fill.style.width = Length.Percent(100 * fraction);
-                readout.text = remaining.HasValue ? $"{remaining.Value:N0} kg  ·  {fraction:P0}" : "—";
+                readout.text = remaining.HasValue ? $"{remaining.Value:N0} {unit}  ·  {fraction:P0}" : "—";
                 Border(this, active ? Amber : Edge);
             }
         }

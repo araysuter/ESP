@@ -10,6 +10,17 @@ namespace FlightCore
             new StageDefinition(150000, 1600000, 11e6, 15.83e6, 320, 360, .5, 63.62, supportsStarshipReturn: true)
         };
 
+        /// <summary>Fictional gameplay preset: five units of propellant per unit of carried mass.</summary>
+        public static StageDefinition[] BuildSuperStarshipStages()
+        {
+            var normal=BuildStarshipStages(); var result=new StageDefinition[normal.Length];
+            for(int i=0;i<normal.Length;i++) { var s=normal[i]; result[i]=new StageDefinition(s.DryMassKg,s.PropellantKg*5,s.ThrustSeaLevelNewtons,s.ThrustVacuumNewtons,s.IspSeaLevelSeconds,s.IspVacuumSeconds,s.DragCoefficient,s.ReferenceAreaSquareMeters,s.SupportsStarshipReturn,.2); }
+            return result;
+        }
+
+        /// <summary>Feedback-based ascent for the fictional extended-burn preset.</summary>
+        public static AssistedAscent BuildSuperStarshipGuidance() => new AssistedAscent(160000, 2.5, 200000, true);
+
         /// <summary>SLS-specific assisted pitch schedule; still uses ordinary simulation controls.</summary>
         public static AssistedAscent BuildSlsGuidance() => new AssistedAscent(160000, 2.5, 200000, true);
 

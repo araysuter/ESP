@@ -53,7 +53,8 @@ namespace ESP.Presentation
         {
             (StageDefinition.DemoStages(), null),
             (RealVehiclePresets.BuildStarshipStages(), null),
-            (RealVehiclePresets.BuildSlsStages(), RealVehiclePresets.BuildSlsBoosterParameters())
+            (RealVehiclePresets.BuildSlsStages(), RealVehiclePresets.BuildSlsBoosterParameters()),
+            (RealVehiclePresets.BuildSuperStarshipStages(), null)
         };
         private (StageDefinition[] Stages, SolidBoosterDefinition Boosters) SelectedPreset =>
             VehiclePresets[director != null ? director.VehicleIndex : 0];
@@ -156,7 +157,7 @@ namespace ESP.Presentation
             director.GetComponent<RocketSmokeTrail>()?.Arm(simulation);
             director.GetComponent<FlightTrailRecorder>()?.RecordSimulation(simulation);
             if (simulation.GravityMultiplier != 1) AssistanceEnabled = false;
-            guidance = director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsGuidance() : new AssistedAscent(director.VehicleIndex == 1 ? 220000 : 160000, 2);
+            guidance = director.VehicleIndex == 2 ? RealVehiclePresets.BuildSlsGuidance() : director.VehicleIndex == 3 ? RealVehiclePresets.BuildSuperStarshipGuidance() : new AssistedAscent(director.VehicleIndex == 1 ? 220000 : 160000, 2);
             simulation.Throttle = pendingThrottle;
             simulation.Launch();
             accumulator = 0;
