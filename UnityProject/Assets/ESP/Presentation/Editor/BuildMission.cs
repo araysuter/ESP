@@ -111,6 +111,8 @@ public static class BuildMission
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
         manager.AddComponent<MissionFlightSmoke>();
         var flight = manager.AddComponent<RocketFlightDriver>(); flight.director = director; flight.nasaWeather = nasaWeather;
+        flight.reentryShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/ReentryPlasma.shader");
+        if (!flight.reentryShader) throw new Exception("Missing reentry plasma shader");
         var explosion = manager.AddComponent<RocketExplosion>();
         explosion.driver = flight; explosion.director = director;
         explosion.effectShader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/ESP/Presentation/RocketExplosion.shader");

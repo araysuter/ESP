@@ -106,7 +106,7 @@ namespace ESP.Presentation
             var view = vehicle.GetComponent<RocketPresentation>();
             foreach (Renderer renderer in vehicle.GetComponentsInChildren<Renderer>())
             {
-                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || RocketPlume.IsExhaustRenderer(renderer) ||
+                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || renderer.GetComponentInParent<ReentryPlasma>() != null || RocketPlume.IsExhaustRenderer(renderer) ||
                     (view != null && view.exhaust != null && renderer.transform.IsChildOf(view.exhaust))) continue;
                 if (!found) { bounds = renderer.bounds; found = true; }
                 else bounds.Encapsulate(renderer.bounds);

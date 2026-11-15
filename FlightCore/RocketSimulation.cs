@@ -15,6 +15,29 @@ namespace FlightCore
         readonly double step,lat,lon,pad; readonly SolidBoosterDefinition? booster; bool boosterAttached; double boosterFuel; readonly StageDefinition[] stages; readonly WeatherAtmosphere atmosphere;
         Vector3d position,velocity; double time,fuel,actualPitch,actualHeading,throttle,pitch=90,heading=90; int stage; bool commanded,launched,landed,destroyed;
         double gravityMultiplier = 1;
+        internal bool ReturnMode;
+        internal Vector3d ReturnCommand, ReturnAxis;
+        internal double ReturnBankRadians;
+        public Vector3d ReturnAttitudeDirection => ReturnAxis;
+        public double ReturnBankAngleRadians => ReturnBankRadians;
+        public Vector3d AirRelativeVelocity { get { var geo=Geo(position,time);return velocity-Air(position,time,geo).velocity; } }
+        public double ReturnHeatFluxWattsPerSquareMeter => CurrentForces().HeatFlux;
+        public bool IsCaught { get; private set; }
+        internal double FixedStep => step;
+        internal bool SupportsStarshipReturn => stages[stage].SupportsStarshipReturn;
+        internal double ReturnAvailableThrust { get { var s=stages[stage]; var pressure=CurrentForces().Atmosphere.PressurePascals;double f=Math.Max(0,Math.Min(1,pressure/101325));return s.ThrustVacuumNewtons+(s.ThrustSeaLevelNewtons-s.ThrustVacuumNewtons)*f; } }
+        internal RocketSimulation ReturnClone(double newStep)
+        {
+            var c=new RocketSimulation(newStep,stages,atmosphere,lat,lon,pad,booster);
+            c.position=position;c.velocity=velocity;c.time=time;c.fuel=fuel;c.stage=stage;c.boosterFuel=boosterFuel;c.boosterAttached=boosterAttached;
+            c.gravityMultiplier=gravityMultiplier;c.infiniteFuel=infiniteFuel;c.crashDestructionEnabled=crashDestructionEnabled;c.HasUsedCheats=HasUsedCheats;
+            c.commanded=commanded;c.launched=launched;c.landed=landed;c.destroyed=destroyed;c.actualPitch=actualPitch;c.actualHeading=actualHeading;
+            c.ReturnBankRadians=ReturnBankRadians;c.ReturnMode=ReturnMode;c.ReturnAxis=ReturnAxis;c.ReturnCommand=ReturnCommand;c.throttle=throttle;
+            return c;
+        }
+        internal void EnableReturn() { ReturnMode=true;ReturnAxis=Direction(Geo(position,time),time,actualPitch,actualHeading);ReturnCommand=ReturnAxis;throttle=0; }
+        internal void CatchAtCurrentPosition() { IsCaught=true;landed=true;throttle=0;velocity=Rotation(position); }
+
         bool infiniteFuel, crashDestructionEnabled = true;
         /// <summary>Scales the same inverse-square acceleration used by integration and liftoff. Scientific default: 1.</summary>
         public double GravityMultiplier { get => gravityMultiplier; set { Check(value,0,5); gravityMultiplier=value; if(value!=1) HasUsedCheats=true; } }
@@ -39,14 +62,14 @@ namespace FlightCore
             Check(latitudeRadians,-Math.PI/2,Math.PI/2);if(!Finite(longitudeRadians)||!Finite(padAltitudeMeters))throw new ArgumentOutOfRangeException(nameof(longitudeRadians));
             this.step=step;this.stages=(StageDefinition[])stages.Clone();this.atmosphere=atmosphere??throw new ArgumentNullException(nameof(atmosphere));lat=latitudeRadians;lon=longitudeRadians;pad=padAltitudeMeters;this.booster=booster;Reset();
         }
-        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;}
+        public void Reset(){position=EarthFrames.GeodeticToEcef(lat,lon,pad);velocity=Rotation(position);time=0;stage=0;fuel=stages[0].PropellantKg;commanded=launched=landed=destroyed=false;boosterAttached=booster!=null;boosterFuel=booster?.PropellantKg??0;actualPitch=90;actualHeading=90;throttle=0;pitch=90;heading=90;gravityMultiplier=1;infiniteFuel=false;crashDestructionEnabled=true;HasUsedCheats=false;ImpactSpeedMetersPerSecond=0;ReturnMode=false;IsCaught=false;ReturnBankRadians=0;ReturnAxis=ReturnCommand=Vector3d.Zero;}
         public void Launch(){if(!landed)commanded=true;}
         public bool Stage(){if(landed||stage>=stages.Length-1)return false;stage++;fuel=stages[stage].PropellantKg;return true;}
         /// <summary>Discard spent booster dry mass without a separation impulse. Burning boosters cannot be jettisoned.</summary>
         public bool JettisonBoosters(){if(!boosterAttached||boosterFuel>0||landed)return false;boosterAttached=false;return true;}
         public RocketSnapshot State {get {
             var forces=CurrentForces();
-            string status=destroyed?"Destroyed: ground impact":landed?"Landed":launched?(fuel<=0&&!BoosterBurning?"Coasting: fuel depleted":"Flight"):commanded?"Holding on pad":"Ready";
+            string status=destroyed?"Destroyed: ground impact":IsCaught?"Caught at Starbase":landed?"Landed":launched?(fuel<=0&&!BoosterBurning?"Coasting: fuel depleted":"Flight"):commanded?"Holding on pad":"Ready";
             return new RocketSnapshot(position,velocity,time,fuel,stage,forces.Mass,forces.Geodetic.AltitudeMeters,(velocity-Rotation(position)).Magnitude(),forces.Drag.DynamicPressurePascals,landed,launched,landed,destroyed,status);
         }}
         /// <summary>Instantaneous shared force evaluation at the current state. Net acceleration excludes pad/ground support; label it free-flight acceleration when constrained.</summary>
@@ -62,6 +85,7 @@ namespace FlightCore
         public void Step()
         {
             if(landed||!commanded)return;
+            if(ReturnMode) ReturnAxis=StarshipReturnController.Slew(ReturnAxis,ReturnCommand,10*Math.PI/180*step);
             actualPitch=Move(actualPitch,pitch,5*step);double delta=((heading-actualHeading+540)%360)-180;actualHeading=(actualHeading+Math.Max(-5*step,Math.Min(5*step,delta))+360)%360;
             if(!launched){var padGeo=Geo(position,time);var air=Air(position,time,padGeo);var engine=Engine(air.sample.PressurePascals);double coreThrust=fuel>0?engine.thrust:0;double solidThrust=BoosterBurning?booster!.ThrustNewtons:0;double thrust=coreThrust+solidThrust;var up=Direction(padGeo,time,90,0);var gravityVector=Gravity.Acceleration(position)*gravityMultiplier;double gravity=-(gravityVector.X*up.X+gravityVector.Y*up.Y+gravityVector.Z*up.Z);if(thrust*Math.Sin(actualPitch*Math.PI/180)<=Mass(fuel,boosterFuel)*gravity){
                 // Hold-down burns both propellants; a mass-driven liftoff is checked next tick.
@@ -96,9 +120,9 @@ namespace FlightCore
             public readonly AtmosphereSample Atmosphere;
             public readonly Vector3d Gravity,Acceleration;
             public readonly DragResult Drag;
-            public readonly double Thrust,CoreThrust,Isp,Mass;
-            public ForceSample(GeodeticPosition geo,AtmosphereSample air,Vector3d gravity,Vector3d acceleration,DragResult drag,double thrust,double coreThrust,double isp,double mass)
-            {Geodetic=geo;Atmosphere=air;Gravity=gravity;Acceleration=acceleration;Drag=drag;Thrust=thrust;CoreThrust=coreThrust;Isp=isp;Mass=mass;}
+            public readonly double Thrust,CoreThrust,Isp,Mass,HeatFlux;
+            public ForceSample(GeodeticPosition geo,AtmosphereSample air,Vector3d gravity,Vector3d acceleration,DragResult drag,double thrust,double coreThrust,double isp,double mass,double heatFlux)
+            {Geodetic=geo;Atmosphere=air;Gravity=gravity;Acceleration=acceleration;Drag=drag;Thrust=thrust;CoreThrust=coreThrust;Isp=isp;Mass=mass;HeatFlux=heatFlux;}
         }
         // Integration and telemetry share this exact atmosphere, mass and force path.
         ForceSample EvaluateForces(Y y,double t,bool burn,bool solidBurn)
@@ -109,8 +133,29 @@ namespace FlightCore
             double mass=Mass(Math.Max(0,y.f),Math.Max(0,y.b));
             var drag=Aerodynamics.Compute(y.v,air.velocity,air.sample.DensityKgPerCubicMeter,stages[stage].DragCoefficient,stages[stage].ReferenceAreaSquareMeters,mass);
             var gravity=Gravity.Acceleration(y.p)*gravityMultiplier;
-            var acceleration=gravity+Direction(geo,t,actualPitch,actualHeading)*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
-            return new ForceSample(geo,air.sample,gravity,acceleration,drag,thrust,coreThrust,engine.isp,mass);
+            double heatFlux=0;
+            var acceleration=gravity+(ReturnMode?ReturnAxis:Direction(geo,t,actualPitch,actualHeading))*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
+            if(ReturnMode)
+            {
+                var relative=y.v-air.velocity;double speed=relative.Magnitude();
+                // Broadside 9 m by 50 m body area; slender end-on area. Coefficients are game estimates.
+                double cosine=speed>0?Math.Abs(StarshipReturnController.Dot(ReturnAxis,relative*(1/speed))):1;
+                double area=63.62+386.38*Math.Sqrt(Math.Max(0,1-cosine*cosine));
+                drag=Aerodynamics.Compute(y.v,air.velocity,air.sample.DensityKgPerCubicMeter,1.2,area,mass);
+                acceleration=gravity+ReturnAxis*(thrust/mass)+drag.AccelerationMetersPerSecondSquared;
+                if(speed>1)
+                {
+                    var flow=relative*(1/speed);var up=y.p.Normalize();var lift=up-flow*StarshipReturnController.Dot(up,flow);
+                    if(lift.Magnitude()>1e-8) {
+                        lift=lift.Normalize();var side=StarshipReturnController.Cross(flow,lift);
+                        lift=lift*Math.Cos(ReturnBankRadians)+side*Math.Sin(ReturnBankRadians);
+                        acceleration+=lift*(.25*drag.ForceNewtons.Magnitude()/mass);
+                    }
+                }
+                // Sutton-Graves Earth entry heating proxy, 4.5 m nose radius; not TPS temperature/damage.
+                heatFlux=1.74153e-4*Math.Sqrt(air.sample.DensityKgPerCubicMeter/4.5)*speed*speed*speed;
+            }
+            return new ForceSample(geo,air.sample,gravity,acceleration,drag,thrust,coreThrust,engine.isp,mass,heatFlux);
         }
         (double thrust,double isp) Engine(double pressure){double f=Math.Max(0,Math.Min(1,pressure/101325));var s=stages[stage];return ((s.ThrustVacuumNewtons+(s.ThrustSeaLevelNewtons-s.ThrustVacuumNewtons)*f)*throttle,s.IspVacuumSeconds+(s.IspSeaLevelSeconds-s.IspVacuumSeconds)*f);}
         double Mass(double currentFuel,double currentBoosterFuel){double m=stages[stage].DryMassKg+currentFuel+(boosterAttached?booster!.DryMassKg+currentBoosterFuel:0);for(int i=stage+1;i<stages.Length;i++)m+=stages[i].DryMassKg+stages[i].PropellantKg;return m;}
