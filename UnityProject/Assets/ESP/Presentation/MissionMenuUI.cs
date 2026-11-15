@@ -455,10 +455,17 @@ namespace ESP.Presentation
         }
         private void ClampNerdPanel(Vector2 position)
         {
-            if (nerdPanel == null || root == null || float.IsNaN(nerdPanel.resolvedStyle.width)) return;
-            nerdPanel.style.left = Mathf.Clamp(position.x, 0, Mathf.Max(0, root.resolvedStyle.width - nerdPanel.resolvedStyle.width - 1));
-            nerdPanel.style.top = Mathf.Clamp(position.y, 0, Mathf.Max(0, root.resolvedStyle.height - nerdPanel.resolvedStyle.height - 1));
+            if (nerdPanel == null || root == null || nerdPanel.resolvedStyle.display == DisplayStyle.None) return;
+            float width = root.resolvedStyle.width, height = root.resolvedStyle.height;
+            float panelWidth = nerdPanel.resolvedStyle.width, panelHeight = nerdPanel.resolvedStyle.height;
+            // Hidden and not-yet-laid-out elements report zero or nonfinite extents.
+            // Keep the last position until the visible panel has usable geometry.
+            if (!PositiveExtent(width) || !PositiveExtent(height) || !PositiveExtent(panelWidth) || !PositiveExtent(panelHeight) ||
+                float.IsNaN(position.x) || float.IsInfinity(position.x) || float.IsNaN(position.y) || float.IsInfinity(position.y)) return;
+            nerdPanel.style.left = Mathf.Clamp(position.x, 0, Mathf.Max(0, width - panelWidth - 1));
+            nerdPanel.style.top = Mathf.Clamp(position.y, 0, Mathf.Max(0, height - panelHeight - 1));
         }
+        private static bool PositiveExtent(float value) => value > 0 && !float.IsInfinity(value);
         private void EndNerdDrag(PointerUpEvent evt)
         {
             draggingNerdPanel = false;
