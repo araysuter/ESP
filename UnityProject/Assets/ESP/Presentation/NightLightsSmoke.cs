@@ -60,7 +60,6 @@ namespace ESP.Presentation
             while (driver.AltitudeMeters < 150000 && Time.realtimeSinceStartup < deadline) yield return null;
             if (driver.AltitudeMeters < 150000) { Fail("verified ascent timeout"); yield break; }
             driver.SetTimeRate(1);
-            MissionSession.Instance.OpenPause();
             var camera = director.launchCamera;
             camera.GetComponent<FlightCameraControls>().enabled = false;
             camera.transform.position = new Vector3(0, 80, -150);
@@ -69,7 +68,6 @@ namespace ESP.Presentation
             yield return Shot("flight-night");
             lighting.ReviewUtc = lighting.ReviewUtc.Value.AddHours(12);
             yield return Shot("flight-day");
-            MissionSession.Instance.ResumeMission();
             lighting.ReviewUtc = null;
             camera.GetComponent<FlightCameraControls>().enabled = true;
             director.ResetMission();

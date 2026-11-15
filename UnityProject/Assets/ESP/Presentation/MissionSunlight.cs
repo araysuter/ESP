@@ -34,6 +34,7 @@ namespace ESP.Presentation
         }
         private void OnDisable()
         {
+            Shader.SetGlobalFloat("_EspNightLightsStrength", 0);
             RenderPipelineManager.beginCameraRendering -= BeginCamera;
             RenderPipelineManager.endCameraRendering -= EndCamera;
             if (mapSun != null) mapSun.enabled = false;
@@ -105,8 +106,6 @@ namespace ESP.Presentation
                 director.launchCamera.backgroundColor = Color.Lerp(new Color(.002f, .005f, .014f), new Color(.11f, .20f, .29f), daylight * air);
             }
         }
-
-        private void OnDisable() { Shader.SetGlobalFloat("_EspNightLightsStrength", 0); }
 
         public static void Aim(Light light, Vector3 towardSun)
         {
