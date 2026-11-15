@@ -43,8 +43,8 @@ The Sun image retains the existing bright material.
 
 Planet flight backdrops are camera-relative, with distant centers compressed to a
 500-unit shell and radius scaled identically to preserve angular size. Nearby bodies
-retain true scale. Earth/Moon rendering is unchanged. Map orbit lines show available
-arcs, not fabricated complete outer-system orbits. Texture orientation and distant
+retain true scale. Earth/Moon rendering is unchanged. Map orbit lines show complete approximate osculating ellipses; these are
+separate from the finite reference tracks used by the simulation. Texture orientation and distant
 occlusion remain visual approximations requiring rendered review.
 
 ## Verification
@@ -62,3 +62,14 @@ The pure core and presentation compile using Unity's installed C# compiler/refer
 are wired into `-espReleaseSmoke` so future package rehearsals fail if assets are missing.
 These new packaged checks, shader compilation and rendered appearance still require a
 fresh Unity package build. No locked-screen GUI session was operated during this work.
+
+## Complete map orbit lines
+
+Planet and dwarf-planet orbit lines are closed, instantaneous two-body ellipses
+fitted to the current heliocentric position and velocity using the Sun's
+gravitational parameter. They are visual approximations, not future reference
+ephemeris tracks. This avoids truncating long-period outer orbits to the finite
+offline table's date range. Body positions and flight dynamics still use the
+existing ephemerides. The display samples 256 equal eccentric-anomaly segments
+and repeats the starting vertex exactly, in the current map frame. Degenerate
+or unbound states have no closed line.

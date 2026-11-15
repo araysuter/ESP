@@ -808,7 +808,7 @@ namespace ESP.Presentation
             string vehicleInfo = director.VehicleIndex == 3 ? "Fictional preset: five times the fuel at the same loaded mass." : director.VehicleIndex == 0 ? "ESP demo preset." : "Vehicle performance uses estimated specifications.";
             string mapInfo = (director.GetComponent<MissionSunlight>()?.Status ?? "") + "\n" + director.MapCredit + "\n\n" + director.SiteName + "\nRed triangle: current simulated vehicle position. Flight attitude is shown on the navball.\n" + vehicleInfo +
                 "\nCyan: coast prediction — engines cut now; ignores drag. Muted blue: actual flown path behind the vehicle. Ap/Pe mark radial apsides with local WGS84 heights. Impact clips the path at the surface." +
-                "\nSun / Earth view: the Sun follows the lighting direction; Earth's orbit is a visual, circular 1 AU approximation, not a simulated heliocentric trajectory.";
+                "\nPlanet orbit lines: approximate full ellipses fitted to current positions and velocities; not future ephemeris tracks.\nSun / Earth view: the Sun follows the lighting direction; Earth's orbit is a visual, circular 1 AU approximation, not a simulated heliocentric trajectory.";
             string steeringInfo = "Pitch: W/S or ↑/↓  ·  Heading: A/D  ·  Stage: Space  ·  Map: M\n" +
                 "Throttle or steering input switches assistance off. Attitude uses simplified elevation/heading with a finite steering rate; roll is not modeled.";
             var localSurface = director.GetComponent<LocalSurfaceTiles>();

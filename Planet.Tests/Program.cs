@@ -24,8 +24,29 @@ static class Program
         return stream.ToArray();
     }
     static void Set(object target,string field,object value) => typeof(RocketSimulation).GetField(field,BindingFlags.NonPublic|BindingFlags.Instance)!.SetValue(target,value);
+    static double Dot(Vector3d a,Vector3d b) => a.X*b.X+a.Y*b.Y+a.Z*b.Z;
+    static Vector3d Cross(Vector3d a,Vector3d b) => new Vector3d(a.Y*b.Z-a.Z*b.Y,a.Z*b.X-a.X*b.Z,a.X*b.Y-a.Y*b.X);
+    static void OrbitDisplayChecks()
+    {
+        const double radius=4.5e12; // Neptune scale, beyond the Earth projection's range.
+        var p=new Vector3d(radius,0,0);
+        var circular=new Vector3d(0,Math.Sqrt(LunarEphemeris.SunMu/radius),0);
+        var circle=ESP.Presentation.PlanetOrbitProjection.Build(p,circular);
+        foreach(var point in circle) Near(point.Magnitude(),radius,.01,"large circular orbit radius");
+        Check(circle[64].Y>radius*.99 && circle[128].X < -radius*.99 && circle[192].Y < -radius*.99,"all four orbit quadrants");
+        Near((circle[0]-circle[256]).Magnitude(),0,0,"exact circular closure");
+        // Known inclined eccentric ellipse, sampled at perihelion.
+        const double e=.6;
+        var v=new Vector3d(0,Math.Sqrt(LunarEphemeris.SunMu*(1+e)/radius)/Math.Sqrt(2),Math.Sqrt(LunarEphemeris.SunMu*(1+e)/radius)/Math.Sqrt(2));
+        var ellipse=ESP.Presentation.PlanetOrbitProjection.Build(p,v);
+        Near(ellipse[128].Magnitude(),radius*(1+e)/(1-e),.1,"eccentric aphelion");
+        Check(ESP.Presentation.PlanetOrbitProjection.Build(p,circular*2).Length==0,"unbound state rejected");
+        Check(ESP.Presentation.PlanetOrbitProjection.Build(p,p*1e-9).Length==0,"radial state rejected");
+        Check(ESP.Presentation.PlanetOrbitProjection.Build(Vector3d.Zero,circular).Length==0,"zero radius rejected");
+    }
     static void Main(string[] args)
     {
+        OrbitDisplayChecks();
         var ep=new LunarEphemeris(Epoch);
         var p=new Vector3d(1e11,2e10,3e9);var v=new Vector3d(10,-20,30);var a=new Vector3d(.001,-.002,.003);
         LunarEphemeris.ConfigurePlanet(CelestialPrimary.Mercury,Table(p,v,a));
@@ -90,6 +111,22 @@ static class Program
             LunarEphemeris.ConfigurePlanet(body,File.ReadAllBytes(file));
             var launch=new LunarEphemeris(new DateTime(2026,11,15,0,0,0,DateTimeKind.Utc));
             Check(launch.TryPlanet(body,0,out var bp,out var bv,out _),body+" bundled current date");
+            var solarPosition = bp - launch.SunPosition(0);
+            var solarVelocity = bv - launch.SunVelocity(0);
+            var ellipse = ESP.Presentation.PlanetOrbitProjection.Build(solarPosition, solarVelocity);
+            Check(ellipse.Length == 257, body + " full orbit vertex count");
+            Near((ellipse[0] - solarPosition).Magnitude(), 0, 0, body + " current body anchor");
+            Near((ellipse[0] - ellipse[256]).Magnitude(), 0, 0, body + " closed seam");
+            var normal = Cross(solarPosition, solarVelocity).Normalize();
+            double conicP = Math.Pow(Cross(solarPosition, solarVelocity).Magnitude(), 2) / LunarEphemeris.SunMu;
+            var eccentricity = Cross(solarVelocity, Cross(solarPosition, solarVelocity)) * (1 / LunarEphemeris.SunMu) - solarPosition.Normalize();
+            foreach (var vertex in ellipse)
+            {
+                Check(vertex.Magnitude() > 1e9, body + " no origin spikes");
+                Near(Dot(vertex, normal), 0, .1, body + " orbital plane");
+                Near(vertex.Magnitude() + Dot(eccentricity, vertex), conicP, 1, body + " conic geometry");
+            }
+            Console.WriteLine(body + " complete display ellipse checked");
             Check(bp.Magnitude()>1e9 && bv.Magnitude()>0,body+" SI-scale state");
             Check(launch.Primary(bp,0)==body,body+" bundled primary");
             var outward=(bp-launch.SunPosition(0)).Normalize();
