@@ -261,7 +261,27 @@ namespace ESP.Presentation
             settingsNote = Note(""); settingsNote.name = "frame-pacing-description";
             settingsNote.style.marginTop = 5; settingsNote.style.marginBottom = 17;
             menuScroll.Add(settingsNote);
+            menuScroll.Add(Label("AURORA GRAPHICS", 10, Muted, true));
+            AddAuroraSlider("Brightness", "aurora-brightness", session.AuroraBrightness, 2, session.SetAuroraBrightness);
+            AddAuroraSlider("Color intensity", "aurora-color-intensity", session.AuroraColorIntensity, 2, session.SetAuroraColorIntensity);
+            AddAuroraSlider("Solar storm strength", "aurora-storm-strength", session.AuroraStormStrength, 3, session.SetAuroraStormStrength);
+            var auroraNote = Note("Artistic simulation only — not live space weather. Set brightness or storm strength to zero to hide the aurora.");
+            auroraNote.style.marginBottom = 16; menuScroll.Add(auroraNote);
             AddAction("Back", "settings-back", session.Back);
+        }
+
+        private void AddAuroraSlider(string title, string name, float value, float maximum, Action<float> change)
+        {
+            var heading = Row(); heading.style.justifyContent = Justify.SpaceBetween;
+            heading.style.marginTop = 10;
+            heading.Add(Label(title, 12, Text));
+            var readout = Label(value.ToString("F2") + "×", 12, Cyan, true);
+            heading.Add(readout); menuScroll.Add(heading);
+            var slider = new Slider(0, maximum) { name = name + "-slider" };
+            slider.style.height = 30; slider.style.marginLeft = 0; slider.style.marginRight = 0;
+            slider.SetValueWithoutNotify(value);
+            slider.RegisterValueChangedCallback(evt => { change(evt.newValue); readout.text = evt.newValue.ToString("F2") + "×"; });
+            menuScroll.Add(slider);
         }
 
         private void BuildCheats(MissionSession session)

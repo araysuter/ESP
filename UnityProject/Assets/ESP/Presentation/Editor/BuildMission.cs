@@ -34,6 +34,7 @@ public static class BuildMission
         ESP.Presentation.Editor.KeyboardCameraChecks.Validate();
         WeatherHeightChecks.Validate();
         ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
+        ESP.Presentation.Editor.AuroraChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
         var starbaseTower = ImportStarbaseTower.Build();
