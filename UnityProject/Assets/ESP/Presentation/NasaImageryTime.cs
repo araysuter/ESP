@@ -8,6 +8,8 @@ namespace ESP.Presentation
     // dates across gaps, or mistake subdaily/unsupported intervals for daily data.
     public static class NasaImageryTime
     {
+        public static string FormatDay(DateTime day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
         static bool Day(string value, out DateTime day) => DateTime.TryParseExact(value,
             "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out day);
 

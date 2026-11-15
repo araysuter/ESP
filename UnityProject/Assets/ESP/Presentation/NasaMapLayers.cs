@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 using UnityEngine;
@@ -72,9 +73,10 @@ namespace ESP.Presentation
                         timeDomains[i]=dim?.Value;
                         // The default is advisory. Select the newest explicitly advertised day
                         // at/before UTC today, respecting gaps and interval cadence.
-                        defaults[i]=NasaImageryTime.LatestDay(timeDomains[i],DateTime.UtcNow)?.ToString("yyyy-MM-dd");
+                        var latest=NasaImageryTime.LatestDay(timeDomains[i],DateTime.UtcNow);
+                        defaults[i]=latest.HasValue?NasaImageryTime.FormatDay(latest.Value):null;
                     }
-                    parsedMetadata=true;available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'");
+                    parsedMetadata=true;available=true;status="NASA availability retrieved "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'",CultureInfo.InvariantCulture);
                     Debug.Log("ESP_NASA_CAPABILITIES_OK "+string.Join(",",defaults));
                 }catch(Exception){status="NASA metadata could not be read — previous map retained";}
             }
@@ -122,7 +124,7 @@ namespace ESP.Presentation
                 int days=3;
                 for(int offset=0;offset<days;offset++){
                     var day=newest.AddDays(-offset);if(!Advertised(index,day))continue;
-                    string date=day.ToString("yyyy-MM-dd");
+                    string date=NasaImageryTime.FormatDay(day);
                     status="Loading NASA "+layerNames[index]+" "+date+" ("+(offset+1)+"/"+days+")…";
                     string url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+UnityWebRequest.EscapeURL(layerIds[index])+"&STYLES=&CRS=EPSG%3A4326&BBOX=-90%2C-180%2C90%2C180&WIDTH=2048&HEIGHT=1024&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME="+date;
                     using(var req=UnityWebRequestTexture.GetTexture(url)){
@@ -183,11 +185,11 @@ namespace ESP.Presentation
                     earth.material.mainTexture=result;if(downloaded)Destroy(downloaded);downloaded=result;result=null;
                 }
                 observationFirst=first;observationLast=last;
-                DisplayedLayerId=layerIds[index];DisplayedDate=last.ToString("yyyy-MM-dd");displayed=index;
-                string dateRange=first.ToString("yyyy-MM-dd")+(first!=last?" to "+last.ToString("yyyy-MM-dd"):"");
+                DisplayedLayerId=layerIds[index];DisplayedDate=NasaImageryTime.FormatDay(last);displayed=index;
+                string dateRange=NasaImageryTime.FormatDay(first)+(first!=last?" to "+NasaImageryTime.FormatDay(last):"");
                 shown=(cloudLayer?"Smoothed cloud observation blend":"Satellite true-color temporal mosaic")+" "+dateRange+" UTC • "+(cloudLayer?"Blue Marble ground; transparent unsampled areas; 10 km display height":"Blue Marble fills no-data")+"; not instantaneous";
                 double coverage=AreaCoverage(covered,2048,1024);
-                status="NASA GIBS • "+dateRange+" UTC • "+coverage.ToString("F1")+"% area observed / "+(100-coverage).ToString("F1")+"% missing • fetched "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'")+" • "+(cloudLayer?"smoothed dated cloud blend":"historical fallback in gaps");
+                status="NASA GIBS • "+dateRange+" UTC • "+coverage.ToString("F1")+"% area observed / "+(100-coverage).ToString("F1")+"% missing • fetched "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm 'UTC'",CultureInfo.InvariantCulture)+" • "+(cloudLayer?"smoothed dated cloud blend":"historical fallback in gaps");
                 LayerChanged?.Invoke();Debug.Log("ESP_NASA_LAYER_OK "+layerIds[index]+" "+DisplayedDate);
                 if(cloudLayer)Debug.Log("ESP_CLOUD_SHELL_OK valid="+validPixels+" missing="+(pixels.Length-validPixels)+" observedAreaPercent="+coverage.ToString("F3")+" unknown="+unknownPixels+" days="+successes+" range="+dateRange+" composite=normalized-observation-blend base=BlueMarble");
                 if(Array.IndexOf(Environment.GetCommandLineArgs(),"-espLiveTest")>=0)StartCoroutine(CaptureTest(index));

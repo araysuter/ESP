@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using UnityEngine;
 
 namespace ESP.Presentation.Editor
@@ -20,7 +21,23 @@ namespace ESP.Presentation.Editor
             Require(!NasaImageryTime.Describe(now.Date.AddDays(-2), now.Date, now).StartsWith("STALE"), "Current observations marked stale");
             Require(NasaImageryTime.Describe(now.Date.AddDays(-2), now.Date, now.AddDays(3)).StartsWith("STALE"), "Retained data never ages");
             Require(NasaImageryTime.Describe(now.Date.AddDays(-2), now.Date, now).Contains("newest 0d / oldest 2d"), "Blended day range hidden");
-            Debug.Log("ESP_NASA_IMAGERY_TIME_CHECKS_OK gaps future cadence malformed aging UTC dates");
+            NonGregorianCulture(now);
+            Debug.Log("ESP_NASA_IMAGERY_TIME_CHECKS_OK gaps future cadence malformed aging UTC dates nonGregorianCulture");
+        }
+        static void NonGregorianCulture(DateTime now)
+        {
+            var previous = CultureInfo.CurrentCulture;
+            try
+            {
+                CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("th-TH");
+                Require(CultureInfo.CurrentCulture.DateTimeFormat.Calendar is ThaiBuddhistCalendar, "Fixture must use a non-Gregorian calendar");
+                var latest = NasaImageryTime.LatestDay("2026-11-14/2026-11-20/P1D", now);
+                Require(latest.HasValue && NasaImageryTime.FormatDay(latest.Value) == "2026-11-15", "NASA day formatted using local calendar");
+                var parsed = DateTime.ParseExact(NasaImageryTime.FormatDay(latest.Value), "yyyy-MM-dd", CultureInfo.InvariantCulture);
+                Require(parsed == now.Date && NasaImageryTime.Contains("2026-11-14/2026-11-20/P1D", parsed), "Formatted selection must round-trip through Gregorian parsing");
+                Require(NasaImageryTime.FormatDay(now.AddDays(-2)) == "2026-11-13", "Composite WMS day formatted using local calendar");
+            }
+            finally { CultureInfo.CurrentCulture = previous; }
         }
         static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
     }

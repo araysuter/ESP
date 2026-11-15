@@ -87,3 +87,11 @@ returned 72/72 levels valid November 14 at 21:00 UTC. No instantaneous cloud
 field is claimed. This revision was not run on Windows; the full 15-minute
 automatic timer was not waited out, and metadata-network failure was not
 injected (the packaged failure check targets WMS imagery requests).
+
+Locale follow-up: NASA request/selection dates, composite date ranges and UTC
+fetch labels explicitly use invariant Gregorian formatting. The date checks
+also switch to `th-TH` (Thai Buddhist calendar), verify the latest selection
+round-trips as `2026-11-15`, and restore the prior culture. The complete date
+check passed in a standalone .NET 8 run using the same C# source and a logging
+shim, without opening Unity or changing the shared project. Rendering was not
+repeated for this date-format-only follow-up.
