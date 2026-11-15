@@ -505,6 +505,8 @@ namespace ESP.Presentation
             weather.text = director.WeatherSummary ?? "Weather unavailable";
             string imageryDate = director.mapLayers != null ? director.mapLayers.DisplayedDate : "";
             mapCredit.text = string.IsNullOrEmpty(imageryDate) ? "NASA · historical Blue Marble fallback" : "NASA · through " + imageryDate + " UTC\n" + director.mapLayers.Freshness;
+            if (director.mapLayers != null && !string.IsNullOrEmpty(director.mapLayers.SelectionStatus))
+                mapCredit.text += "\n" + director.mapLayers.SelectionStatus;
             mapCredit.tooltip = director.MapCredit;
             if (director.mapLayers != null && (director.mapLayers.Status.Contains("retained") || director.mapLayers.Status.StartsWith("No verified")))
                 mapCredit.text += "\n" + director.mapLayers.Status;

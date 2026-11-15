@@ -95,3 +95,23 @@ round-trips as `2026-11-15`, and restore the prior culture. The complete date
 check passed in a standalone .NET 8 run using the same C# source and a logging
 shim, without opening Unity or changing the shared project. Rendering was not
 repeated for this date-format-only follow-up.
+
+
+Pending switch-cycle follow-up (source prepared for combined QA): Surface no
+longer destroys satellite textures. Each observed mode retains one texture with
+its requested day, contributing dates, provider identity, description and fetch
+status. Selecting a cached mode restores its visual and provenance together
+without waiting for a download. Selecting the same mode during loading does
+not abort/restart its request. Explicit refresh and the 15-minute catalog
+refresh still force new imagery requests; when a newer advertised day appears,
+selection can show the older cached observations while fetching the new day.
+The credit distinguishes requested/loading mode from the layer actually shown.
+The data decoding, blend weights, resolution and cloud shader are unchanged.
+
+The expanded development smoke checks Surface→Clouds immediate texture/date
+identity, a first satellite load with repeated same-mode selections, eight
+Satellite→Clouds→Surface→Satellite cache cycles, then explicit refresh, failed
+refresh retention and offline restoration. The owner of the Integration lease
+will run the combined packaged/UI QA; these new switch checks have not yet been
+executed by the weather audit chat. Previous qualification above applies to the
+prior source revision.
