@@ -45,6 +45,7 @@ namespace ESP.Presentation
             string.Format("{0} • pitch {1:F0}° • Stage {2} • Fuel {3:N0} kg • {4}× • {5}", AssistanceEnabled ? "Assisted" : "Manual", simulation.PitchDegrees, simulation.State.StageIndex + 1, simulation.State.PropellantKg, TimeRate, weatherSource) + (simulation.BoosterBurning ? " • SRBs burning (fixed thrust)" : "") + (accumulator >= StepSeconds ? " • simulation catching up" : "");
         public RocketSimulation Simulation => simulation;
         public bool HasPosition => simulation != null;
+        public DateTime LaunchUtc { get; private set; }
         public void SetPitchTarget(double pitchDegrees)
         {
             if (double.IsNaN(pitchDegrees) || double.IsInfinity(pitchDegrees)) throw new ArgumentOutOfRangeException(nameof(pitchDegrees));
@@ -63,6 +64,7 @@ namespace ESP.Presentation
         {
             if (IsPaused || started || site == null) return;
             DateTime now = DateTime.UtcNow;
+            LaunchUtc = now;
             WeatherProfile profile = null;
             TimeSpan maxAge = TimeSpan.FromHours(12);
             if (nasaWeather != null && nasaWeather.Snapshot != null &&

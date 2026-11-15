@@ -72,6 +72,9 @@ public static class BuildMission
         var backdrop = manager.AddComponent<FlightEarthBackdrop>();
         backdrop.driver = flight; backdrop.director = director; backdrop.globeMesh = mesh; backdrop.globeMaterial = earthMaterial;
         backdrop.starShader = starShader; backdrop.earthSun = sun;
+        var sunlight = manager.AddComponent<MissionSunlight>();
+        sunlight.director = director; sunlight.driver = flight; sunlight.sun = sun;
+        backdrop.sunlight = sunlight;
         director.picker = picker; director.pointWeather = pointWeather; director.regional = regional;
         director.events = events; director.spaceWeather = spaceWeather;
         var groundPath = "Assets/ESP/Art/Sites/Ground.mat";

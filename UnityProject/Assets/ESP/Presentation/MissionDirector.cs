@@ -134,6 +134,8 @@ namespace ESP.Presentation
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             groundMaterial = siteGroundTemplate != null
                 ? new Material(siteGroundTemplate) : new Material(shader);
+            // Ground must respond to the same Sun as the rocket; the template is also used by unlit orbit lines.
+            groundMaterial.shader = shader;
             groundMaterial.color = Color.white;
             groundMaterial.SetFloat("_Smoothness", 0);
             if (siteGroundTextures != null && siteIndex < siteGroundTextures.Length && siteGroundTextures[siteIndex]) { groundMaterial.mainTexture = siteGroundTextures[siteIndex]; }
