@@ -19,11 +19,23 @@ public static class BuildMission
         if (!string.IsNullOrEmpty(buildPath) && !Path.IsPathRooted(buildPath))
             buildPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../..", buildPath));
         if (string.IsNullOrEmpty(buildPath)) throw new Exception("ESP_BUILD_PATH is required");
+        // Keep the existing macOS development default, while allowing a native
+        // Windows editor to produce an .exe. CI supplies its active target.
+        var target = release ? EditorUserBuildSettings.activeBuildTarget : DevelopmentTarget();
+        if (target != BuildTarget.StandaloneOSX && target != BuildTarget.StandaloneWindows64)
+            throw new Exception("Mission builds support macOS and Windows x64.");
+        string extension = target == BuildTarget.StandaloneWindows64 ? ".exe" : ".app";
+        if (!buildPath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+            throw new Exception("The " + target + " output path must end in " + extension);
+        if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone, target))
+            throw new Exception("Unity build support is not installed for " + target);
         ESP.Presentation.Editor.CloudBlendChecks.Validate();
+        ESP.Presentation.Editor.NasaImageryTimeChecks.Validate();
         WeatherHeightChecks.Validate();
         ESP.Presentation.Editor.SmokeEmissionScheduleChecks.Run();
         EditorSettings.serializationMode = SerializationMode.ForceText;
         ImportDetailedVehicles.Build();
+        var starbaseTower = ImportStarbaseTower.Build();
         var nasaGantry = ImportLaunchStructures.Build();
         var nasaMobileLauncher = ImportMobileLauncher.Build();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -92,7 +104,7 @@ public static class BuildMission
         // Historical Apollo/Shuttle geometry is an explicit asset-review option,
         // never represented as the modern SLS mobile launcher in a normal build.
         bool historicalGantryReview = Environment.GetEnvironmentVariable("ESP_HISTORICAL_GANTRY_REVIEW") == "1";
-        director.siteStructurePrefabs = new GameObject[] { null, historicalGantryReview ? nasaGantry : nasaMobileLauncher };
+        director.siteStructurePrefabs = new GameObject[] { starbaseTower, historicalGantryReview ? nasaGantry : nasaMobileLauncher };
         director.vehiclePrefabs = new[] { rocket, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-Starship.prefab"), AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ESP/Art/Vehicles/ESP-SLS.prefab") };
         foreach (var vehicle in director.vehiclePrefabs) if (!vehicle) throw new Exception("Missing vehicle prefab");
         director.mapLayers = layers; director.weather = weather; director.nasaWeather = nasaWeather; director.rocketPrefab = rocket;
@@ -155,10 +167,6 @@ public static class BuildMission
         PlayerSettings.runInBackground = true;
         PlayerSettings.resizableWindow = true;
         PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720; PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-        var target = release
-            ? EditorUserBuildSettings.activeBuildTarget : BuildTarget.StandaloneOSX;
-        if (target != BuildTarget.StandaloneOSX && target != BuildTarget.StandaloneWindows64)
-            throw new Exception("Downloadable builds support macOS and Windows x64.");
         if (release)
         {
             PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
@@ -170,6 +178,14 @@ public static class BuildMission
         // GameCI validates this exact marker after the custom build method returns.
         Debug.Log("Build succeeded!");
         Debug.Log("ESP_MISSION_BUILD_OK version=" + PlayerSettings.bundleVersion + " target=" + target + " release=" + release);
+    }
+    private static BuildTarget DevelopmentTarget()
+    {
+#if UNITY_EDITOR_WIN
+        return BuildTarget.StandaloneWindows64;
+#else
+        return BuildTarget.StandaloneOSX;
+#endif
     }
     private static string Argument(string name)
     {

@@ -70,7 +70,11 @@ Shader "ESP/Local Surface Imagery"
                 float horizonHaze = grazing * smoothstep(400, 3500, distanceMeters) * airDensity;
                 half haze = daylight * min(.985, 1 - (1 - baseHaze) * (1 - horizonHaze));
                 color = lerp(color, half3(.26, .48, .90), haze);
-                color += EspNightEmission(input.geographicUv);
+                // The global satellite night composite cannot resolve individual
+                // lamps here. Painting it onto metre-scale terrain turns beaches
+                // into broad yellow emitters; use it only on the distant globe.
+                half4 clouds = EspLocalCloudLayer(input.geographicUv, _CameraAltitude);
+                color = lerp(color, clouds.rgb, clouds.a);
                 return half4(color, alpha);
             }
             ENDHLSL

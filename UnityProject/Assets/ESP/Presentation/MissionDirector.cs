@@ -65,7 +65,7 @@ namespace ESP.Presentation
         public Transform RocketVisual { get; private set; }
         public bool IsMapView { get; private set; } = true;
         public int SelectedSiteIndex { get; private set; }
-        public float RocketBaseHeightMeters => LaunchEnvironment.RocketBaseHeightFor(
+        public float RocketBaseHeightMeters => LaunchEnvironment.RocketBaseHeightFor(LaunchSites.All[SelectedSiteIndex],
             siteStructurePrefabs != null && SelectedSiteIndex < siteStructurePrefabs.Length
                 ? siteStructurePrefabs[SelectedSiteIndex] : null);
         public string SiteName => LaunchSites.All[SelectedSiteIndex].Name;
@@ -93,7 +93,7 @@ namespace ESP.Presentation
                 picked ? picker.Longitude : site.Longitude, forceRefresh);
         }
         public Texture RegionalImage => regional != null ? regional.Image : null;
-        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedDescription + " • " + mapLayers.Status : "NASA Blue Marble";
+        public string MapCredit => mapLayers != null ? "NASA GIBS / Blue Marble • " + mapLayers.DisplayedDescription + " • " + mapLayers.Freshness + " • " + mapLayers.Status : "NASA Blue Marble";
         public string NasaStatus => "NASA EONET: " + (events != null ? events.Status : "unavailable") + "\nNASA DONKI: " + (spaceWeather != null ? spaceWeather.Status : "unavailable");
         public double AltitudeMeters => FlightDriver?.AltitudeMeters ?? 0;
         public double SpeedMetersPerSecond => FlightDriver?.SpeedMetersPerSecond ?? 0;
@@ -125,6 +125,7 @@ namespace ESP.Presentation
             if (mapLayers != null) mapLayers.LayerChanged += RefreshRegion;
             Inset = gameObject.AddComponent<MissionInsetView>();
             Inset.Initialize(this);
+            gameObject.AddComponent<SolarSystemMap>().Initialize(this);
             GoToLaunch(SelectedSiteIndex);
             ShowMap();
             RequestWeather();

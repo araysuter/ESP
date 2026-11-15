@@ -46,6 +46,9 @@ namespace ESP.Presentation
             var simulation = driver != null ? driver.Simulation : null;
             // Also sample immediately before drawing to keep the last endpoint authoritative.
             recorder?.RecordSimulation(simulation);
+            var mapControls = director != null && director.mapCamera != null ? director.mapCamera.GetComponent<GlobeCameraControls>() : null;
+            if (director != null && director.IsMapView && mapControls != null && mapControls.Distance >= 1000)
+            { Clear(); return; }
             if (director == null || director.MapRenderCamera == null || simulation == null || orbitMaterial == null)
             { Clear(); return; }
             if (line == null) CreateLines();

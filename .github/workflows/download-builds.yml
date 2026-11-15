@@ -12,10 +12,16 @@ on:
         description: 'Publish packages as a GitHub release after both platforms pass'
         type: boolean
         default: false
+      platform:
+        description: 'Platforms to build (publishing requires both)'
+        type: choice
+        options: [both, windows, macos]
+        default: both
 permissions:
   contents: read
 concurrency:
-  group: esp-release-build
+  # Serialize only competing publications or matching rehearsals, not all builds.
+  group: ${{ (github.event_name == 'release' || inputs.publish) && format('esp-publish-{0}', github.event.release.tag_name || format('v{0}', inputs.version)) || format('esp-rehearsal-{0}-{1}', github.ref, inputs.platform || 'both') }}
   cancel-in-progress: false
 jobs:
   prepare:
@@ -31,6 +37,7 @@ jobs:
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
           PUBLISH: ${{ inputs.publish }}
+          PLATFORM: ${{ inputs.platform }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
@@ -38,26 +45,19 @@ jobs:
             const tag = context.eventName === 'release' ? context.payload.release.tag_name : 'v' + process.env.REQUESTED_VERSION;
             if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error('Use a version such as v0.1.0');
             if (!process.env.UNITY_EMAIL || !process.env.UNITY_PASSWORD) throw new Error('Set UNITY_EMAIL and UNITY_PASSWORD in repository Actions secrets. No UNITY_LICENSE file is needed.');
+            if (process.env.PUBLISH === 'true' && process.env.PLATFORM !== 'both') throw new Error('Publishing requires both platforms. Select both or disable publish.');
             const sha = context.sha;
             if (context.eventName === 'release' || process.env.PUBLISH === 'true') {
               const {data} = await github.rest.repos.compareCommitsWithBasehead({...context.repo, basehead: sha + '...main'});
               if (!['ahead', 'identical'].includes(data.status)) throw new Error('Release source must be on main');
             }
             core.setOutput('version', tag.slice(1)); core.setOutput('tag', tag); core.setOutput('sha', sha);
-  build:
+  # Independent jobs allow Windows packaging to start while macOS is still
+  # compiling. Each runner owns its own checkout and Unity Library cache.
+  macos-build:
+    if: ${{ github.event_name == 'release' || inputs.platform != 'windows' }}
     needs: prepare
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - target: StandaloneOSX
-            runner: macos-15-intel
-            output: ESP.app
-          - target: StandaloneWindows64
-            runner: ubuntu-24.04
-            output: ESP.exe
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-15-intel
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -71,12 +71,24 @@ jobs:
           git lfs fsck
           test "$(wc -c < UnityProject/Assets/ESP/Art/Sky/CelestialSky.exr)" -gt 1000000
           df -h .
-      - uses: actions/cache@v4
+      # Cache only the versioned editor installation, never Hub/account state.
+      - name: Prepare editor cache directory
+        run: sudo install -d -o "$(id -u)" -g "$(id -g)" /Applications/Unity/Hub/Editor
+      - name: Restore Unity editor
+        id: editor-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /Applications/Unity/Hub/Editor/6000.6.9f1
+          key: unity-editor-v1-macos-15-${{ runner.arch }}-6000.6.9f1-mac-il2cpp
+      - name: Restore imported Unity assets
+        id: library-cache
+        uses: actions/cache/restore@v4
         with:
           path: UnityProject/Library
-          key: unity-6000.6.9f1-${{ matrix.target }}-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'FlightCore/**') }}
-          restore-keys: unity-6000.6.9f1-${{ matrix.target }}-
+          key: unity-6000.6.9f1-StandaloneOSX-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'FlightCore/**') }}
+          restore-keys: unity-6000.6.9f1-StandaloneOSX-
       - name: Build release player
+        id: unity-build
         uses: game-ci/unity-builder@eb1b9fba120c6e62c9fb7a7a81d6c107ce004c45 # v6.0.0
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -84,40 +96,43 @@ jobs:
         with:
           cliVersion: v0.1.75
           projectPath: UnityProject
-          targetPlatform: ${{ matrix.target }}
+          targetPlatform: StandaloneOSX
           buildName: ESP
           buildsPath: build
           buildMethod: BuildMission.Build
           versioning: Custom
           version: ${{ needs.prepare.outputs.version }}
-          customParameters: -espRelease -espVersion ${{ needs.prepare.outputs.version }} -espBuildPath build/${{ matrix.target }}/${{ matrix.output }}
+          customParameters: -espRelease -espVersion ${{ needs.prepare.outputs.version }} -espBuildPath build/StandaloneOSX/ESP.app
+      - name: Save Unity editor
+        if: steps.unity-build.outcome == 'success' && steps.editor-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /Applications/Unity/Hub/Editor/6000.6.9f1
+          key: ${{ steps.editor-cache.outputs.cache-primary-key }}
+      # Save after compilation, so a later packaging/smoke failure does not
+      # discard the expensive import and shader cache.
+      - name: Save imported Unity assets
+        if: steps.unity-build.outcome == 'success' && steps.library-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: UnityProject/Library
+          key: ${{ steps.library-cache.outputs.cache-primary-key }}
       - name: Bundle notices and build provenance
         shell: bash
         env:
-          TARGET: ${{ matrix.target }}
+          TARGET: StandaloneOSX
           VERSION: ${{ needs.prepare.outputs.version }}
           SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
           python3 packaging/bundle-notices.py "build/$TARGET" "$VERSION" "$SOURCE_SHA"
       - name: Package and check macOS DMG
-        if: matrix.target == 'StandaloneOSX'
         shell: bash
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: bash packaging/package-macos.sh "$VERSION"
-      - name: Archive Windows player for native installer packaging
-        if: matrix.target == 'StandaloneWindows64'
-        run: tar -czf windows-player.tar.gz -C build/StandaloneWindows64 .
       - uses: actions/upload-artifact@v4
-        if: matrix.target == 'StandaloneWindows64'
         with:
-          name: windows-player
-          path: windows-player.tar.gz
-          retention-days: 7
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        if: matrix.target == 'StandaloneOSX'
-        with:
+          compression-level: 0
           name: ESP-macOS
           path: dist/*
           retention-days: 14
@@ -125,14 +140,92 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: build-log-${{ matrix.target }}
+          name: build-log-StandaloneOSX
+          path: |
+            build/**/*.log
+            artifacts/**
+          if-no-files-found: ignore
+          retention-days: 7
+  windows-build:
+    if: ${{ github.event_name == 'release' || inputs.platform != 'macos' }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          lfs: true
+          persist-credentials: false
+      - name: Check source assets
+        shell: bash
+        run: |
+          git lfs fsck
+          test "$(wc -c < UnityProject/Assets/ESP/Art/Sky/CelestialSky.exr)" -gt 1000000
+          df -h .
+      - name: Restore imported Unity assets
+        id: library-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: UnityProject/Library
+          key: unity-6000.6.9f1-StandaloneWindows64-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'FlightCore/**') }}
+          restore-keys: unity-6000.6.9f1-StandaloneWindows64-
+      - name: Build release player
+        id: unity-build
+        uses: game-ci/unity-builder@eb1b9fba120c6e62c9fb7a7a81d6c107ce004c45 # v6.0.0
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          cliVersion: v0.1.75
+          projectPath: UnityProject
+          targetPlatform: StandaloneWindows64
+          buildName: ESP
+          buildsPath: build
+          buildMethod: BuildMission.Build
+          versioning: Custom
+          version: ${{ needs.prepare.outputs.version }}
+          customParameters: -espRelease -espVersion ${{ needs.prepare.outputs.version }} -espBuildPath build/StandaloneWindows64/ESP.exe
+      # The Linux builder container creates these generated files as root.
+      - name: Restore runner ownership of Windows build output
+        run: sudo chown -R "$(id -u):$(id -g)" build UnityProject/Library
+      # Save after compilation, so a later packaging/smoke failure does not
+      # discard the expensive import and shader cache.
+      - name: Save imported Unity assets
+        if: steps.unity-build.outcome == 'success' && steps.library-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: UnityProject/Library
+          key: ${{ steps.library-cache.outputs.cache-primary-key }}
+      - name: Bundle notices and build provenance
+        shell: bash
+        env:
+          TARGET: StandaloneWindows64
+          VERSION: ${{ needs.prepare.outputs.version }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          python3 packaging/bundle-notices.py "build/$TARGET" "$VERSION" "$SOURCE_SHA"
+      - name: Archive Windows player for native installer packaging
+        run: tar -czf windows-player.tar.gz -C build/StandaloneWindows64 .
+      - uses: actions/upload-artifact@v4
+        with:
+          compression-level: 0
+          name: windows-player
+          path: windows-player.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-log-StandaloneWindows64
           path: |
             build/**/*.log
             artifacts/**
           if-no-files-found: ignore
           retention-days: 7
   windows-installer:
-    needs: [prepare, build]
+    if: ${{ github.event_name == 'release' || inputs.platform != 'macos' }}
+    needs: [prepare, windows-build]
     runs-on: windows-2025
     timeout-minutes: 15
     steps:
@@ -151,6 +244,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ESP-Windows
+          compression-level: 0
           path: dist/*
           if-no-files-found: error
           retention-days: 14
@@ -162,7 +256,7 @@ jobs:
           if-no-files-found: ignore
   publish:
     if: github.event_name == 'release' || inputs.publish
-    needs: [prepare, build, windows-installer]
+    needs: [prepare, macos-build, windows-build, windows-installer]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
