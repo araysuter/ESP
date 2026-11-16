@@ -2,7 +2,7 @@
 
 ESP is an original Earth-scale rocket sandbox built for Hack The Nest with Unity and a pure C# flight core. Explore a WGS84 globe, choose a representative launch site at Starbase or Kennedy LC-39B, then fly an assisted or manual mission. The three vehicle options are the fictional ESP Demo Rocket, a Starship/Super Heavy preset, and an SLS Block 1 preset with parallel solid boosters. The representative vehicles use estimated game parameters.
 
-# VIDEO
+## Video Demo
 
 Youtube: https://youtu.be/DS2ihhrjUls
 GitHub Video: Adobe Express - Final Small (1).mp4
